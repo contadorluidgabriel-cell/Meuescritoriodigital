@@ -1,4 +1,5 @@
 {
+  "installCommand": "node scripts/restore-lockfile.mjs && pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "framework": "vite"
