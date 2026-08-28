@@ -53,7 +53,8 @@ export function useGoogleTasks({ enabled, tasks, update, reconcileTasks }) {
       setState(current => ({ ...current, checking: false, connected: true, busy: false, message: `Sincronizado${time ? ` · ${time}` : ''}` }))
       return data
     } catch (error) {
-      setState(current => ({ ...current, checking: false, connected: true, busy: false, message: error.message }))
+      clearTimeout(timerRef.current)
+      setState(current => ({ ...current, checking: false, connected: false, busy: false, message: error.message }))
       if (!silent) throw error
       return null
     } finally {
@@ -76,7 +77,7 @@ export function useGoogleTasks({ enabled, tasks, update, reconcileTasks }) {
       if (!popup) window.location.href = data.url
       setState(current => ({ ...current, busy: false, message: 'Finalize a conexão na janela do Google' }))
     } catch (error) {
-      setState(current => ({ ...current, busy: false, message: error.message }))
+      setState(current => ({ ...current, busy: false, connected: false, message: error.message }))
     }
   }, [enabled])
 
@@ -85,6 +86,7 @@ export function useGoogleTasks({ enabled, tasks, update, reconcileTasks }) {
     setState(current => ({ ...current, busy: true, message: 'Desconectando…' }))
     try {
       await invokeGoogle({ action: 'disconnect' })
+      clearTimeout(timerRef.current)
       setState(current => ({ ...current, busy: false, connected: false, message: 'Google desconectado' }))
     } catch (error) {
       setState(current => ({ ...current, busy: false, message: error.message }))
@@ -104,7 +106,7 @@ export function useGoogleTasks({ enabled, tasks, update, reconcileTasks }) {
   useEffect(() => {
     const receive = event => {
       if (event.origin !== GOOGLE_ORIGIN) return
-      if (event.data?.type === 'google-tasks-error') { setState(current => ({ ...current, busy: false, message: 'Não foi possível conectar o Google.' })); return }
+      if (event.data?.type === 'google-tasks-error') { setState(current => ({ ...current, connected: false, busy: false, message: 'Não foi possível conectar o Google.' })); return }
       if (event.data?.type === 'google-tasks-connected') refresh().then(data => { if (data?.connected) syncNow() })
     }
     window.addEventListener('message', receive)
