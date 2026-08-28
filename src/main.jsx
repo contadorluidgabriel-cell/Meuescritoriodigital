@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+import './legacy-route-bridge.js'
 import './styles.css'
 import './legacy-host.css'
 import './migration-shell.css'
