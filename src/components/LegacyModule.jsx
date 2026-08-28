@@ -246,7 +246,28 @@ function configureFrame(frame, view, record) {
   style.textContent = bridgeCss
 
   frameDocument.body.dataset.reactBridgeView = view || ''
-  if (typeof frameWindow.showView === 'function') frameWindow.showView(view)
+  const activateView = () => {
+    if (frameDocument.body.dataset.reactBridgeView !== (view || '')) return false
+    if (typeof frameWindow.showView === 'function') {
+      frameWindow.showView(view)
+      return true
+    }
+    const target = frameDocument.getElementById(view)
+    if (target?.classList.contains('active')) return true
+    const button = frameDocument.querySelector(`[data-view="${view}"]`)
+    if (button) {
+      button.click()
+      return true
+    }
+    if (target) {
+      frameDocument.querySelectorAll('.view').forEach(node => node.classList.toggle('active', node === target))
+      frameDocument.querySelectorAll('.nav-btn').forEach(node => node.classList.toggle('active', node.dataset.view === view))
+      return true
+    }
+    return false
+  }
+  activateView()
+  ;[60, 180, 420].forEach(delay => setTimeout(activateView, delay))
 
   if (view === 'configuracoes') {
     const version = frameDocument.querySelector('#configuracoes .settings-version')
