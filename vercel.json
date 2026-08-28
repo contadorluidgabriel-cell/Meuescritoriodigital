@@ -1,6 +1,6 @@
 {
-  "installCommand": "corepack enable && corepack prepare pnpm@11.19.0 --activate && node scripts/restore-lockfile.mjs && pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build",
+  "installCommand": "node scripts/restore-lockfile.mjs && npx -y pnpm@11.19.0 install --frozen-lockfile",
+  "buildCommand": "npx -y pnpm@11.19.0 build",
   "outputDirectory": "dist",
   "framework": "vite"
 }
