@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Icon } from './ui/SaasUI.jsx'
 
 export const navigationGroups = [
@@ -23,10 +23,12 @@ const mobileMore = [
   ['configuracoes', 'Configurações', 'settings'],
 ]
 
-export function AppSidebar({ currentView, identity, sync, collapsed, onToggle, onNavigate, onSignOut }) {
+export function AppSidebar({ currentView, identity, sync, collapsed, notificationsOpen = false, onToggle, onNavigate, onSignOut }) {
   const [mobileMoreOpen, setMobileMoreOpen] = useState(false)
   const mobileMoreActive = mobileMore.some(([id]) => id === currentView)
   const go = id => { setMobileMoreOpen(false); onNavigate(id) }
+
+  useEffect(() => { setMobileMoreOpen(false) }, [currentView, notificationsOpen])
 
   return <>
     <aside className="react-sidebar saas-sidebar">
@@ -39,7 +41,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, onToggle, o
       <div className="react-nav-stack saas-nav-stack saas-desktop-nav">
         {navigationGroups.map(group => <section className="react-nav-group saas-nav-group" key={group.label}>
           <div className="react-nav-title">{group.label}</div>
-          <nav aria-label={group.label}>{group.items.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => onNavigate(id)} title={label} key={id}><Icon name={icon} size={18} /><span>{label}</span></button>)}</nav>
+          <nav aria-label={group.label}>{group.items.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} title={label} key={id}><Icon name={icon} size={18} /><span>{label}</span></button>)}</nav>
         </section>)}
       </div>
 
@@ -49,7 +51,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, onToggle, o
       </nav>
 
       <div className="saas-sidebar-bottom">
-        <nav aria-label="Preferências"><button type="button" className={currentView === 'configuracoes' ? 'active' : ''} onClick={() => onNavigate('configuracoes')} title="Configurações"><Icon name="settings" size={18} /><span>Configurações</span></button></nav>
+        <nav aria-label="Preferências"><button type="button" className={currentView === 'configuracoes' ? 'active' : ''} onClick={() => go('configuracoes')} title="Configurações"><Icon name="settings" size={18} /><span>Configurações</span></button></nav>
         <footer className="react-profile saas-profile"><span>{identity.initials || 'ME'}</span><div><strong>{identity.user}</strong><small>{identity.role} · {sync}</small></div><Button variant="ghost-inverse" size="sm" icon="logout" iconOnly onClick={onSignOut}>Sair</Button></footer>
       </div>
     </aside>
