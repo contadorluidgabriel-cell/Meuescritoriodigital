@@ -1,16 +1,27 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FunctionsHttpError } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabase.js'
 
+const todoistFunctionUrl = 'https://pbwnzkmbcuoyyoojgnay.supabase.co/functions/v1/todoist-sync'
+
 async function invokeTodoist(body) {
-  const { data, error } = await supabase.functions.invoke('todoist-sync', { body })
-  if (!error) return data || {}
-  if (error instanceof FunctionsHttpError) {
-    let detail = null
-    try { detail = await error.context.json() } catch { /* response without JSON body */ }
-    throw new Error(detail?.error || detail?.message || error.message)
-  }
-  throw new Error(error.message || 'Não foi possível acessar o Todoist.')
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  if (sessionError) throw sessionError
+  const accessToken = sessionData?.session?.access_token
+  if (!accessToken) throw new Error('Sessão inválida. Entre novamente.')
+
+  const response = await fetch(todoistFunctionUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  let data = {}
+  try { data = await response.json() } catch { /* response without JSON body */ }
+  if (!response.ok) throw new Error(data?.error || data?.message || `Todoist respondeu ${response.status}.`)
+  return data || {}
 }
 
 export function useTodoistTasks({ enabled, tasks, update }) {
