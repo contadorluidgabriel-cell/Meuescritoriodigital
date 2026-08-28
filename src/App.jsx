@@ -45,6 +45,7 @@ export default function App() {
   const { office, update, ready, sync } = useOfficeData(session)
   const identity = useLegacyIdentity()
   const [view, setView] = useState(localPreview ? 'clientes' : 'dashboard')
+  const [clientTarget, setClientTarget] = useState({ id: '', request: 0 })
   const [taskClientId, setTaskClientId] = useState('')
   const [taskOpenRequest, setTaskOpenRequest] = useState(0)
   const [taskEditTarget, setTaskEditTarget] = useState({ id: '', request: 0 })
@@ -70,27 +71,44 @@ export default function App() {
   const searchResults = useMemo(() => {
     const query = normalize(globalQuery)
     if (!query) return []
-    const clients = new Map((office.clients || []).map(client => [String(client.id), clientName(client)]))
+    const clientsById = new Map((office.clients || []).map(client => [String(client.id), client]))
     const results = []
+
     ;(office.clients || []).forEach(client => {
       const haystack = normalize(`${clientName(client)} ${client.fantasia || ''} ${client.documento || ''} ${client.id || ''}`)
       if (haystack.includes(query)) results.push({ key: `client-${client.id}`, type: 'client', typeLabel: 'Cliente', id: String(client.id), title: clientName(client), subtitle: client.documento || client.tributacao || 'Cadastro de cliente' })
     })
+
     ;(office.tasks || []).forEach(task => {
-      const customer = task.clientId ? clients.get(String(task.clientId)) || 'Cliente' : 'Interna'
+      const customer = task.clientId ? clientName(clientsById.get(String(task.clientId))) : 'Interna'
       const haystack = normalize(`${task.titulo || ''} ${customer} ${task.departamento || ''} ${task.responsavel || ''}`)
       if (haystack.includes(query)) results.push({ key: `task-${task.id}`, type: 'task', typeLabel: 'Tarefa', id: String(task.id), title: task.titulo || 'Tarefa', subtitle: `${customer}${task.departamento ? ` · ${task.departamento}` : ''}` })
     })
+
     ;(office.processes || []).forEach(process => {
-      const customer = clients.get(String(process.clientId)) || 'Cliente'
+      const customer = clientName(clientsById.get(String(process.clientId)))
       const haystack = normalize(`${process.tipo || ''} ${customer} ${process.status || ''} ${process.origem || ''}`)
       if (haystack.includes(query)) results.push({ key: `process-${process.id}`, type: 'process', typeLabel: 'Processo', id: String(process.id), title: process.tipo || 'Processo', subtitle: `${customer}${process.status ? ` · ${process.status}` : ''}` })
     })
+
     ;(office.obligations || []).forEach(obligation => {
-      const firstClientId = obligation.clientes?.[0]?.clienteId ? String(obligation.clientes[0].clienteId) : ''
-      const haystack = normalize(`${obligation.nome || ''} ${obligation.categoria || ''} ${obligation.competencia || ''}`)
-      if (haystack.includes(query)) results.push({ key: `obligation-${obligation.id}`, type: 'obligation', typeLabel: 'Obrigação', id: String(obligation.id), clientId: firstClientId, title: obligation.nome || 'Obrigação', subtitle: obligation.categoria || 'Obrigação do escritório' })
+      const linked = (obligation.clientes || []).map(link => ({ link, client: clientsById.get(String(link.clienteId)) })).filter(item => item.client)
+      const linkedText = linked.map(({ client }) => `${clientName(client)} ${client.documento || ''}`).join(' ')
+      const haystack = normalize(`${obligation.nome || ''} ${obligation.categoria || ''} ${obligation.competencia || ''} ${linkedText}`)
+      if (!haystack.includes(query)) return
+      const matchingClient = linked.find(({ client }) => normalize(`${clientName(client)} ${client.documento || ''}`).includes(query))
+      const selectedLink = matchingClient?.link || linked[0]?.link
+      results.push({
+        key: `obligation-${obligation.id}`,
+        type: 'obligation',
+        typeLabel: 'Obrigação',
+        id: String(obligation.id),
+        clientId: selectedLink?.clienteId ? String(selectedLink.clienteId) : '',
+        title: obligation.nome || 'Obrigação',
+        subtitle: matchingClient ? `${obligation.categoria || 'Obrigação'} · ${clientName(matchingClient.client)}` : obligation.categoria || 'Obrigação do escritório',
+      })
     })
+
     return results.slice(0, 30)
   }, [globalQuery, office.clients, office.obligations, office.processes, office.tasks])
 
@@ -103,6 +121,7 @@ export default function App() {
   }
 
   function navigate(nextView) {
+    setClientTarget({ id: '', request: 0 })
     setTaskClientId('')
     setTaskOpenRequest(0)
     setTaskEditTarget({ id: '', request: 0 })
@@ -161,6 +180,11 @@ export default function App() {
   function chooseSearchResult(item) {
     setGlobalQuery('')
     setNotificationsOpen(false)
+    if (item.type === 'client') {
+      setClientTarget(current => ({ id: item.id, request: current.request + 1 }))
+      setView('clientes')
+      return
+    }
     if (item.type === 'task') {
       setTaskClientId('')
       setTaskOpenRequest(0)
@@ -176,13 +200,11 @@ export default function App() {
     if (item.type === 'obligation') {
       setObligationTarget(current => ({ id: item.id, clientId: item.clientId || '', request: current.request + 1 }))
       setView('obrigacoes')
-      return
     }
-    setView('clientes')
   }
 
   return <div className={`react-shell ${collapsed ? 'is-collapsed' : ''}`}>
-    <AppSidebar currentView={view} identity={identity} sync={sync} collapsed={collapsed} onToggle={toggleSidebar} onNavigate={navigate} onSignOut={signOut} />
+    <AppSidebar currentView={view} identity={identity} sync={sync} collapsed={collapsed} notificationsOpen={notificationsOpen} onToggle={toggleSidebar} onNavigate={navigate} onSignOut={signOut} />
     <AppTopbar currentView={view} query={globalQuery} onQueryChange={setGlobalQuery} searchResults={searchResults} onChooseResult={chooseSearchResult} notificationsCount={notificationItems.length} notificationsOpen={notificationsOpen} onToggleNotifications={() => setNotificationsOpen(current => !current)} identity={identity} />
 
     {notificationsOpen ? <div className="react-notifications"><section className="notification-panel" aria-label="Central de notificações">
@@ -215,7 +237,7 @@ export default function App() {
     <main className="react-workspace">
       {view === 'dashboard' ? <Dashboard office={office} update={update} sync={sync} session={session} onNewTask={openTasksForClient} onNavigate={navigate} /> : null}
       {view === 'calendario' ? <CalendarReact office={office} update={update} sync={sync} onOpenEvent={openCalendarEvent} /> : null}
-      {view === 'clientes' ? <ClientsReact office={office} update={update} sync={sync} onOpenTasks={openTasksForClient} onOpenProcesses={openProcessesForClient} /> : null}
+      {view === 'clientes' ? <ClientsReact office={office} update={update} sync={sync} onOpenTasks={openTasksForClient} onOpenProcesses={openProcessesForClient} initialClientId={clientTarget.id} openClientRequest={clientTarget.request} /> : null}
       {view === 'obrigacoes' ? <ObligationsReact office={office} update={update} sync={sync} initialObligationId={obligationTarget.id} initialClientId={obligationTarget.clientId} openObligationRequest={obligationTarget.request} /> : null}
       {view === 'processos' ? <Suspense fallback={<div className="module-loading"><span>ED</span><b>Carregando Processos…</b></div>}><ProcessesReact office={office} update={update} sync={sync} initialProcessId={processTarget.id} openProcessRequest={processTarget.openRequest} initialClientId={processTarget.clientId} openNewRequest={processTarget.newRequest} /></Suspense> : null}
       {view === 'tarefas' ? <TasksReact office={office} update={update} sync={sync} session={session} initialClientId={taskClientId} openNewRequest={taskOpenRequest} initialTaskId={taskEditTarget.id} openTaskRequest={taskEditTarget.request} /> : null}
