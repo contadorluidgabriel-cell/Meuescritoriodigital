@@ -26,6 +26,15 @@ function decodePayload(text) {
   return gunzipSync(Buffer.from(text.replace(/\s+/g, ''), 'base64'))
 }
 
+function readLegacyChunk(index) {
+  const part = String(index).padStart(2, '0')
+  if (index === 2 || index === 8) {
+    return readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}a`, 'utf8')
+      + readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}b`, 'utf8')
+  }
+  return readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}`, 'utf8')
+}
+
 function restorePayloads() {
   for (const [payloadName, targetName] of payloadMap) {
     const target = `${root}${targetName}`
@@ -37,9 +46,7 @@ function restorePayloads() {
 
   const legacyTarget = `${root}legacy-v10-7.html`
   if (!existsSync(legacyTarget)) {
-    const chunks = Array.from({ length: 10 }, (_, index) =>
-      readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${String(index).padStart(2, '0')}`, 'utf8'),
-    )
+    const chunks = Array.from({ length: 10 }, (_, index) => readLegacyChunk(index))
     writeFileSync(legacyTarget, decodePayload(chunks.join('')))
   }
 }
