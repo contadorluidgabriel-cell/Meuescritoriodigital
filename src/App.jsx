@@ -11,10 +11,30 @@ import { useLegacyIdentity } from './hooks/useLegacyIdentity.js'
 import { useOfficeData } from './hooks/useOfficeData.js'
 import { collectCalendarEvents } from './lib/calendarEvents.js'
 
-const navigation = [
-  ['dashboard', 'Painel Principal', '⌂'], ['calendario', 'Calendário', '▣'], ['clientes', 'Clientes', '◎'],
-  ['obrigacoes', 'Obrigações', '✓'], ['processos', 'Processos', '↗'], ['tarefas', 'Tarefas', '☑'],
-  ['honorarios', 'Financeiro', 'R$'], ['configuracoes', 'Configurações', '⚙'],
+const navigationGroups = [
+  {
+    label: 'Visão geral',
+    items: [
+      ['dashboard', 'Painel Principal', '⌂'],
+      ['calendario', 'Calendário', '▣'],
+    ],
+  },
+  {
+    label: 'Operação',
+    items: [
+      ['clientes', 'Clientes', '◎'],
+      ['tarefas', 'Tarefas', '☑'],
+      ['processos', 'Processos', '↗'],
+      ['obrigacoes', 'Obrigações', '✓'],
+    ],
+  },
+  {
+    label: 'Gestão',
+    items: [
+      ['honorarios', 'Financeiro', 'R$'],
+      ['configuracoes', 'Configurações', '⚙'],
+    ],
+  },
 ]
 
 const ProcessesReact = lazy(() => import('./components/ProcessesReact.jsx'))
@@ -68,6 +88,7 @@ export default function App() {
     today: notificationItems.filter(item => item.days === 0).length,
     upcoming: notificationItems.filter(item => item.days > 0).length,
   }), [notificationItems])
+
   if (!authReady && !localPreview) return <div className="react-loading"><span>ED</span><b>Verificando acesso…</b></div>
   if (!session && !localPreview) return <Login />
   if (!ready && !localPreview) return <div className="react-loading"><span>ED</span><b>Carregando seus dados…</b></div>
@@ -133,9 +154,19 @@ export default function App() {
 
   return <div className={`react-shell ${collapsed ? 'is-collapsed' : ''}`}>
     <aside className="react-sidebar">
-      <header className="react-brand"><span className="react-logo">{identity.initials || 'ED'}</span><div><strong>{identity.office}</strong><small>{identity.system} · V11.1</small></div><button type="button" className="collapse-button" onClick={toggleSidebar} aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}>‹</button></header>
-      <div className="react-nav-title">Navegação</div>
-      <nav aria-label="Navegação principal">{navigation.map(([id,label,icon]) => <button type="button" className={view === id ? 'active' : ''} onClick={() => navigate(id)} title={label} key={id}><i aria-hidden="true">{icon}</i><span>{label}</span></button>)}</nav>
+      <header className="react-brand">
+        <span className="react-logo">{identity.initials || 'ED'}</span>
+        <div><strong>{identity.office}</strong><small>{identity.system} · V11.1</small></div>
+        <button type="button" className="collapse-button" onClick={toggleSidebar} aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}>‹</button>
+      </header>
+
+      <div className="react-nav-stack">
+        {navigationGroups.map(group => <section className="react-nav-group" key={group.label}>
+          <div className="react-nav-title">{group.label}</div>
+          <nav aria-label={group.label}>{group.items.map(([id, label, icon]) => <button type="button" className={view === id ? 'active' : ''} onClick={() => navigate(id)} title={label} key={id}><i aria-hidden="true">{icon}</i><span>{label}</span></button>)}</nav>
+        </section>)}
+      </div>
+
       <div className="react-notification-nav">
         <button type="button" className={notificationItems.length ? 'has-alerts' : ''} onClick={() => setNotificationsOpen(current => !current)} aria-label={`Notificações: ${notificationItems.length} alerta(s)`} aria-expanded={notificationsOpen} title="Notificações">
           <svg className="notification-bell-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
@@ -143,34 +174,37 @@ export default function App() {
           {notificationItems.length ? <b>{notificationItems.length > 99 ? '99+' : notificationItems.length}</b> : null}
         </button>
       </div>
+
       <footer className="react-profile"><span>{identity.initials || 'ME'}</span><div><strong>{identity.user}</strong><small>{identity.role} · {sync}</small></div><button type="button" onClick={signOut}>Sair</button></footer>
     </aside>
+
     {notificationsOpen ? <div className="react-notifications"><section className="notification-panel" aria-label="Central de notificações">
-        <header>
-          <div><strong>Notificações</strong><small>Agenda do escritório · atualização automática</small></div>
-          <button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Fechar notificações">×</button>
-        </header>
-        <div className="notification-summary">
-          <span className={notificationSummary.overdue ? 'danger' : ''}><b>{notificationSummary.overdue}</b><small>Vencidas</small></span>
-          <span className={notificationSummary.today ? 'warning' : ''}><b>{notificationSummary.today}</b><small>Hoje</small></span>
-          <span><b>{notificationSummary.upcoming}</b><small>Próximas</small></span>
-        </div>
-        <label className="notification-setting">
-          <span>Alertar com antecedência</span>
-          <select value={notificationDays} onChange={event => setNotificationDays(event.target.value)}>
-            {notificationWindows.map(days => <option value={days} key={days}>{days === 0 ? 'Somente no dia' : `${days} dia${days === 1 ? '' : 's'} antes`}</option>)}
-          </select>
-        </label>
-        <div className="notification-list">
-          {notificationItems.length ? notificationItems.slice(0, 40).map(item => <button type="button" className={`notification-item ${item.days < 0 ? 'overdue' : item.days === 0 ? 'today' : ''}`} key={item.key} onClick={() => openNotification(item)}>
-            <span className={`notification-kind ${item.type}`}>{item.type === 'task' ? 'Tarefa' : item.type === 'process' ? 'Processo' : 'Obrigação'}</span>
-            <strong>{item.label.replace(/^(Tarefa|Processo|Obrigação) · /, '')}</strong>
-            <small>{item.client} · {deadlineCopy(item.days)}</small>
-          </button>) : <div className="notification-empty"><b>Agenda em dia</b><small>Nenhum item pendente dentro da janela configurada.</small></div>}
-        </div>
-        {notificationItems.length > 40 ? <p className="notification-more">Exibindo os 40 alertas mais próximos.</p> : null}
-        <footer><span>Itens concluídos saem dos alertas automaticamente.</span><button type="button" onClick={() => navigate('calendario')}>Abrir calendário</button></footer>
-      </section></div> : null}
+      <header>
+        <div><strong>Notificações</strong><small>Agenda do escritório · atualização automática</small></div>
+        <button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Fechar notificações">×</button>
+      </header>
+      <div className="notification-summary">
+        <span className={notificationSummary.overdue ? 'danger' : ''}><b>{notificationSummary.overdue}</b><small>Vencidas</small></span>
+        <span className={notificationSummary.today ? 'warning' : ''}><b>{notificationSummary.today}</b><small>Hoje</small></span>
+        <span><b>{notificationSummary.upcoming}</b><small>Próximas</small></span>
+      </div>
+      <label className="notification-setting">
+        <span>Alertar com antecedência</span>
+        <select value={notificationDays} onChange={event => setNotificationDays(event.target.value)}>
+          {notificationWindows.map(days => <option value={days} key={days}>{days === 0 ? 'Somente no dia' : `${days} dia${days === 1 ? '' : 's'} antes`}</option>)}
+        </select>
+      </label>
+      <div className="notification-list">
+        {notificationItems.length ? notificationItems.slice(0, 40).map(item => <button type="button" className={`notification-item ${item.days < 0 ? 'overdue' : item.days === 0 ? 'today' : ''}`} key={item.key} onClick={() => openNotification(item)}>
+          <span className={`notification-kind ${item.type}`}>{item.type === 'task' ? 'Tarefa' : item.type === 'process' ? 'Processo' : 'Obrigação'}</span>
+          <strong>{item.label.replace(/^(Tarefa|Processo|Obrigação) · /, '')}</strong>
+          <small>{item.client} · {deadlineCopy(item.days)}</small>
+        </button>) : <div className="notification-empty"><b>Agenda em dia</b><small>Nenhum item pendente dentro da janela configurada.</small></div>}
+      </div>
+      {notificationItems.length > 40 ? <p className="notification-more">Exibindo os 40 alertas mais próximos.</p> : null}
+      <footer><span>Itens concluídos saem dos alertas automaticamente.</span><button type="button" onClick={() => navigate('calendario')}>Abrir calendário</button></footer>
+    </section></div> : null}
+
     <main className="react-workspace">
       {view === 'dashboard' ? <Dashboard office={office} update={update} sync={sync} session={session} onNewTask={openTasksForClient} onNavigate={navigate} /> : null}
       {view === 'calendario' ? <CalendarReact office={office} update={update} sync={sync} onOpenEvent={openCalendarEvent} /> : null}
