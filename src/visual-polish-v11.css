@@ -1,0 +1,151 @@
+/* V11.1 visual stabilization layer — brand-safe, layout-only */
+:root{
+  --med-blue:#2456E8;
+  --med-blue-soft:#EEF3FF;
+  --med-black:#000000;
+  --med-white:#FFFFFF;
+  --med-bg:#F6F7FA;
+  --med-surface:#FFFFFF;
+  --med-line:#E5E9F0;
+  --med-muted:#667085;
+  --med-ink:#111827;
+  --med-radius:14px;
+  --med-shadow:0 8px 28px rgba(17,24,39,.06);
+}
+
+html,body,#root{min-width:0;min-height:100%;background:var(--med-bg)}
+body{color:var(--med-ink);font-family:Montserrat,Poppins,Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+.react-shell{min-width:0;overflow-x:hidden;background:var(--med-bg)}
+.react-workspace{min-width:0;background:var(--med-bg)}
+
+/* Official shell */
+.react-sidebar{
+  background:var(--med-black);
+  border-right:1px solid rgba(255,255,255,.08);
+  box-shadow:8px 0 28px rgba(0,0,0,.08);
+}
+.react-brand{border-bottom-color:rgba(255,255,255,.10)}
+.react-logo,.react-profile>span{
+  background:var(--med-blue);
+  color:#fff;
+  box-shadow:none;
+}
+.react-brand strong,.react-profile strong{color:#fff}
+.react-brand small,.react-profile small,.react-nav-title{color:#9CA3AF}
+.react-sidebar nav button{color:#D1D5DB;border:1px solid transparent}
+.react-sidebar nav button:hover{background:#111;color:#fff}
+.react-sidebar nav button.active{
+  background:rgba(36,86,232,.18);
+  border-color:rgba(36,86,232,.28);
+  color:#fff;
+}
+.react-sidebar nav button.active:before{background:var(--med-blue)}
+.collapse-button{background:#111;color:#D1D5DB;border:1px solid #222}
+.collapse-button:hover{background:#181818;color:#fff}
+.react-shell.is-collapsed .collapse-button{transform:rotate(180deg)}
+.react-profile{border-top-color:rgba(255,255,255,.10)}
+.react-profile button{border-color:#2A2A2A;background:#111;color:#D1D5DB}
+.react-profile button:hover{background:#181818;color:#fff}
+.react-notification-nav button{border-color:#222;background:#0E0E0E;color:#D1D5DB}
+.react-notification-nav button:hover,.react-notification-nav button[aria-expanded="true"]{background:#161616;color:#fff}
+.react-notification-nav button.has-alerts{border-color:rgba(36,86,232,.55)}
+
+/* Shared page rhythm */
+.react-module-page{background:var(--med-bg);color:var(--med-ink)}
+.react-module-topbar{margin-bottom:18px}
+.react-module-topbar h1{color:var(--med-black);font-weight:800;letter-spacing:-.45px}
+.react-module-topbar p,.sync-indicator{color:var(--med-muted)}
+.react-module-card,
+.dashboard-panel,
+.dashboard-kpi,
+.finance-card,
+.finance-kpis article,
+.obligations-card,
+.process-models,
+.process-list>article,
+.task-section,
+.google-tasks-card{
+  border-color:var(--med-line);
+  box-shadow:var(--med-shadow);
+}
+
+/* Buttons — one system */
+.react-shell button{transition:background .15s ease,border-color .15s ease,color .15s ease,box-shadow .15s ease,transform .15s ease}
+.react-shell button.primary,
+.react-shell .primary{
+  border-color:var(--med-blue);
+  background:var(--med-blue);
+  color:#fff;
+}
+.react-shell button.primary:hover,
+.react-shell .primary:hover{border-color:#1E49C7;background:#1E49C7;color:#fff}
+.react-shell button:focus-visible,
+.react-shell input:focus-visible,
+.react-shell select:focus-visible,
+.react-shell textarea:focus-visible{
+  outline:2px solid var(--med-blue);
+  outline-offset:2px;
+}
+
+/* Module accents — remove competing palettes */
+.task-page{--task-border:var(--med-line);--task-muted:var(--med-muted)}
+.dashboard-page{--dash-border:var(--med-line);--dash-muted:var(--med-muted);--dash-ink:var(--med-ink)}
+.calendar-page{--cal-border:var(--med-line);--cal-muted:var(--med-muted);--cal-task:var(--med-blue);--cal-process:#4F6FD8;--cal-obligation:#6B7280}
+.obligations-page{--ob-border:var(--med-line);--ob-muted:var(--med-muted)}
+.process-page{--process-border:var(--med-line);--process-muted:var(--med-muted);--process-soft:#F7F9FF;--process-purple:var(--med-blue)}
+.finance-page{--fin-line:var(--med-line);--fin-muted:var(--med-muted)}
+.process-progress i{background:var(--med-blue)}
+.process-tabs button.active,.process-view-tabs button.active{border-color:var(--med-blue);background:var(--med-blue-soft);color:var(--med-blue)}
+.process-models li em,.process-detail-steps em{background:var(--med-blue-soft);color:var(--med-blue)}
+
+/* Inputs and filters */
+.react-module-page input,
+.react-module-page select,
+.react-module-page textarea{
+  border-color:#D9E0EA;
+  color:var(--med-ink);
+}
+.react-module-page input:focus,
+.react-module-page select:focus,
+.react-module-page textarea:focus{
+  border-color:#91A8F3;
+  box-shadow:0 0 0 3px rgba(36,86,232,.10);
+}
+
+/* Notification surface */
+.notification-panel{border-color:var(--med-line);border-radius:16px;box-shadow:0 24px 70px rgba(17,24,39,.18)}
+.notification-panel>header{border-bottom-color:#EEF0F4}
+.notification-panel>header strong{color:var(--med-black)}
+.notification-panel>footer button{border-color:var(--med-blue);background:var(--med-blue);color:#fff}
+.notification-panel>footer button:hover{background:#1E49C7}
+
+/* Small layout guards against overflow/overlap */
+.react-module-actions,.row-actions,.dashboard-item-actions{min-width:0}
+.react-module-card,.dashboard-panel,.finance-card,.obligations-card{min-width:0}
+.client-table,.finance-table,.obligation-table,.calendar-scroll{max-width:100%}
+.client-modal-card,.task-modal-card,.dashboard-modal-card,.obligation-modal-card,.process-modal-card,.finance-modal-card{max-width:calc(100vw - 24px)}
+
+@media(max-width:760px){
+  .react-shell{padding-bottom:76px}
+  .react-sidebar,.react-shell.is-collapsed .react-sidebar{
+    height:76px;
+    background:var(--med-black);
+    border-top:1px solid #202020;
+    box-shadow:0 -10px 26px rgba(0,0,0,.14);
+  }
+  .react-sidebar nav button,.react-shell.is-collapsed .react-sidebar nav button,.react-notification-nav button,.react-shell.is-collapsed .react-notification-nav button{min-height:62px}
+  .react-sidebar nav button.active{background:rgba(36,86,232,.18)}
+  .react-sidebar nav button.active:before{background:var(--med-blue)}
+  .react-module-page{padding:16px 12px 32px}
+  .react-module-topbar{gap:12px}
+  .react-module-topbar h1{font-size:22px}
+  .react-module-actions{width:100%;flex-wrap:wrap}
+  .react-module-actions>button{min-height:40px}
+  .notification-panel{top:10px;right:10px;left:10px;width:auto;max-height:calc(100dvh - 96px)}
+}
+
+@media(max-width:520px){
+  .react-module-page{padding-left:10px;padding-right:10px}
+  .react-module-card,.dashboard-panel,.finance-card,.obligations-card{border-radius:12px}
+  .client-modal-card,.task-modal-card,.dashboard-modal-card,.obligation-modal-card,.process-modal-card,.finance-modal-card{max-width:100vw}
+}
