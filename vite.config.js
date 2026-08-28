@@ -1,7 +1,50 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import { copyFileSync, readFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { gunzipSync } from 'node:zlib'
+
+const root = fileURLToPath(new URL('./', import.meta.url))
+const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
+
+const payloadMap = [
+  ['ProcessesReact.jsx.gz.b64', 'src/components/ProcessesReact.jsx'],
+  ['TasksReact.jsx.gz.b64', 'src/components/TasksReact.jsx'],
+  ['calendar-react.css.gz.b64', 'src/calendar-react.css'],
+  ['clients-react.css.gz.b64', 'src/clients-react.css'],
+  ['dashboard-react.css.gz.b64', 'src/dashboard-react.css'],
+  ['finance-react.css.gz.b64', 'src/finance-react.css'],
+  ['migration-shell.css.gz.b64', 'src/migration-shell.css'],
+  ['obligations-react.css.gz.b64', 'src/obligations-react.css'],
+  ['processes-react.css.gz.b64', 'src/processes-react.css'],
+  ['styles.css.gz.b64', 'src/styles.css'],
+  ['tasks-react.css.gz.b64', 'src/tasks-react.css'],
+]
+
+function decodePayload(text) {
+  return gunzipSync(Buffer.from(text.replace(/\s+/g, ''), 'base64'))
+}
+
+function restorePayloads() {
+  for (const [payloadName, targetName] of payloadMap) {
+    const target = `${root}${targetName}`
+    if (existsSync(target)) continue
+    const payload = readFileSync(`${payloadDir}${payloadName}`, 'utf8')
+    mkdirSync(dirname(target), { recursive: true })
+    writeFileSync(target, decodePayload(payload))
+  }
+
+  const legacyTarget = `${root}legacy-v10-7.html`
+  if (!existsSync(legacyTarget)) {
+    const chunks = Array.from({ length: 10 }, (_, index) =>
+      readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${String(index).padStart(2, '0')}`, 'utf8'),
+    )
+    writeFileSync(legacyTarget, decodePayload(chunks.join('')))
+  }
+}
+
+restorePayloads()
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 
