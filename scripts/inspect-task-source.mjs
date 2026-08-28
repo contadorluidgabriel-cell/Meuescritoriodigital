@@ -2,7 +2,8 @@ import { readFileSync } from 'node:fs'
 
 export function inspectTaskSource(root) {
   const source = readFileSync(`${root}src/components/TasksReactBase.jsx`, 'utf8')
-  const needles = ['setEditing(task)', 'row-actions', '>Editar<', 'Salvar tarefa', 'task-row', 'openEdit']
+  console.log(`\n[task-source] START\n${source.slice(0, 3600)}\n[/task-source]\n`)
+  const needles = ['setEditing(task)', 'row-actions', '>Editar<', 'Salvar tarefa', 'task-row', 'openEdit', 'useGoogleTasks', 'export default function']
   for (const needle of needles) {
     let index = source.indexOf(needle)
     if (index < 0) {
