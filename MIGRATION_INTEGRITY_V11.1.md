@@ -38,6 +38,19 @@ Local reconstruction test result: **all files matched the original source byte-f
 - Vercel uses `scripts/restore-lockfile.mjs` before `pnpm install --frozen-lockfile`, restoring the exact validated lockfile before dependency installation.
 - The visible title in `index.html` was intentionally corrected from V11.0 to V11.1; this is the only intentional version-label correction relative to the source ZIP.
 
+## Independent CI validation
+
+GitHub Actions workflow `Validate V11.1` ran on commit `da9b59864ed4221c8aa2fa6ff622c2e96bedaea2` and completed with **SUCCESS**.
+
+Validated steps:
+- checkout
+- Node.js 22
+- pnpm 11.19.0
+- restore original lockfile
+- `pnpm install --frozen-lockfile`
+- `pnpm build`
+- verify `dist/legacy-v10-7.html`
+
 ## Promotion rule
 
 Do not merge this branch into `main` or promote it to production until Preview validation is complete.
