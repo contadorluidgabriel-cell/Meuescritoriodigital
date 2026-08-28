@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { today, uid } from '../lib/storage.js'
 import { nextObligationCompetence, nextObligationDue, obligationProgress, obligationStatuses } from '../lib/obligationUtils.js'
+import { formatCnpj, thirdPartyError } from '../lib/thirdPartyWork.js'
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
@@ -39,7 +40,7 @@ function ClientDetailsModal({ obligation, clientsById, focusClientId, onClose, o
     onSave(savedRows)
   }
 
-  return <Modal title={obligation.nome} subtitle="Vencimento e situação por cliente." onClose={onClose} wide><form className="obligation-client-form" onSubmit={submit}><div className="obligation-client-list">{rows.map(row => {
+  return <Modal title={obligation.nome} subtitle={obligation.terceirizado ? `Terceirizado · ${obligation.terceiroNome || 'Sem nome'} · ${formatCnpj(obligation.terceiroCnpj)}` : "Vencimento e situação por cliente."} onClose={onClose} wide><form className="obligation-client-form" onSubmit={submit}><div className="obligation-client-list">{rows.map(row => {
     const client = clientsById.get(String(row.clienteId))
     return <article className={String(row.clienteId) === String(focusClientId) ? 'focused' : ''} key={row.clienteId}>
       <header><div><b>{clientName(client)}</b>{client?.status === 'Inativo' ? <em>Inativo</em> : null}<small>{client?.documento || 'Sem documento'}</small></div><span className={`obligation-status status-${normalize(row.status).replaceAll(' ', '-')}`}>{row.status}</span></header>
@@ -64,7 +65,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
   const activeDepartments = useMemo(() => (office.departments || []).filter(department => department.active !== false).map(department => department.name), [office.departments])
   const filterCategories = useMemo(() => [...new Set([...activeDepartments, ...(office.obligations || []).map(obligation => obligation.categoria), 'Outros'].filter(Boolean))].sort((a, b) => a.localeCompare(b, 'pt-BR')), [activeDepartments, office.obligations])
   const rows = useMemo(() => (office.obligations || []).filter(obligation => {
-    const matchesQuery = !query || normalize(`${obligation.nome} ${obligation.tipo} ${obligation.competencia} ${obligation.descricao}`).includes(normalize(query))
+    const matchesQuery = !query || normalize(`${obligation.nome} ${obligation.tipo} ${obligation.competencia} ${obligation.descricao} ${obligation.terceiroNome || ''} ${obligation.terceiroCnpj || ''}`).includes(normalize(query))
     return matchesQuery && (!category || obligation.categoria === category)
   }), [category, office.obligations, query])
   const categoryChoices = useMemo(() => [...new Set([...activeDepartments, editing?.categoria, 'Outros'].filter(Boolean))], [activeDepartments, editing?.categoria])
@@ -89,7 +90,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
   }, [notice])
 
   function openNew() {
-    setEditing({ id: '', tipo: '', competencia: '', nome: '', descricao: '', categoria: activeDepartments[0] || 'Outros', observacoes: '' })
+    setEditing({ id: '', tipo: '', competencia: '', nome: '', descricao: '', categoria: activeDepartments[0] || 'Outros', observacoes: '', terceirizado: false, terceiroCnpj: '', terceiroNome: '' })
     setSelectedClients(new Set())
     setClientQuery('')
     setError('')
@@ -104,6 +105,9 @@ export default function ObligationsReact({ office, update, sync, initialObligati
       descricao: obligation.descricao || '',
       categoria: obligation.categoria || 'Outros',
       observacoes: obligation.observacoes || '',
+      terceirizado: Boolean(obligation.terceirizado),
+      terceiroCnpj: obligation.terceiroCnpj || '',
+      terceiroNome: obligation.terceiroNome || '',
     })
     setSelectedClients(new Set((obligation.clientesIds || obligation.clientes?.map(link => link.clienteId) || []).map(String)))
     setClientQuery('')
@@ -117,6 +121,8 @@ export default function ObligationsReact({ office, update, sync, initialObligati
   function saveObligation(event) {
     event.preventDefault()
     if (!editing.nome.trim() || !selectedClients.size) { setError('Informe o nome e selecione pelo menos um cliente.'); return }
+    const outsourcingError = thirdPartyError(editing)
+    if (outsourcingError) { setError(outsourcingError); return }
     const previous = editing.id ? (office.obligations || []).find(item => String(item.id) === String(editing.id)) : null
     const previousLinks = new Map((previous?.clientes || []).map(link => [String(link.clienteId), link]))
     const ids = [...selectedClients]
@@ -124,6 +130,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
       id: editing.id || uid('obr'), tipo: editing.tipo.trim(), competencia: editing.competencia.trim(), nome: editing.nome.trim(),
       descricao: editing.descricao.trim(), categoria: editing.categoria || 'Outros', clientesIds: ids,
       clientes: ids.map(clientId => structuredClone(previousLinks.get(clientId) || emptyLink(clientId))), observacoes: editing.observacoes.trim(),
+      terceirizado: Boolean(editing.terceirizado), terceiroCnpj: editing.terceirizado ? formatCnpj(editing.terceiroCnpj) : '', terceiroNome: editing.terceirizado ? editing.terceiroNome.trim() : '',
     }
     update(draft => { draft.obligations = previous ? draft.obligations.map(item => String(item.id) === String(obligation.id) ? obligation : item) : [...draft.obligations, obligation] })
     setEditing(null)
@@ -154,7 +161,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     const ids = sourceIds.map(String).filter(clientId => activeClientIds.has(clientId))
     let baseName = source.tipo || source.nome || 'Obrigação'
     if (!source.tipo && source.competencia && baseName.endsWith(String(source.competencia))) baseName = baseName.slice(0, -String(source.competencia).length).trim()
-    const copy = { id: uid('obr'), tipo: source.tipo || '', competencia: competence, nome: `${baseName} ${competence}`.trim(), descricao: source.descricao || '', categoria: source.categoria || 'Fiscal', clientesIds: ids, clientes: ids.map(emptyLink), observacoes: source.observacoes || '' }
+    const copy = { id: uid('obr'), tipo: source.tipo || '', competencia: competence, nome: `${baseName} ${competence}`.trim(), descricao: source.descricao || '', categoria: source.categoria || 'Fiscal', clientesIds: ids, clientes: ids.map(emptyLink), observacoes: source.observacoes || '', terceirizado: Boolean(source.terceirizado), terceiroCnpj: source.terceiroCnpj || '', terceiroNome: source.terceiroNome || '' }
     update(draft => { draft.obligations = [...draft.obligations, copy] })
     setDuplicate(null)
     setNotice('Nova competência criada.')
@@ -167,12 +174,13 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     <section className="obligations-card"><div className="obligation-filters"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar obrigação" /><select value={category} onChange={event => setCategory(event.target.value)}><option value="">Todas as categorias</option>{filterCategories.map(name => <option key={name}>{name}</option>)}</select></div>
       <div className="obligation-table"><div className="obligation-row obligation-head"><span>Obrigação</span><span>Categoria</span><span>Clientes</span><span>Concluídos</span><span>Progresso</span><span>Próximo vencimento</span><span /></div>{rows.map(obligation => {
         const progress = obligationProgress(obligation), nextDue = nextObligationDue(obligation, today())
-        return <article className="obligation-row" key={obligation.id}><div className="obligation-title"><b>{obligation.nome}</b><small>{[obligation.tipo, obligation.competencia, obligation.descricao].filter(Boolean).join(' · ') || 'Sem detalhes adicionais'}</small></div><span className="obligation-category">{obligation.categoria}</span><strong>{progress.total}</strong><strong>{progress.done}</strong><Progress value={progress.pct} /><time>{formatDate(nextDue)}</time><div className="obligation-row-actions"><button type="button" className="primary" onClick={() => openDetails(obligation)}>Clientes</button><button type="button" onClick={() => openDuplicate(obligation)}>Duplicar</button><button type="button" onClick={() => openEdit(obligation)}>Editar</button></div></article>
+        return <article className="obligation-row" key={obligation.id}><div className="obligation-title"><b>{obligation.nome}</b><small>{[obligation.tipo, obligation.competencia, obligation.descricao].filter(Boolean).join(' · ') || 'Sem detalhes adicionais'}{obligation.terceirizado ? ` · Terceirizado: ${obligation.terceiroNome || 'Sem nome'} · ${formatCnpj(obligation.terceiroCnpj)}` : ''}</small></div><span className="obligation-category">{obligation.categoria}</span><strong>{progress.total}</strong><strong>{progress.done}</strong><Progress value={progress.pct} /><time>{formatDate(nextDue)}</time><div className="obligation-row-actions"><button type="button" className="primary" onClick={() => openDetails(obligation)}>Clientes</button><button type="button" onClick={() => openDuplicate(obligation)}>Duplicar</button><button type="button" onClick={() => openEdit(obligation)}>Editar</button></div></article>
       })}{!rows.length ? <div className="obligation-empty">Nenhuma obrigação encontrada.</div> : null}</div>
     </section>
 
     {editing ? <Modal title={editing.id ? 'Editar obrigação' : 'Nova obrigação'} subtitle="Selecione clientes da base central; vínculos existentes mantêm seu histórico." onClose={() => setEditing(null)} wide><form className="obligation-form" onSubmit={saveObligation}>
       <Field label="Tipo da obrigação"><input value={editing.tipo} onChange={event => setField('tipo', event.target.value)} placeholder="Ex.: DEFIS, DASN-SIMEI" /></Field><Field label="Competência / Ano"><input value={editing.competencia} onChange={event => setField('competencia', event.target.value)} placeholder="Ex.: 2026 ou 2026-08" /></Field><Field label="Nome *" full><input value={editing.nome} onChange={event => setField('nome', event.target.value)} placeholder="Ex.: DEFIS 2026" /></Field><Field label="Categoria"><select value={editing.categoria} onChange={event => setField('categoria', event.target.value)}>{categoryChoices.map(name => <option key={name}>{name}</option>)}</select></Field><Field label="Descrição"><input value={editing.descricao} onChange={event => setField('descricao', event.target.value)} /></Field>
+      <Field label="Terceirização" full><div className="third-party-toggle"><label><input type="checkbox" checked={Boolean(editing.terceirizado)} onChange={event => setEditing(current => ({ ...current, terceirizado: event.target.checked, terceiroCnpj: event.target.checked ? current.terceiroCnpj : '', terceiroNome: event.target.checked ? current.terceiroNome : '' }))} /> Obrigação ligada a um CNPJ que não é cliente do escritório</label></div></Field>{editing.terceirizado ? <><Field label="CNPJ terceirizado *"><input inputMode="numeric" maxLength={18} value={formatCnpj(editing.terceiroCnpj)} onChange={event => setField('terceiroCnpj', formatCnpj(event.target.value))} placeholder="00.000.000/0000-00" /></Field><Field label="Nome / Razão Social *"><input value={editing.terceiroNome} onChange={event => setField('terceiroNome', event.target.value)} /></Field></> : null}
       <Field label={`Clientes * · ${selectedClients.size} selecionado(s)`} full hint="Clientes inativos aparecem somente quando já estavam vinculados."><div className="obligation-picker-tools"><input value={clientQuery} onChange={event => setClientQuery(event.target.value)} placeholder="Buscar cliente" /><button type="button" onClick={toggleVisibleClients}>{visiblePickerSelected ? 'Desmarcar visíveis' : 'Selecionar visíveis'}</button></div><div className="obligation-client-picker">{pickerClients.map(client => <label key={client.id}><input type="checkbox" checked={selectedClients.has(String(client.id))} onChange={() => toggleClient(String(client.id))} /><span><b>{clientName(client)}</b>{client.status === 'Inativo' ? <em>Inativo</em> : null}<small>{client.documento || 'Sem documento'}</small></span></label>)}{!pickerClients.length ? <p>Nenhum cliente disponível.</p> : null}</div></Field>
       <Field label="Observações" full><textarea value={editing.observacoes} onChange={event => setField('observacoes', event.target.value)} /></Field>{error ? <p className="obligation-error">{error}</p> : null}<footer className="obligation-form-actions"><button type="button" onClick={() => setEditing(null)}>Cancelar</button><button className="primary">Salvar obrigação</button></footer>
     </form></Modal> : null}
