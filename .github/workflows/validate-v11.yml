@@ -27,7 +27,7 @@ jobs:
       - name: Enable pnpm
         run: |
           corepack enable
-          corepack prepare pnpm@10.34.5 --activate
+          corepack prepare pnpm@11.19.0 --activate
 
       - name: Restore original lockfile
         run: node scripts/restore-lockfile.mjs
