@@ -1,4 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
+import { supabase } from '../lib/supabase.js'
+import { loadOffice } from '../lib/storage.js'
+
+const todoistFunctionUrl = 'https://pbwnzkmbcuoyyoojgnay.supabase.co/functions/v1/todoist-sync'
 
 const bridgeCss = `
 :root{
@@ -202,6 +206,59 @@ const bridgeCss = `
   align-items:center!important;
 }
 #configuracoes .integration-actions{display:flex!important;gap:8px!important;flex-wrap:wrap!important}
+#configuracoes .todoist-integration-card{margin-top:14px!important}
+#configuracoes .todoist-integration-icon{
+  display:grid!important;
+  place-items:center!important;
+  width:42px!important;
+  height:42px!important;
+  border-radius:12px!important;
+  background:#DC4C3E!important;
+  color:#FFF!important;
+  font-size:22px!important;
+  font-weight:900!important;
+}
+#configuracoes .todoist-integration-copy{min-width:0!important}
+#configuracoes .todoist-integration-copy strong{
+  display:block!important;
+  margin:0 0 4px!important;
+  color:#101828!important;
+  font-size:14px!important;
+}
+#configuracoes .todoist-integration-copy p{
+  margin:0!important;
+  color:#667085!important;
+  font-size:11px!important;
+  line-height:1.45!important;
+}
+#configuracoes .todoist-status{
+  display:inline-flex!important;
+  align-items:center!important;
+  gap:6px!important;
+  margin-top:7px!important;
+  color:#16A34A!important;
+  font-size:10px!important;
+  font-weight:800!important;
+}
+#configuracoes .todoist-status::before{
+  content:''!important;
+  width:7px!important;
+  height:7px!important;
+  border-radius:999px!important;
+  background:currentColor!important;
+}
+#configuracoes .todoist-status.is-checking{color:#667085!important}
+#configuracoes .todoist-status.is-error{color:#DC2626!important}
+#configuracoes .todoist-sync-note{
+  grid-column:1/-1!important;
+  margin:0!important;
+  padding:10px 12px!important;
+  border-radius:10px!important;
+  background:#FFF5F3!important;
+  color:#7A271A!important;
+  font-size:10px!important;
+  line-height:1.45!important;
+}
 #configuracoes .backup-action-card{min-height:165px!important}
 @media(max-width:980px){
   #configuracoes{padding:22px 20px 36px!important}
@@ -231,6 +288,114 @@ const bridgeCss = `
   #configuracoes .integration-actions .btn{flex:1 1 auto!important}
 }
 `
+
+async function invokeTodoist(body) {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+  if (sessionError) throw sessionError
+  const accessToken = sessionData?.session?.access_token
+  if (!accessToken) throw new Error('Sessão inválida. Entre novamente.')
+
+  const response = await fetch(todoistFunctionUrl, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(body),
+  })
+
+  let data = {}
+  try { data = await response.json() } catch { /* response without JSON body */ }
+  if (!response.ok) throw new Error(data?.error || data?.message || `Todoist respondeu ${response.status}.`)
+  return data || {}
+}
+
+function updateTodoistCard(card, { status = 'Verificando Todoist…', note = 'Projeto Meu Escritório Digital · sincronização segura por tarefa.', state = 'checking', busy = false } = {}) {
+  const statusNode = card?.querySelector('[data-todoist-status]')
+  const noteNode = card?.querySelector('[data-todoist-note]')
+  const syncButton = card?.querySelector('[data-todoist-sync]')
+  const verifyButton = card?.querySelector('[data-todoist-verify]')
+  if (statusNode) {
+    statusNode.textContent = status
+    statusNode.classList.toggle('is-checking', state === 'checking')
+    statusNode.classList.toggle('is-error', state === 'error')
+  }
+  if (noteNode) noteNode.textContent = note
+  if (syncButton) {
+    syncButton.disabled = busy
+    syncButton.textContent = busy ? 'Sincronizando…' : 'Sincronizar agora'
+  }
+  if (verifyButton) verifyButton.disabled = busy
+}
+
+async function verifyTodoistCard(card) {
+  updateTodoistCard(card, { busy: true })
+  try {
+    const data = await invokeTodoist({ action: 'status' })
+    if (!data?.configured) {
+      updateTodoistCard(card, { status: 'Configuração pendente', note: 'O token do Todoist ainda não está disponível no Supabase.', state: 'error' })
+      return
+    }
+    updateTodoistCard(card, { status: data.connected ? 'Todoist conectado' : 'Todoist indisponível', note: 'Projeto Meu Escritório Digital · tarefas separadas do Meu Planner Digital.', state: data.connected ? 'connected' : 'error' })
+  } catch (error) {
+    updateTodoistCard(card, { status: 'Falha na conexão', note: error.message || 'Não foi possível verificar o Todoist.', state: 'error' })
+  }
+}
+
+async function syncTodoistCard(card) {
+  updateTodoistCard(card, { status: 'Sincronizando Todoist…', note: 'Enviando as tarefas atuais do Escritório sem propagar exclusões.', state: 'checking', busy: true })
+  try {
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
+    if (sessionError) throw sessionError
+    const userId = sessionData?.session?.user?.id
+    if (!userId) throw new Error('Sessão inválida. Entre novamente.')
+    const office = loadOffice(userId)
+    const tasks = Array.isArray(office.tasks) ? office.tasks : []
+    const data = await invokeTodoist({ action: 'sync', tasks })
+    const created = Number(data.created || 0)
+    const pushed = Number(data.pushed || 0)
+    const completed = Number(data.completedFromTodoist || 0)
+    const detail = tasks.length
+      ? `${tasks.length} tarefa${tasks.length === 1 ? '' : 's'} verificada${tasks.length === 1 ? '' : 's'} · ${created} criada${created === 1 ? '' : 's'} · ${pushed} atualizada${pushed === 1 ? '' : 's'}${completed ? ` · ${completed} concluída${completed === 1 ? '' : 's'} no Todoist` : ''}.`
+      : 'Sincronização concluída. Não há tarefas cadastradas no Escritório para enviar agora.'
+    updateTodoistCard(card, { status: 'Todoist sincronizado', note: detail, state: 'connected' })
+  } catch (error) {
+    updateTodoistCard(card, { status: 'Falha na sincronização', note: error.message || 'Não foi possível sincronizar com o Todoist.', state: 'error' })
+  }
+}
+
+function injectTodoistCard(frameDocument) {
+  if (!frameDocument) return false
+  let card = frameDocument.getElementById('todoist-integration-card')
+  const integrationCards = Array.from(frameDocument.querySelectorAll('#configuracoes .integration-card'))
+  const googleCard = integrationCards.find(node => /Google Tasks/i.test(node.textContent || '')) || integrationCards[0]
+  if (!googleCard && !card) return false
+
+  if (!card) {
+    card = frameDocument.createElement('div')
+    card.id = 'todoist-integration-card'
+    card.className = 'settings-card integration-card todoist-integration-card'
+    card.innerHTML = `
+      <div class="todoist-integration-icon" aria-hidden="true">✓</div>
+      <div class="todoist-integration-copy">
+        <strong>Todoist</strong>
+        <p>Tarefas do Escritório sincronizadas com o projeto Meu Escritório Digital, organizadas por departamento.</p>
+        <span class="todoist-status is-checking" data-todoist-status>Verificando Todoist…</span>
+      </div>
+      <div class="integration-actions">
+        <button type="button" class="btn btn-primary" data-todoist-sync>Sincronizar agora</button>
+        <button type="button" class="btn btn-light" data-todoist-verify>Verificar conexão</button>
+      </div>
+      <p class="todoist-sync-note" data-todoist-note>Projeto separado do Meu Planner Digital. Exclusões não são propagadas automaticamente.</p>
+    `
+    googleCard.insertAdjacentElement('afterend', card)
+    card.querySelector('[data-todoist-sync]')?.addEventListener('click', () => syncTodoistCard(card))
+    card.querySelector('[data-todoist-verify]')?.addEventListener('click', () => verifyTodoistCard(card))
+  }
+
+  verifyTodoistCard(card)
+  return true
+}
 
 function configureFrame(frame, view, record) {
   const frameWindow = frame?.contentWindow
@@ -272,6 +437,14 @@ function configureFrame(frame, view, record) {
   if (view === 'configuracoes') {
     const version = frameDocument.querySelector('#configuracoes .settings-version')
     if (version) version.textContent = 'V11.1 · Nuvem'
+    const ensureTodoistCard = () => injectTodoistCard(frameDocument)
+    ensureTodoistCard()
+    ;[120, 360, 800].forEach(delay => setTimeout(ensureTodoistCard, delay))
+    frameDocument.querySelectorAll('#configuracoes .settings-tab').forEach(tab => {
+      if (tab.dataset.todoistBridgeBound === '1') return
+      tab.dataset.todoistBridgeBound = '1'
+      tab.addEventListener('click', () => setTimeout(ensureTodoistCard, 30))
+    })
   }
 
   if (record?.id && record.type === 'process' && typeof frameWindow.openProcessDetail === 'function') frameWindow.openProcessDetail(record.id)
