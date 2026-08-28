@@ -2,3 +2,5 @@ Trigger seguro de deploy GitHub → Vercel para validar a integração do projet
 Nenhum código funcional foi alterado.
 
 Retry controlado em 2026-08-28 para publicar o ícone oficial LG e a estrutura mobile atual após liberação do build-rate-limit.
+
+Deploy controlado em 2026-08-28 para publicar a exclusão segura de tarefas após merge do PR #7.
