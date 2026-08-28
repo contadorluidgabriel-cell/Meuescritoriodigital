@@ -14,6 +14,7 @@ import { collectCalendarEvents } from './lib/calendarEvents.js'
 
 const ProcessesReact = lazy(() => import('./components/ProcessesReact.jsx'))
 const FinanceReact = lazy(() => import('./components/FinanceReact.jsx'))
+
 const notificationWindows = [0, 1, 3, 5, 7, 15, 30]
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
@@ -51,11 +52,11 @@ export default function App() {
   const [taskEditTarget, setTaskEditTarget] = useState({ id: '', request: 0 })
   const [obligationTarget, setObligationTarget] = useState({ id: '', clientId: '', request: 0 })
   const [processTarget, setProcessTarget] = useState({ id: '', clientId: '', openRequest: 0, newRequest: 0 })
+  const [financeTarget, setFinanceTarget] = useState({ clientId: '', request: 0, newRequest: 0 })
   const [legacyTarget, setLegacyTarget] = useState({ type: '', id: '', request: 0 })
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('med_react_sidebar_collapsed') === '1')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
   const [globalQuery, setGlobalQuery] = useState('')
-
   const configuredNotificationDays = Number(office.ui?.notifications?.daysBefore ?? 3)
   const notificationDays = notificationWindows.includes(configuredNotificationDays) ? configuredNotificationDays : 3
   const notificationItems = useMemo(() => collectCalendarEvents(office)
@@ -111,7 +112,6 @@ export default function App() {
 
     return results.slice(0, 30)
   }, [globalQuery, office.clients, office.obligations, office.processes, office.tasks])
-
   if (!authReady && !localPreview) return <div className="react-loading"><span>ED</span><b>Verificando acesso…</b></div>
   if (!session && !localPreview) return <Login />
   if (!ready && !localPreview) return <div className="react-loading"><span>ED</span><b>Carregando seus dados…</b></div>
@@ -127,6 +127,7 @@ export default function App() {
     setTaskEditTarget({ id: '', request: 0 })
     setObligationTarget({ id: '', clientId: '', request: 0 })
     setProcessTarget({ id: '', clientId: '', openRequest: 0, newRequest: 0 })
+    setFinanceTarget({ clientId: '', request: 0, newRequest: 0 })
     setLegacyTarget({ type: '', id: '', request: 0 })
     setNotificationsOpen(false)
     setGlobalQuery('')
@@ -145,6 +146,15 @@ export default function App() {
       ? { id: processId, clientId: '', openRequest: current.openRequest + 1, newRequest: 0 }
       : { id: '', clientId: clientId || '', openRequest: 0, newRequest: current.newRequest + 1 })
     setView('processos')
+  }
+
+  function openFinanceForClient(clientId, create = false) {
+    setFinanceTarget(current => ({
+      clientId: clientId || '',
+      request: current.request + 1,
+      newRequest: create ? current.newRequest + 1 : 0,
+    }))
+    setView('honorarios')
   }
 
   function setNotificationDays(value) {
@@ -208,40 +218,39 @@ export default function App() {
     <AppTopbar currentView={view} query={globalQuery} onQueryChange={setGlobalQuery} searchResults={searchResults} onChooseResult={chooseSearchResult} notificationsCount={notificationItems.length} notificationsOpen={notificationsOpen} onToggleNotifications={() => setNotificationsOpen(current => !current)} identity={identity} />
 
     {notificationsOpen ? <div className="react-notifications"><section className="notification-panel" aria-label="Central de notificações">
-      <header>
-        <div><strong>Notificações</strong><small>Agenda do escritório · atualização automática</small></div>
-        <button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Fechar notificações">×</button>
-      </header>
-      <div className="notification-summary">
-        <span className={notificationSummary.overdue ? 'danger' : ''}><b>{notificationSummary.overdue}</b><small>Vencidas</small></span>
-        <span className={notificationSummary.today ? 'warning' : ''}><b>{notificationSummary.today}</b><small>Hoje</small></span>
-        <span><b>{notificationSummary.upcoming}</b><small>Próximas</small></span>
-      </div>
-      <label className="notification-setting">
-        <span>Alertar com antecedência</span>
-        <select value={notificationDays} onChange={event => setNotificationDays(event.target.value)}>
-          {notificationWindows.map(days => <option value={days} key={days}>{days === 0 ? 'Somente no dia' : `${days} dia${days === 1 ? '' : 's'} antes`}</option>)}
-        </select>
-      </label>
-      <div className="notification-list">
-        {notificationItems.length ? notificationItems.slice(0, 40).map(item => <button type="button" className={`notification-item ${item.days < 0 ? 'overdue' : item.days === 0 ? 'today' : ''}`} key={item.key} onClick={() => openNotification(item)}>
-          <span className={`notification-kind ${item.type}`}>{item.type === 'task' ? 'Tarefa' : item.type === 'process' ? 'Processo' : 'Obrigação'}</span>
-          <strong>{item.label.replace(/^(Tarefa|Processo|Obrigação) · /, '')}</strong>
-          <small>{item.client} · {deadlineCopy(item.days)}</small>
-        </button>) : <div className="notification-empty"><b>Agenda em dia</b><small>Nenhum item pendente dentro da janela configurada.</small></div>}
-      </div>
-      {notificationItems.length > 40 ? <p className="notification-more">Exibindo os 40 alertas mais próximos.</p> : null}
-      <footer><span>Itens concluídos saem dos alertas automaticamente.</span><button type="button" onClick={() => navigate('calendario')}>Abrir calendário</button></footer>
-    </section></div> : null}
-
+        <header>
+          <div><strong>Notificações</strong><small>Agenda do escritório · atualização automática</small></div>
+          <button type="button" onClick={() => setNotificationsOpen(false)} aria-label="Fechar notificações">×</button>
+        </header>
+        <div className="notification-summary">
+          <span className={notificationSummary.overdue ? 'danger' : ''}><b>{notificationSummary.overdue}</b><small>Vencidas</small></span>
+          <span className={notificationSummary.today ? 'warning' : ''}><b>{notificationSummary.today}</b><small>Hoje</small></span>
+          <span><b>{notificationSummary.upcoming}</b><small>Próximas</small></span>
+        </div>
+        <label className="notification-setting">
+          <span>Alertar com antecedência</span>
+          <select value={notificationDays} onChange={event => setNotificationDays(event.target.value)}>
+            {notificationWindows.map(days => <option value={days} key={days}>{days === 0 ? 'Somente no dia' : `${days} dia${days === 1 ? '' : 's'} antes`}</option>)}
+          </select>
+        </label>
+        <div className="notification-list">
+          {notificationItems.length ? notificationItems.slice(0, 40).map(item => <button type="button" className={`notification-item ${item.days < 0 ? 'overdue' : item.days === 0 ? 'today' : ''}`} key={item.key} onClick={() => openNotification(item)}>
+            <span className={`notification-kind ${item.type}`}>{item.type === 'task' ? 'Tarefa' : item.type === 'process' ? 'Processo' : 'Obrigação'}</span>
+            <strong>{item.label.replace(/^(Tarefa|Processo|Obrigação) · /, '')}</strong>
+            <small>{item.client} · {deadlineCopy(item.days)}</small>
+          </button>) : <div className="notification-empty"><b>Agenda em dia</b><small>Nenhum item pendente dentro da janela configurada.</small></div>}
+        </div>
+        {notificationItems.length > 40 ? <p className="notification-more">Exibindo os 40 alertas mais próximos.</p> : null}
+        <footer><span>Itens concluídos saem dos alertas automaticamente.</span><button type="button" onClick={() => navigate('calendario')}>Abrir calendário</button></footer>
+      </section></div> : null}
     <main className="react-workspace">
       {view === 'dashboard' ? <Dashboard office={office} update={update} sync={sync} session={session} onNewTask={openTasksForClient} onNavigate={navigate} /> : null}
       {view === 'calendario' ? <CalendarReact office={office} update={update} sync={sync} onOpenEvent={openCalendarEvent} /> : null}
-      {view === 'clientes' ? <ClientsReact office={office} update={update} sync={sync} onOpenTasks={openTasksForClient} onOpenProcesses={openProcessesForClient} initialClientId={clientTarget.id} openClientRequest={clientTarget.request} /> : null}
+      {view === 'clientes' ? <ClientsReact office={office} update={update} sync={sync} onOpenTasks={openTasksForClient} onOpenProcesses={openProcessesForClient} onOpenFinance={openFinanceForClient} initialClientId={clientTarget.id} openClientRequest={clientTarget.request} /> : null}
       {view === 'obrigacoes' ? <ObligationsReact office={office} update={update} sync={sync} initialObligationId={obligationTarget.id} initialClientId={obligationTarget.clientId} openObligationRequest={obligationTarget.request} /> : null}
       {view === 'processos' ? <Suspense fallback={<div className="module-loading"><span>ED</span><b>Carregando Processos…</b></div>}><ProcessesReact office={office} update={update} sync={sync} initialProcessId={processTarget.id} openProcessRequest={processTarget.openRequest} initialClientId={processTarget.clientId} openNewRequest={processTarget.newRequest} /></Suspense> : null}
       {view === 'tarefas' ? <TasksReact office={office} update={update} sync={sync} session={session} initialClientId={taskClientId} openNewRequest={taskOpenRequest} initialTaskId={taskEditTarget.id} openTaskRequest={taskEditTarget.request} /> : null}
-      {view === 'honorarios' ? <Suspense fallback={<div className="module-loading"><span>ED</span><b>Carregando Financeiro…</b></div>}><FinanceReact office={office} update={update} sync={sync} /></Suspense> : null}
+      {view === 'honorarios' ? <Suspense fallback={<div className="module-loading"><span>ED</span><b>Carregando Financeiro…</b></div>}><FinanceReact office={office} update={update} sync={sync} initialClientId={financeTarget.clientId} openClientRequest={financeTarget.request} openNewRequest={financeTarget.newRequest} /></Suspense> : null}
       {view !== 'dashboard' && view !== 'calendario' && view !== 'clientes' && view !== 'obrigacoes' && view !== 'processos' && view !== 'tarefas' && view !== 'honorarios' ? <LegacyModule view={view} record={legacyTarget} /> : null}
     </main>
   </div>

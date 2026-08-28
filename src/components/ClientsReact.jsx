@@ -29,13 +29,15 @@ const formatDocument = (value, type = '') => {
   if (digits.length > 12) formatted += `-${digits.slice(12, 14)}`
   return formatted
 }
+const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+const formatDate = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : '—'
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 const addDays = (date, amount) => { const next = new Date(`${date || today()}T00:00:00`); next.setDate(next.getDate() + Number(amount || 0)); return today(next) }
 
 function Field({ label, full = false, children }) { return <label className={`client-field ${full ? 'full' : ''}`}><span>{label}</span>{children}</label> }
 function Modal({ title, subtitle, onClose, children, wide = false }) { return <div className="client-modal" role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><div className={`client-modal-card ${wide ? 'wide' : ''}`}><header><div><h2>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</div></div> }
 
-export default function ClientsReact({ office, update, sync, onOpenTasks, onOpenProcesses, initialClientId = '', openClientRequest = 0 }) {
+export default function ClientsReact({ office, update, sync, onOpenTasks, onOpenProcesses, onOpenFinance, initialClientId = '', openClientRequest = 0 }) {
   const [query, setQuery] = useState(''), [status, setStatus] = useState(''), [relationship, setRelationship] = useState('')
   const [editing, setEditing] = useState(null), [details, setDetails] = useState(null), [error, setError] = useState('')
   const [selectedTemplates, setSelectedTemplates] = useState(new Set())
@@ -108,16 +110,36 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
       <Field label="Observações" full><textarea value={editing.observacoes} onChange={event => setField('observacoes', event.target.value)} /></Field>{error ? <p className="client-error">{error}</p> : null}<footer className="client-form-actions"><button type="button" onClick={() => setEditing(null)}>Cancelar</button><button className="primary">Salvar cliente</button></footer>
     </form></Modal> : null}
 
-    {details ? <ClientDetails client={details} office={office} onClose={() => setDetails(null)} onEdit={() => { setDetails(null); openEdit(details) }} onOpenTasks={() => onOpenTasks(details.id)} onNewProcess={() => onOpenProcesses(details.id)} onOpenProcess={processId => onOpenProcesses('', processId)} /> : null}
+    {details ? <ClientDetails client={details} office={office} onClose={() => setDetails(null)} onEdit={() => { setDetails(null); openEdit(details) }} onOpenTasks={() => onOpenTasks(details.id)} onNewProcess={() => onOpenProcesses(details.id)} onOpenProcess={processId => onOpenProcesses('', processId)} onOpenFinance={create => onOpenFinance?.(details.id, create)} /> : null}
   </div>
 }
 
-function ClientDetails({ client, office, onClose, onEdit, onOpenTasks, onNewProcess, onOpenProcess }) {
+function ClientDetails({ client, office, onClose, onEdit, onOpenTasks, onNewProcess, onOpenProcess, onOpenFinance }) {
   const [tab, setTab] = useState('overview')
   const clientId = String(client.id)
   const tasks = office.tasks.filter(item => String(item.clientId) === clientId)
   const processes = office.processes.filter(item => String(item.clientId) === clientId || (item.relacionados || []).some(id => String(id) === clientId))
   const obligations = office.obligations.filter(item => (item.clientes || []).some(link => String(link.clienteId) === clientId))
-  return <Modal title={clientName(client)} subtitle={`${formatDocument(client.documento, client.tipo) || ''} · ${client.tributacao || ''}`} onClose={onClose} wide><div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${Number(client.mensalidade || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article></div><div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button><button onClick={onEdit}>Editar cliente</button></div><div className="details-tabs">{[['overview','Visão geral'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>{tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}{tab === 'tasks' ? <DetailList rows={tasks} title="titulo" /> : null}{tab === 'processes' ? <DetailList rows={processes} title="tipo" onOpen={item => onOpenProcess(item.id)} /> : null}{tab === 'obligations' ? <DetailList rows={obligations} title="nome" /> : null}</Modal>
+  const charges = (office.finance || []).filter(item => String(item.clienteId) === clientId).sort((a, b) => String(b.vencimento || b.competencia || '').localeCompare(String(a.vencimento || a.competencia || '')))
+  const financeTotals = charges.reduce((result, charge) => {
+    const value = Number(charge.valor) || 0
+    if (charge.status === 'Recebido') result.received += value
+    if (charge.status === 'Pendente') result.pending += value
+    if (charge.status === 'Atrasado') result.overdue += value
+    return result
+  }, { received: 0, pending: 0, overdue: 0 })
+  const canCharge = client.status !== 'Inativo'
+  return <Modal title={clientName(client)} subtitle={`${formatDocument(client.documento, client.tipo) || ''} · ${client.tributacao || ''}`} onClose={onClose} wide>
+    <div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${money(client.mensalidade)}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article></div>
+    <div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button>{canCharge ? <button onClick={() => onOpenFinance?.(true)}>+ Cobrança</button> : null}<button onClick={onEdit}>Editar cliente</button></div>
+    <div className="details-tabs">{[['overview','Visão geral'],['finance','Financeiro'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>
+    {tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}
+    {tab === 'finance' ? <div>
+      <div className="overview-grid"><article><small>Mensalidade</small><strong>{money(client.mensalidade)}</strong></article><article><small>Recebido</small><strong>{money(financeTotals.received)}</strong></article><article><small>A receber</small><strong>{money(financeTotals.pending + financeTotals.overdue)}</strong></article></div>
+      <div className="details-actions"><button type="button" onClick={() => onOpenFinance?.(false)}>Abrir no Financeiro</button>{canCharge ? <button type="button" onClick={() => onOpenFinance?.(true)}>+ Nova cobrança</button> : null}</div>
+      <div className="detail-list">{charges.slice(0, 12).map(charge => <article key={charge.id}><div><b>{charge.descricao || 'Cobrança'}</b><small>{charge.competencia || 'Sem competência'} · {charge.status || 'Pendente'} · {formatDate(charge.vencimento)}</small></div><strong>{money(charge.valor)}</strong></article>)}{!charges.length ? <div className="empty">Nenhuma cobrança vinculada a este cliente.</div> : null}</div>
+    </div> : null}
+    {tab === 'tasks' ? <DetailList rows={tasks} title="titulo" /> : null}{tab === 'processes' ? <DetailList rows={processes} title="tipo" onOpen={item => onOpenProcess(item.id)} /> : null}{tab === 'obligations' ? <DetailList rows={obligations} title="nome" /> : null}
+  </Modal>
 }
 function DetailList({ rows, title, onOpen }) { return <div className="detail-list">{rows.map(item => <article key={item.id}><div><b>{item[title]}</b><small>{item.status || item.categoria || 'Registro vinculado'}</small></div>{onOpen ? <button type="button" onClick={() => onOpen(item)}>Abrir</button> : null}</article>)}{!rows.length ? <div className="empty">Nenhum registro.</div> : null}</div> }
