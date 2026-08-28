@@ -10,6 +10,25 @@ const taxOptions = ['MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 
 const activityOptions = ['Comércio', 'Serviço', 'Comércio + Serviço', 'Indústria', 'Todas']
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 const documentDigits = value => String(value || '').replace(/\D/g, '')
+const documentType = (value, type = '') => type === 'PF' || type === 'PJ' ? type : (documentDigits(value).length > 11 ? 'PJ' : 'PF')
+const formatDocument = (value, type = '') => {
+  const kind = documentType(value, type)
+  const digits = documentDigits(value).slice(0, kind === 'PF' ? 11 : 14)
+  if (!digits) return ''
+  if (kind === 'PF') {
+    let formatted = digits.slice(0, 3)
+    if (digits.length > 3) formatted += `.${digits.slice(3, 6)}`
+    if (digits.length > 6) formatted += `.${digits.slice(6, 9)}`
+    if (digits.length > 9) formatted += `-${digits.slice(9, 11)}`
+    return formatted
+  }
+  let formatted = digits.slice(0, 2)
+  if (digits.length > 2) formatted += `.${digits.slice(2, 5)}`
+  if (digits.length > 5) formatted += `.${digits.slice(5, 8)}`
+  if (digits.length > 8) formatted += `/${digits.slice(8, 12)}`
+  if (digits.length > 12) formatted += `-${digits.slice(12, 14)}`
+  return formatted
+}
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 const addDays = (date, amount) => { const next = new Date(`${date || today()}T00:00:00`); next.setDate(next.getDate() + Number(amount || 0)); return today(next) }
 
@@ -22,7 +41,7 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
   const [selectedTemplates, setSelectedTemplates] = useState(new Set())
   const handledClientOpen = useRef(0)
   const rows = useMemo(() => office.clients.filter(client => {
-    const matchesQuery = !query || normalize(`${clientName(client)} ${client.fantasia || ''} ${client.documento || ''} ${client.id}`).includes(normalize(query))
+    const matchesQuery = !query || normalize(`${clientName(client)} ${client.fantasia || ''} ${client.documento || ''} ${documentDigits(client.documento)} ${client.id}`).includes(normalize(query))
     return matchesQuery && (!status || client.status === status) && (!relationship || client.relacionamento === relationship)
   }), [office.clients, query, relationship, status])
 
@@ -41,18 +60,22 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
   }, [initialClientId, office.clients, openClientRequest])
 
   function openNew() { setEditing({ ...emptyClient, departamentos: [], dataEntrada: today() }); setSelectedTemplates(new Set()); setError('') }
-  function openEdit(client) { setEditing({ ...emptyClient, ...structuredClone(client), departamentos: [...(client.departamentos || [])], comunicacoes: [...(client.comunicacoes || [])] }); setSelectedTemplates(new Set()); setError('') }
+  function openEdit(client) { setEditing({ ...emptyClient, ...structuredClone(client), documento: formatDocument(client.documento, client.tipo), departamentos: [...(client.departamentos || [])], comunicacoes: [...(client.comunicacoes || [])] }); setSelectedTemplates(new Set()); setError('') }
   function setField(name, value) { setEditing(current => ({ ...current, [name]: value })) }
+  function setClientType(type) { setEditing(current => ({ ...current, tipo: type, documento: formatDocument(current.documento, type) })) }
   function toggleDepartment(name) { setEditing(current => ({ ...current, departamentos: current.departamentos.includes(name) ? current.departamentos.filter(item => item !== name) : [...current.departamentos, name] })) }
   function toggleTemplate(id) { setSelectedTemplates(current => { const next = new Set(current); next.has(id) ? next.delete(id) : next.add(id); return next }) }
 
   function saveClient(event) {
     event.preventDefault()
     const normalizedDocument = documentDigits(editing.documento)
+    const expectedLength = editing.tipo === 'PF' ? 11 : 14
+    const documentLabel = editing.tipo === 'PF' ? 'CPF' : 'CNPJ'
     if (!editing.razao.trim() || !normalizedDocument) { setError('Informe nome e CPF/CNPJ.'); return }
+    if (normalizedDocument.length !== expectedLength) { setError(`Informe um ${documentLabel} com ${expectedLength} dígitos.`); return }
     if (office.clients.some(client => client.id !== editing.id && documentDigits(client.documento) === normalizedDocument)) { setError('Este CPF/CNPJ já está cadastrado.'); return }
     const isNew = !editing.id
-    const client = { ...editing, id: editing.id || uid('cli'), documento: editing.documento.trim(), razao: editing.razao.trim(), fantasia: editing.fantasia.trim(), atividade: editing.atividade.trim(), telefone: editing.telefone.trim(), whatsapp: editing.whatsapp.trim(), email: editing.email.trim(), endereco: editing.endereco.trim(), mensalidade: Number(editing.mensalidade) || 0, vencimento: Number(editing.vencimento) || null, drive: editing.drive.trim(), observacoes: editing.observacoes.trim(), motivoSaida: editing.motivoSaida.trim(), comunicacoes: editing.comunicacoes || [] }
+    const client = { ...editing, id: editing.id || uid('cli'), documento: formatDocument(normalizedDocument, editing.tipo), razao: editing.razao.trim(), fantasia: editing.fantasia.trim(), atividade: editing.atividade.trim(), telefone: editing.telefone.trim(), whatsapp: editing.whatsapp.trim(), email: editing.email.trim(), endereco: editing.endereco.trim(), mensalidade: Number(editing.mensalidade) || 0, vencimento: Number(editing.vencimento) || null, drive: editing.drive.trim(), observacoes: editing.observacoes.trim(), motivoSaida: editing.motivoSaida.trim(), comunicacoes: editing.comunicacoes || [] }
     update(draft => {
       draft.clients = isNew ? [...draft.clients, client] : draft.clients.map(item => item.id === client.id ? client : item)
       if (isNew && selectedTemplates.size) {
@@ -66,12 +89,12 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
   return <div className="react-module-page">
     <div className="react-module-topbar"><div><h1>Clientes</h1><p>Base central e única do sistema.</p></div><div className="react-module-actions"><span className="sync-indicator">{sync}</span><button className="primary" onClick={openNew}>+ Novo cliente</button></div></div>
     <section className="react-module-card"><div className="client-filters"><input placeholder="Buscar nome, CPF/CNPJ ou ID" value={query} onChange={event => setQuery(event.target.value)} /><select value={status} onChange={event => setStatus(event.target.value)}><option value="">Ativos e inativos</option><option>Ativo</option><option>Inativo</option></select><select value={relationship} onChange={event => setRelationship(event.target.value)}><option value="">Recorrentes e avulsos</option><option>Recorrente</option><option>Avulso</option></select></div>
-      <div className="client-table"><div className="client-row client-head"><span>Cliente</span><span>CPF/CNPJ</span><span>Tributação</span><span>Departamentos</span><span>Relacionamento</span><span>Status</span><span /></div>{rows.map(client => <div className="client-row" key={client.id}><div><b>{clientName(client)}</b><small>{client.fantasia || client.tipo || ''}</small></div><span>{client.documento || '—'}</span><span>{client.tributacao || '—'}</span><span>{(client.departamentos || []).join(', ') || '—'}</span><span>{client.relacionamento}</span><span className={`client-status ${client.status === 'Inativo' ? 'inactive' : ''}`}>{client.status}</span><div className="row-actions"><button onClick={() => setDetails(client)}>Abrir</button><button onClick={() => openEdit(client)}>Editar</button></div></div>)}</div>
+      <div className="client-table"><div className="client-row client-head"><span>Cliente</span><span>CPF/CNPJ</span><span>Tributação</span><span>Departamentos</span><span>Relacionamento</span><span>Status</span><span /></div>{rows.map(client => <div className="client-row" key={client.id}><div><b>{clientName(client)}</b><small>{client.fantasia || client.tipo || ''}</small></div><span>{formatDocument(client.documento, client.tipo) || '—'}</span><span>{client.tributacao || '—'}</span><span>{(client.departamentos || []).join(', ') || '—'}</span><span>{client.relacionamento}</span><span className={`client-status ${client.status === 'Inativo' ? 'inactive' : ''}`}>{client.status}</span><div className="row-actions"><button onClick={() => setDetails(client)}>Abrir</button><button onClick={() => openEdit(client)}>Editar</button></div></div>)}</div>
       {!rows.length ? <div className="empty">Nenhum cliente encontrado.</div> : null}
     </section>
 
     {editing ? <Modal title={editing.id ? 'Editar cliente' : 'Novo cliente'} subtitle="Cadastro central do sistema." onClose={() => setEditing(null)} wide><form className="client-form" onSubmit={saveClient}>
-      <Field label="Tipo"><select value={editing.tipo} onChange={event => setField('tipo', event.target.value)}><option>PJ</option><option>PF</option></select></Field><Field label="CPF/CNPJ *"><input value={editing.documento} onChange={event => setField('documento', event.target.value)} /></Field>
+      <Field label="Tipo"><select value={editing.tipo} onChange={event => setClientType(event.target.value)}><option>PJ</option><option>PF</option></select></Field><Field label="CPF/CNPJ *"><input inputMode="numeric" maxLength={editing.tipo === 'PF' ? 14 : 18} value={formatDocument(editing.documento, editing.tipo)} onChange={event => setField('documento', formatDocument(event.target.value, editing.tipo))} placeholder={editing.tipo === 'PF' ? '000.000.000-00' : '00.000.000/0000-00'} /></Field>
       <Field label="Nome / Razão Social *"><input value={editing.razao} onChange={event => setField('razao', event.target.value)} /></Field><Field label="Nome Fantasia"><input value={editing.fantasia} onChange={event => setField('fantasia', event.target.value)} /></Field>
       <Field label="Tributação"><select value={editing.tributacao} onChange={event => setField('tributacao', event.target.value)}>{taxOptions.map(item => <option key={item}>{item}</option>)}</select></Field><Field label="Atividade"><select value={editing.atividade} onChange={event => setField('atividade', event.target.value)}>{activityOptions.map(item => <option key={item}>{item}</option>)}</select></Field>
       <Field label="Departamentos" full><div className="choice-list">{departmentChoices.map(name => <label key={name}><input type="checkbox" checked={editing.departamentos.includes(name)} onChange={() => toggleDepartment(name)} /> {name}{activeDepartments.has(name) ? '' : ' (inativo)'}</label>)}</div></Field>
@@ -95,6 +118,6 @@ function ClientDetails({ client, office, onClose, onEdit, onOpenTasks, onNewProc
   const tasks = office.tasks.filter(item => String(item.clientId) === clientId)
   const processes = office.processes.filter(item => String(item.clientId) === clientId || (item.relacionados || []).some(id => String(id) === clientId))
   const obligations = office.obligations.filter(item => (item.clientes || []).some(link => String(link.clienteId) === clientId))
-  return <Modal title={clientName(client)} subtitle={`${client.documento || ''} · ${client.tributacao || ''}`} onClose={onClose} wide><div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${Number(client.mensalidade || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article></div><div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button><button onClick={onEdit}>Editar cliente</button></div><div className="details-tabs">{[['overview','Visão geral'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>{tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}{tab === 'tasks' ? <DetailList rows={tasks} title="titulo" /> : null}{tab === 'processes' ? <DetailList rows={processes} title="tipo" onOpen={item => onOpenProcess(item.id)} /> : null}{tab === 'obligations' ? <DetailList rows={obligations} title="nome" /> : null}</Modal>
+  return <Modal title={clientName(client)} subtitle={`${formatDocument(client.documento, client.tipo) || ''} · ${client.tributacao || ''}`} onClose={onClose} wide><div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${Number(client.mensalidade || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article></div><div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button><button onClick={onEdit}>Editar cliente</button></div><div className="details-tabs">{[['overview','Visão geral'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>{tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}{tab === 'tasks' ? <DetailList rows={tasks} title="titulo" /> : null}{tab === 'processes' ? <DetailList rows={processes} title="tipo" onOpen={item => onOpenProcess(item.id)} /> : null}{tab === 'obligations' ? <DetailList rows={obligations} title="nome" /> : null}</Modal>
 }
 function DetailList({ rows, title, onOpen }) { return <div className="detail-list">{rows.map(item => <article key={item.id}><div><b>{item[title]}</b><small>{item.status || item.categoria || 'Registro vinculado'}</small></div>{onOpen ? <button type="button" onClick={() => onOpen(item)}>Abrir</button> : null}</article>)}{!rows.length ? <div className="empty">Nenhum registro.</div> : null}</div> }
