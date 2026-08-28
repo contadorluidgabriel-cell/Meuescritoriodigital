@@ -1,301 +1,234 @@
-/* V11.1 design refinement — visual only, no business logic */
+/* V11.1 — premium office UI refinement. Visual only. */
 :root{
-  --react-sidebar-width:252px;
-  --react-sidebar-collapsed:76px;
   --ui-blue:#2456E8;
-  --ui-blue-hover:#1D49C8;
-  --ui-blue-soft:#EEF3FF;
-  --ui-bg:#F4F6FA;
+  --ui-blue-700:#1F49C7;
+  --ui-blue-50:#F2F6FF;
+  --ui-bg:#F5F7FA;
   --ui-surface:#FFFFFF;
-  --ui-line:#E3E8F0;
-  --ui-line-soft:#EDF1F5;
-  --ui-text:#101828;
+  --ui-surface-soft:#FAFBFC;
+  --ui-line:#E5E9F0;
+  --ui-line-strong:#D7DEE8;
+  --ui-ink:#101828;
+  --ui-text:#344054;
   --ui-muted:#667085;
-  --ui-subtle:#98A2B3;
-  --ui-shadow:0 1px 2px rgba(16,24,40,.03),0 12px 32px rgba(16,24,40,.055);
-  --ui-shadow-hover:0 2px 4px rgba(16,24,40,.04),0 16px 36px rgba(16,24,40,.075);
+  --ui-faint:#98A2B3;
+  --ui-radius:16px;
+  --ui-shadow:0 1px 2px rgba(16,24,40,.025),0 10px 28px rgba(16,24,40,.045);
+  --ui-shadow-lift:0 2px 4px rgba(16,24,40,.035),0 18px 42px rgba(16,24,40,.065);
 }
 
 html,body,#root,.react-shell,.react-workspace{background:var(--ui-bg)!important}
-body{color:var(--ui-text)}
+body{color:var(--ui-ink);font-family:Montserrat,Poppins,Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important}
 
-/* Sidebar: slimmer, calmer, clearer hierarchy */
+/* ───────── Sidebar ───────── */
 .react-sidebar{
   padding:16px 12px 14px!important;
-  background:linear-gradient(180deg,#05070A 0%,#090B10 100%)!important;
+  background:linear-gradient(180deg,#050608 0%,#090B10 100%)!important;
   border-right:1px solid #17191F!important;
-  box-shadow:8px 0 28px rgba(0,0,0,.06)!important;
+  box-shadow:8px 0 30px rgba(0,0,0,.055)!important;
 }
 .react-brand{
-  min-height:58px!important;
-  padding:4px 8px 15px!important;
+  min-height:62px!important;
+  padding:5px 8px 17px!important;
   gap:11px!important;
+  border-bottom:1px solid rgba(255,255,255,.075)!important;
 }
 .react-logo{
-  width:40px!important;
-  height:40px!important;
+  width:42px!important;height:42px!important;flex:0 0 42px!important;
   border-radius:12px!important;
-  background:var(--ui-blue)!important;
-  font-size:13px!important;
+  background:linear-gradient(145deg,#2456E8,#315FE8)!important;
+  color:#fff!important;font-size:13px!important;font-weight:850!important;
   box-shadow:0 8px 20px rgba(36,86,232,.20)!important;
 }
-.react-brand strong{font-size:14px!important;letter-spacing:-.2px}
-.react-brand small{font-size:9.5px!important;color:#8D96A5!important}
-.react-nav-title{padding:15px 10px 7px!important;color:#6F7785!important;font-size:8.5px!important;letter-spacing:1.45px!important}
-.react-sidebar nav{gap:3px!important}
+.react-brand strong{color:#FFF!important;font-size:14px!important;font-weight:750!important;letter-spacing:-.2px!important}
+.react-brand small{margin-top:3px!important;color:#8B94A3!important;font-size:9.4px!important}
+.react-nav-title{padding:16px 10px 7px!important;color:#6C7482!important;font-size:8.3px!important;font-weight:800!important;letter-spacing:1.5px!important}
+.react-sidebar nav{display:grid!important;gap:3px!important}
 .react-sidebar nav button{
-  min-height:42px!important;
-  padding:9px 11px!important;
-  gap:11px!important;
-  border-radius:10px!important;
-  color:#C8CDD6!important;
-  font-size:12.5px!important;
-  font-weight:600!important;
+  position:relative!important;
+  min-height:42px!important;padding:9px 11px!important;gap:11px!important;
+  border:1px solid transparent!important;border-radius:10px!important;
+  background:transparent!important;color:#C6CBD4!important;
+  font-size:12.5px!important;font-weight:600!important;letter-spacing:-.06px!important;
 }
-.react-sidebar nav button:hover{background:#11141A!important;color:#FFF!important}
+.react-sidebar nav button:hover{background:#11141A!important;color:#FFF!important;border-color:#181C23!important}
 .react-sidebar nav button.active{
-  background:linear-gradient(90deg,rgba(36,86,232,.22),rgba(36,86,232,.09))!important;
-  border-color:rgba(36,86,232,.28)!important;
-  color:#FFF!important;
+  background:linear-gradient(90deg,rgba(36,86,232,.24),rgba(36,86,232,.08))!important;
+  border-color:rgba(55,101,235,.28)!important;color:#FFF!important;
+  box-shadow:none!important;
 }
-.react-sidebar nav button.active:before{top:10px!important;bottom:10px!important;width:3px!important;background:var(--ui-blue)!important}
-.react-sidebar nav i{width:20px!important}
-.react-notification-nav{margin-top:9px!important}
+.react-sidebar nav button.active:before{content:""!important;position:absolute!important;left:0!important;top:10px!important;bottom:10px!important;width:3px!important;border-radius:0 5px 5px 0!important;background:var(--ui-blue)!important}
+.react-sidebar nav i{width:20px!important;min-width:20px!important;opacity:.92!important}
+.react-notification-nav{margin-top:10px!important;padding-top:9px!important;border-top:1px solid rgba(255,255,255,.065)!important}
 .react-notification-nav button{
-  min-height:42px!important;
-  padding:9px 11px!important;
-  border-radius:10px!important;
-  border-color:#20232A!important;
-  background:#0D0F14!important;
-  font-size:12.5px!important;
+  min-height:42px!important;padding:9px 11px!important;border-radius:10px!important;
+  border:1px solid #20232A!important;background:#0D0F14!important;color:#C8CDD6!important;
+  font-size:12.5px!important;font-weight:600!important;
 }
-.react-profile{padding:13px 7px 2px!important}
-.react-profile>span{width:34px!important;height:34px!important;border-radius:10px!important}
-.react-profile strong{font-size:11px!important}
-.react-profile small{font-size:9px!important;color:#7D8593!important}
-.collapse-button{width:28px!important;height:28px!important;border-radius:9px!important;background:#0F1116!important;border-color:#22262E!important}
+.react-notification-nav button:hover,.react-notification-nav button[aria-expanded="true"]{background:#13161C!important;color:#FFF!important;border-color:#2B3039!important}
+.react-notification-nav button.has-alerts{border-color:rgba(36,86,232,.45)!important}
+.react-profile{padding:13px 7px 2px!important;border-top:1px solid rgba(255,255,255,.075)!important}
+.react-profile>span{width:34px!important;height:34px!important;border-radius:10px!important;background:var(--ui-blue)!important;box-shadow:none!important}
+.react-profile strong{color:#F2F4F7!important;font-size:10.8px!important}
+.react-profile small{color:#7E8796!important;font-size:8.8px!important}
+.react-profile button{min-height:30px!important;border-radius:9px!important;background:#111318!important;border-color:#24272F!important;color:#BFC5CF!important}
+.collapse-button{width:28px!important;height:28px!important;border-radius:9px!important;background:#101217!important;border-color:#25282F!important;color:#C7CDD6!important}
+.collapse-button:hover{background:#171A20!important;color:#FFF!important}
 
-/* Main pages: consistent canvas and breathing room */
-.react-workspace{background:var(--ui-bg)!important}
+/* ───────── Workspace ───────── */
+.react-workspace{min-width:0!important;background:var(--ui-bg)!important}
 .react-module-page{
-  width:100%!important;
-  max-width:1680px!important;
-  margin:0 auto!important;
-  padding:26px 28px 54px!important;
-  background:var(--ui-bg)!important;
+  width:100%!important;max-width:1720px!important;margin:0 auto!important;
+  padding:30px 32px 58px!important;background:var(--ui-bg)!important;color:var(--ui-ink)!important;
 }
 .react-module-topbar{
-  align-items:flex-start!important;
-  gap:18px!important;
-  margin-bottom:22px!important;
-  padding:0 0 2px!important;
+  display:flex!important;align-items:flex-start!important;justify-content:space-between!important;
+  gap:22px!important;margin:0 0 23px!important;padding:0 1px!important;
 }
 .react-module-topbar h1{
-  color:var(--ui-text)!important;
-  font-size:27px!important;
-  line-height:1.12!important;
-  font-weight:800!important;
-  letter-spacing:-.65px!important;
+  margin:0!important;color:var(--ui-ink)!important;
+  font-size:28px!important;line-height:1.1!important;font-weight:800!important;letter-spacing:-.75px!important;
 }
-.react-module-topbar p{
-  max-width:760px;
-  margin-top:6px!important;
-  color:var(--ui-muted)!important;
-  font-size:11.5px!important;
-  line-height:1.45!important;
-}
-.react-module-actions{gap:8px!important;flex-wrap:wrap!important;justify-content:flex-end!important}
+.react-module-topbar p{max-width:800px!important;margin:7px 0 0!important;color:var(--ui-muted)!important;font-size:11.5px!important;line-height:1.48!important}
+.react-module-actions{display:flex!important;align-items:center!important;justify-content:flex-end!important;gap:8px!important;flex-wrap:wrap!important}
 .sync-indicator{
-  display:inline-flex!important;
-  align-items:center!important;
-  min-height:34px!important;
-  padding:0 10px!important;
-  border:1px solid var(--ui-line)!important;
-  border-radius:999px!important;
-  background:#FFF!important;
-  color:var(--ui-muted)!important;
-  font-size:9.5px!important;
-  font-weight:650!important;
-}
-.react-module-actions button,
-.dashboard-head-actions button,
-.dashboard-panel-head>button,
-.dashboard-item-actions button,
-.dashboard-deadline-list button{
-  min-height:36px;
-  padding:0 12px!important;
-  border:1px solid #D8DEE8!important;
-  border-radius:10px!important;
-  background:#FFF!important;
-  color:#344054!important;
-  font-size:10.5px!important;
-  font-weight:700!important;
-  box-shadow:0 1px 1px rgba(16,24,40,.02)!important;
-}
-.react-module-actions button:hover,
-.dashboard-head-actions button:hover,
-.dashboard-panel-head>button:hover,
-.dashboard-item-actions button:hover,
-.dashboard-deadline-list button:hover{background:#F9FAFB!important;border-color:#C9D1DD!important}
-.react-module-actions button.primary,
-.dashboard-item-actions button.primary,
-.dashboard-deadline-list button.primary{
-  border-color:var(--ui-blue)!important;
-  background:var(--ui-blue)!important;
-  color:#FFF!important;
-  box-shadow:0 5px 14px rgba(36,86,232,.18)!important;
-}
-.react-module-actions button.primary:hover,
-.dashboard-item-actions button.primary:hover,
-.dashboard-deadline-list button.primary:hover{background:var(--ui-blue-hover)!important;border-color:var(--ui-blue-hover)!important}
-
-/* Shared surfaces */
-.react-module-card,
-.dashboard-panel,
-.dashboard-kpi,
-.finance-card,
-.finance-kpis article,
-.obligations-card,
-.process-models,
-.process-list>article,
-.task-section,
-.google-tasks-card{
-  border:1px solid var(--ui-line)!important;
-  border-radius:18px!important;
-  background:var(--ui-surface)!important;
-  box-shadow:var(--ui-shadow)!important;
-}
-.react-module-card:hover,
-.dashboard-panel:hover,
-.finance-card:hover,
-.obligations-card:hover{
-  border-color:#D9E0EA!important;
+  display:inline-flex!important;align-items:center!important;min-height:35px!important;padding:0 11px!important;
+  border:1px solid var(--ui-line)!important;border-radius:999px!important;background:#FFF!important;
+  color:var(--ui-muted)!important;font-size:9.3px!important;font-weight:650!important;box-shadow:0 1px 1px rgba(16,24,40,.02)!important;
 }
 
-/* Dashboard: less empty space, stronger hierarchy */
-.dashboard-kpis{
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  gap:12px!important;
-  margin-bottom:16px!important;
+/* ───────── Buttons ───────── */
+.react-shell button{font-family:inherit!important}
+.react-module-actions button,.dashboard-head-actions button,.dashboard-panel-head>button,.dashboard-item-actions button,.dashboard-deadline-list button{
+  min-height:37px!important;padding:0 13px!important;
+  border:1px solid var(--ui-line-strong)!important;border-radius:10px!important;
+  background:#FFF!important;color:var(--ui-text)!important;
+  font-size:10.4px!important;font-weight:700!important;box-shadow:0 1px 2px rgba(16,24,40,.025)!important;
 }
+.react-module-actions button:hover,.dashboard-head-actions button:hover,.dashboard-panel-head>button:hover,.dashboard-item-actions button:hover,.dashboard-deadline-list button:hover{background:#F9FAFB!important;border-color:#C7D0DD!important;transform:translateY(-1px)!important}
+.react-module-actions button.primary,.dashboard-item-actions button.primary,.dashboard-deadline-list button.primary{
+  border-color:var(--ui-blue)!important;background:var(--ui-blue)!important;color:#FFF!important;
+  box-shadow:0 5px 14px rgba(36,86,232,.17)!important;
+}
+.react-module-actions button.primary:hover,.dashboard-item-actions button.primary:hover,.dashboard-deadline-list button.primary:hover{border-color:var(--ui-blue-700)!important;background:var(--ui-blue-700)!important}
+
+/* ───────── Global surfaces ───────── */
+.react-module-card,.dashboard-panel,.dashboard-kpi,.finance-card,.finance-kpis article,.obligations-card,.process-models,.process-list>article,.task-section,.google-tasks-card{
+  border:1px solid var(--ui-line)!important;border-radius:var(--ui-radius)!important;
+  background:var(--ui-surface)!important;box-shadow:var(--ui-shadow)!important;
+}
+.react-module-card,.dashboard-panel,.finance-card,.obligations-card{transition:border-color .15s ease,box-shadow .15s ease!important}
+.react-module-card:hover,.dashboard-panel:hover,.finance-card:hover,.obligations-card:hover{border-color:#D7DEE8!important}
+
+/* ───────── Dashboard ───────── */
+.dashboard-page{background:var(--ui-bg)!important}
+.dashboard-kpis{display:grid!important;grid-template-columns:repeat(4,minmax(0,1fr))!important;gap:12px!important;margin:0 0 16px!important}
 .dashboard-kpi{
-  min-height:100px!important;
-  padding:16px 17px!important;
-  overflow:hidden!important;
-  transition:transform .15s ease,border-color .15s ease,box-shadow .15s ease!important;
+  position:relative!important;min-height:104px!important;padding:17px 18px!important;overflow:hidden!important;
+  text-align:left!important;transition:transform .16s ease,border-color .16s ease,box-shadow .16s ease!important;
 }
-.dashboard-kpi:hover{transform:translateY(-2px)!important;box-shadow:var(--ui-shadow-hover)!important;border-color:#D5DCE7!important}
-.dashboard-kpi:after{
-  width:64px!important;
-  height:64px!important;
-  right:-18px!important;
-  bottom:-22px!important;
-  background:rgba(36,86,232,.055)!important;
-}
-.dashboard-kpi>span{color:#667085!important;font-size:9px!important;letter-spacing:.8px!important}
-.dashboard-kpi>strong{margin-top:8px!important;color:#101828!important;font-size:28px!important;line-height:1!important;letter-spacing:-1px!important}
-.dashboard-kpi>small{margin-top:7px!important;color:#98A2B3!important;font-size:9px!important}
+.dashboard-kpi:hover{transform:translateY(-2px)!important;border-color:#D2D9E5!important;box-shadow:var(--ui-shadow-lift)!important}
+.dashboard-kpi:after{content:""!important;position:absolute!important;right:-20px!important;bottom:-25px!important;width:72px!important;height:72px!important;border-radius:50%!important;background:rgba(36,86,232,.05)!important}
+.dashboard-kpi>span{display:block!important;color:#667085!important;font-size:8.8px!important;font-weight:800!important;letter-spacing:.78px!important;text-transform:uppercase!important}
+.dashboard-kpi>strong{display:block!important;margin-top:9px!important;color:#101828!important;font-size:29px!important;line-height:1!important;font-weight:800!important;letter-spacing:-1.05px!important}
+.dashboard-kpi>small{display:block!important;margin-top:8px!important;color:#98A2B3!important;font-size:8.8px!important;font-weight:600!important}
 .dashboard-kpi.danger{box-shadow:inset 3px 0 #D92D20,var(--ui-shadow)!important}
 .dashboard-kpi.warning{box-shadow:inset 3px 0 #F79009,var(--ui-shadow)!important}
-.dashboard-react-grid{gap:16px!important}
+.dashboard-kpi.danger:after{background:rgba(217,45,32,.045)!important}
+.dashboard-kpi.warning:after{background:rgba(247,144,9,.055)!important}
+.dashboard-react-grid{display:grid!important;grid-template-columns:minmax(0,1.68fr) minmax(300px,.72fr)!important;gap:16px!important;align-items:start!important}
+.dashboard-side{display:grid!important;gap:16px!important}
+.dashboard-widget[data-dashboard-widget="deadlines"],.dashboard-widget[data-dashboard-widget="history"]{grid-column:1/-1!important}
 .dashboard-panel{padding:20px!important}
-.dashboard-panel-head{margin-bottom:14px!important;align-items:flex-start!important}
-.dashboard-panel-head h2{color:#101828!important;font-size:15.5px!important;font-weight:800!important;letter-spacing:-.25px!important}
-.dashboard-panel-head p{margin-top:5px!important;color:#667085!important;font-size:10.5px!important;line-height:1.4!important}
-.dashboard-pills{gap:6px!important;margin-bottom:12px!important}
+.dashboard-panel-head{display:flex!important;align-items:flex-start!important;justify-content:space-between!important;gap:14px!important;margin:0 0 15px!important}
+.dashboard-panel-head h2{margin:0!important;color:#101828!important;font-size:15.5px!important;font-weight:800!important;letter-spacing:-.28px!important}
+.dashboard-panel-head p{margin:5px 0 0!important;color:#667085!important;font-size:10.3px!important;line-height:1.42!important}
+.dashboard-pills{display:flex!important;gap:6px!important;flex-wrap:wrap!important;margin:0 0 13px!important}
 .dashboard-pills button{
-  min-height:31px!important;
-  padding:0 11px!important;
-  border:1px solid #E1E6EE!important;
-  border-radius:999px!important;
-  background:#FFF!important;
-  color:#475467!important;
-  font-size:9.5px!important;
-  font-weight:700!important;
+  min-height:31px!important;padding:0 11px!important;border:1px solid #E1E6EE!important;border-radius:999px!important;
+  background:#FFF!important;color:#475467!important;font-size:9.3px!important;font-weight:700!important;box-shadow:none!important;
 }
-.dashboard-pills button:hover{background:#F7F9FC!important;border-color:#D5DCE7!important}
-.dashboard-pills button.active{border-color:#162B5B!important;background:#162B5B!important;color:#FFF!important;box-shadow:none!important}
+.dashboard-pills button:hover{background:#F8FAFC!important;border-color:#D4DBE6!important}
+.dashboard-pills button.active{border-color:#122A5B!important;background:#122A5B!important;color:#FFF!important}
 .widget-priorities .dashboard-filters{
-  grid-template-columns:repeat(2,minmax(0,1fr))!important;
-  gap:8px!important;
-  margin-bottom:12px!important;
+  display:grid!important;grid-template-columns:minmax(200px,1.35fr) repeat(3,minmax(145px,.72fr))!important;
+  gap:8px!important;margin:0 0 14px!important;
 }
 .dashboard-filters input,.dashboard-filters select{
-  min-height:40px!important;
-  padding:0 11px!important;
-  border:1px solid #D9E0EA!important;
-  border-radius:10px!important;
-  background:#FFF!important;
-  color:#344054!important;
-  font-size:10.5px!important;
-  box-shadow:0 1px 1px rgba(16,24,40,.02)!important;
+  width:100%!important;min-width:0!important;min-height:39px!important;padding:0 11px!important;
+  border:1px solid #D9E0EA!important;border-radius:10px!important;background:#FFF!important;color:#344054!important;
+  font-size:10.3px!important;box-shadow:0 1px 1px rgba(16,24,40,.018)!important;
 }
-.dashboard-filters input:focus,.dashboard-filters select:focus{border-color:#91A8F3!important;box-shadow:0 0 0 3px rgba(36,86,232,.10)!important;outline:none!important}
-.dashboard-priority-list article{padding:12px 2px!important;gap:10px!important}
-.dashboard-priority-list article.overdue{margin:0 -7px!important;padding-left:10px!important;padding-right:10px!important;background:#FFF8F7!important}
-.dashboard-item-title b{font-size:11.5px!important;color:#101828!important}
-.dashboard-priority-list small,.dashboard-deadline-list small,.dashboard-history-list small{color:#7A8699!important;font-size:9.5px!important}
-.dashboard-kind{padding:3px 7px!important;font-size:7.8px!important;letter-spacing:.45px!important}
-.dashboard-kind.kind-task{background:#EEF3FF!important;color:#2456E8!important}
-.dashboard-kind.kind-process{background:#F2F4F7!important;color:#344054!important}
-.dashboard-kind.kind-obligation{background:#F8FAFC!important;color:#475467!important;border:1px solid #EAECF0!important}
-.dashboard-alerts article{padding:11px!important;border-color:#E8ECF2!important;border-radius:12px!important;background:#FCFCFD!important}
-.dashboard-alerts b{font-size:10.5px!important;color:#101828!important}
-.dashboard-alerts small{font-size:9.5px!important;color:#667085!important}
-.dashboard-workload-row{margin:12px 0!important;font-size:10px!important}
-.dashboard-workload-row>div{height:6px!important;background:#EEF1F5!important}
-.dashboard-workload-row i{background:linear-gradient(90deg,#2456E8,#6C8AF0)!important}
-.dashboard-deadline-list article{padding:12px 2px!important}
+.dashboard-filters input::placeholder{color:#98A2B3!important}
+.dashboard-filters input:focus,.dashboard-filters select:focus{outline:none!important;border-color:#89A4F4!important;box-shadow:0 0 0 3px rgba(36,86,232,.09)!important}
+.dashboard-priority-list{display:grid!important;gap:2px!important}
+.dashboard-priority-list article{
+  display:grid!important;grid-template-columns:auto minmax(0,1fr) auto!important;align-items:center!important;gap:11px!important;
+  padding:11px 7px!important;border-radius:11px!important;border-bottom:0!important;
+}
+.dashboard-priority-list article:hover{background:#F9FAFC!important}
+.dashboard-priority-list article.overdue{background:#FFF8F7!important;border-left:3px solid #D92D20!important;padding-left:10px!important}
+.dashboard-item-title{min-width:0!important}
+.dashboard-item-title b{color:#101828!important;font-size:11.4px!important;font-weight:750!important}
+.dashboard-priority-list small,.dashboard-deadline-list small,.dashboard-history-list small{color:#7A8699!important;font-size:9.25px!important}
+.dashboard-kind{display:inline-flex!important;align-items:center!important;padding:3px 7px!important;border-radius:999px!important;font-size:7.7px!important;font-weight:800!important;letter-spacing:.45px!important;text-transform:uppercase!important}
+.dashboard-kind.kind-task{background:#EEF3FF!important;color:#2456E8!important;border-color:#DDE7FF!important}
+.dashboard-kind.kind-process{background:#F2F4F7!important;color:#344054!important;border-color:#E4E7EC!important}
+.dashboard-kind.kind-obligation{background:#F8FAFC!important;color:#475467!important;border-color:#EAECF0!important}
+.dashboard-alerts{display:grid!important;gap:8px!important}
+.dashboard-alerts article{padding:11px 12px!important;border:1px solid #E9EDF3!important;border-radius:11px!important;background:#FCFCFD!important}
+.dashboard-alerts b{color:#101828!important;font-size:10.5px!important}
+.dashboard-alerts small{margin-top:3px!important;color:#667085!important;font-size:9.3px!important;line-height:1.38!important}
+.dashboard-workload-row{display:grid!important;grid-template-columns:92px minmax(0,1fr) 24px!important;gap:9px!important;align-items:center!important;margin:12px 0!important;color:#475467!important;font-size:9.7px!important}
+.dashboard-workload-row>div{height:6px!important;border-radius:999px!important;background:#EEF1F5!important;overflow:hidden!important}
+.dashboard-workload-row i{display:block!important;height:100%!important;border-radius:999px!important;background:linear-gradient(90deg,#2456E8,#6F8CF0)!important}
+.dashboard-deadline-list article,.dashboard-history-list article{padding:11px 4px!important;border-bottom:1px solid #EEF1F4!important}
+.dashboard-deadline-list article:last-child,.dashboard-history-list article:last-child{border-bottom:0!important}
+.dashboard-empty{padding:24px 10px!important;color:#98A2B3!important;font-size:10px!important;text-align:center!important}
 
-/* Forms/tables across modules */
-.react-module-page input,
-.react-module-page select,
-.react-module-page textarea{
-  border-radius:10px!important;
-  border-color:#D9E0EA!important;
-  background:#FFF!important;
-}
-.client-table,.obligation-table,.finance-table,.calendar-card,.task-section{
-  border-color:var(--ui-line)!important;
-}
-.client-head,.obligation-head{background:#F8FAFC!important;color:#667085!important}
+/* ───────── Inputs, lists and tables ───────── */
+.react-module-page input,.react-module-page select,.react-module-page textarea{border:1px solid #D8E0EA!important;border-radius:10px!important;background:#FFF!important;color:#344054!important;box-shadow:none!important}
+.react-module-page input:focus,.react-module-page select:focus,.react-module-page textarea:focus{outline:none!important;border-color:#89A4F4!important;box-shadow:0 0 0 3px rgba(36,86,232,.09)!important}
+.client-table,.obligation-table,.finance-table,.calendar-card,.task-section{border-color:var(--ui-line)!important}
+.client-head,.obligation-head{background:#F8FAFC!important;color:#667085!important;font-size:9px!important;letter-spacing:.45px!important;text-transform:uppercase!important}
 .client-row,.obligation-row{border-bottom-color:#EDF1F5!important}
 .client-row:hover,.obligation-row:hover{background:#FCFCFD!important}
 
-/* Modals: cleaner and less heavy */
-.client-modal,.task-modal,.dashboard-modal,.obligation-modal,.process-modal,.finance-modal{background:rgba(9,14,25,.52)!important;backdrop-filter:blur(6px)!important}
-.client-modal-card,.task-modal-card,.dashboard-modal-card,.obligation-modal-card,.process-modal-card,.finance-modal-card{
-  border:1px solid rgba(255,255,255,.45)!important;
-  border-radius:20px!important;
-  box-shadow:0 28px 90px rgba(15,23,42,.22)!important;
-}
+/* ───────── Modals ───────── */
+.client-modal,.task-modal,.dashboard-modal,.obligation-modal,.process-modal,.finance-modal{background:rgba(8,12,22,.52)!important;backdrop-filter:blur(7px)!important}
+.client-modal-card,.task-modal-card,.dashboard-modal-card,.obligation-modal-card,.process-modal-card,.finance-modal-card{border:1px solid rgba(255,255,255,.48)!important;border-radius:20px!important;background:#FFF!important;box-shadow:0 30px 90px rgba(15,23,42,.22)!important}
 
-/* Notification panel follows the same system */
-.notification-panel{border-radius:18px!important;border-color:var(--ui-line)!important;box-shadow:0 28px 80px rgba(16,24,40,.18)!important}
+/* ───────── Notifications ───────── */
+.notification-panel{border:1px solid var(--ui-line)!important;border-radius:18px!important;background:#FFF!important;box-shadow:0 28px 80px rgba(16,24,40,.18)!important}
 .notification-summary>span{background:#FAFBFC!important;border-color:#E8ECF2!important}
+.notification-item:hover{background:#F8FAFC!important}
 
-@media(max-width:1180px){
+@media(max-width:1260px){
+  .widget-priorities .dashboard-filters{grid-template-columns:repeat(2,minmax(0,1fr))!important}
+  .dashboard-react-grid{grid-template-columns:minmax(0,1.5fr) minmax(280px,.75fr)!important}
+}
+@media(max-width:980px){
   .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important}
-  .widget-priorities .dashboard-filters{grid-template-columns:1fr!important}
+  .dashboard-react-grid{grid-template-columns:1fr!important}
+  .dashboard-widget[data-dashboard-widget="deadlines"],.dashboard-widget[data-dashboard-widget="history"]{grid-column:auto!important}
+  .widget-priorities .dashboard-filters{grid-template-columns:repeat(2,minmax(0,1fr))!important}
 }
-
 @media(max-width:760px){
-  :root{--react-sidebar-width:100%;--react-sidebar-collapsed:100%}
   .react-module-page{padding:18px 12px 34px!important}
-  .react-module-topbar{margin-bottom:16px!important}
-  .react-module-topbar h1{font-size:23px!important}
+  .react-module-topbar{gap:13px!important;margin-bottom:17px!important;flex-direction:column!important}
+  .react-module-topbar h1{font-size:23px!important;letter-spacing:-.55px!important}
   .react-module-topbar p{font-size:10.5px!important}
-  .sync-indicator{display:none!important}
   .react-module-actions{width:100%!important;justify-content:stretch!important}
-  .react-module-actions button{flex:1 1 auto!important}
+  .react-module-actions>button{flex:1 1 auto!important}
+  .sync-indicator{display:none!important}
   .dashboard-kpis{grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:9px!important}
-  .dashboard-kpi{min-height:92px!important;padding:14px!important;border-radius:15px!important}
+  .dashboard-kpi{min-height:92px!important;padding:14px!important;border-radius:14px!important}
   .dashboard-kpi>strong{font-size:25px!important}
-  .dashboard-panel{padding:15px 13px!important;border-radius:15px!important}
+  .dashboard-panel{padding:15px 13px!important;border-radius:14px!important}
   .widget-priorities .dashboard-filters{grid-template-columns:1fr!important}
-  .dashboard-item-actions{gap:6px!important}
+  .dashboard-priority-list article{grid-template-columns:auto minmax(0,1fr)!important}
+  .dashboard-item-actions{grid-column:2!important;justify-content:flex-start!important;flex-wrap:wrap!important}
 }
-
 @media(max-width:430px){
   .dashboard-kpis{grid-template-columns:1fr!important}
   .react-module-topbar h1{font-size:22px!important}
