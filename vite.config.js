@@ -10,7 +10,7 @@ const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
 
 const payloadMap = [
   ['ProcessesReact.jsx.gz.b64', 'src/components/ProcessesReact.jsx'],
-  ['TasksReact.jsx.gz.b64', 'src/components/TasksReact.jsx'],
+  ['TasksReact.jsx.gz.b64', 'src/components/TasksReactBase.jsx'],
   ['calendar-react.css.gz.b64', 'src/calendar-react.css'],
   ['clients-react.css.gz.b64', 'src/clients-react.css'],
   ['dashboard-react.css.gz.b64', 'src/dashboard-react.css'],
