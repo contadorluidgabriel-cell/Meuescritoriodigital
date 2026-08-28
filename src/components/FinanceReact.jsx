@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { today, uid } from '../lib/storage.js'
+import { buildMissingRecurringCharges } from '../lib/financeRecurring.js'
 import '../finance-react.css'
 
 const statuses = ['Pendente', 'Recebido', 'Atrasado', 'Cancelado']
@@ -63,6 +64,21 @@ export default function FinanceReact({ office, update, sync, initialClientId = '
   }, [finance, update])
 
   useEffect(() => {
+    const month = currentCompetence()
+    const preview = buildMissingRecurringCharges({ clients: activeClients, finance, competence: month, makeId: () => uid('fin') })
+    if (!preview.length) return
+
+    let created = 0
+    update(draft => {
+      const additions = buildMissingRecurringCharges({ clients: draft.clients || [], finance: draft.finance || [], competence: month, makeId: () => uid('fin') })
+      if (!additions.length) return
+      created = additions.length
+      draft.finance = [...(draft.finance || []), ...additions]
+    })
+    if (created) setNotice(`${created} cobrança${created === 1 ? '' : 's'} mensal${created === 1 ? '' : 'is'} gerada${created === 1 ? '' : 's'} automaticamente.`)
+  }, [activeClients, finance, update])
+
+  useEffect(() => {
     if (!initialClientId || !openClientRequest) return
     setClientFilter(String(initialClientId))
     setCompetence('')
@@ -82,20 +98,15 @@ export default function FinanceReact({ office, update, sync, initialClientId = '
   function changeStatus(id, nextStatus) { update(draft => { const charge = draft.finance.find(item => String(item.id) === String(id)); if (!charge) return; const previous = charge.status; charge.status = nextStatus; charge.recebidoEm = nextStatus === 'Recebido' ? (previous === 'Recebido' ? charge.recebidoEm : today()) : '' }); setNotice(nextStatus === 'Recebido' ? 'Recebimento registrado.' : 'Status atualizado.') }
   function deleteCharge(id) { if (!window.confirm('Excluir esta cobrança?')) return; update(draft => { draft.finance = draft.finance.filter(item => String(item.id) !== String(id)) }); setNotice('Cobrança excluída.') }
   function generateRecurring() {
-    const [year, month] = competence.split('-').map(Number)
-    if (!year || !month) { setNotice('Selecione uma competência válida.'); return }
-    let created = 0
+    if (!/^\d{4}-\d{2}$/.test(competence)) { setNotice('Selecione uma competência válida.'); return }
+    const additions = buildMissingRecurringCharges({ clients: activeClients, finance, competence, clientId: clientFilter, makeId: () => uid('fin') })
+    if (!additions.length) { setNotice('Nenhuma cobrança recorrente pendente para gerar.'); return }
     update(draft => {
-      const existing = new Set(draft.finance.filter(charge => charge.origem === 'recorrente' && charge.competencia === competence).map(charge => String(charge.clienteId)))
-      const additions = activeClients.filter(client => (!clientFilter || String(client.id) === String(clientFilter)) && client.relacionamento === 'Recorrente' && Number(client.mensalidade ?? client.honorario ?? 0) > 0 && !existing.has(String(client.id))).map(client => {
-        const requested = Math.max(1, Number(client.vencimento) || 10), lastDay = new Date(year, month, 0).getDate(), day = Math.min(requested, lastDay)
-        created += 1
-        return { id: uid('fin'), clienteId: String(client.id), cliente: clientName(client), descricao: 'Honorários contábeis', competencia: competence, vencimento: `${competence}-${String(day).padStart(2, '0')}`, valor: Number(client.mensalidade ?? client.honorario ?? 0) || 0, status: 'Pendente', recebidoEm: '', origem: 'recorrente' }
-      })
-      draft.finance = [...draft.finance, ...additions]
+      const fresh = buildMissingRecurringCharges({ clients: draft.clients || [], finance: draft.finance || [], competence, clientId: clientFilter, makeId: () => uid('fin') })
+      if (fresh.length) draft.finance = [...(draft.finance || []), ...fresh]
     })
-    setNotice(created ? `${created} cobrança(s) recorrente(s) gerada(s).` : 'Nenhuma nova cobrança recorrente para gerar.')
+    setNotice(`${additions.length} cobrança${additions.length === 1 ? '' : 's'} recorrente${additions.length === 1 ? '' : 's'} gerada${additions.length === 1 ? '' : 's'}.`)
   }
 
-  return <div className="react-module-page finance-page"><div className="react-module-topbar"><div><h1>Financeiro</h1><p>Controle simples dos honorários dos clientes.</p></div><div className="react-module-actions"><span className="sync-indicator">{sync}</span><button type="button" className="primary" onClick={() => setCreating(true)}>+ Nova cobrança</button></div></div><div className="finance-kpis"><article><small>Recebido</small><strong>{money(totals.Recebido)}</strong></article><article><small>A receber</small><strong>{money(totals.Pendente)}</strong></article><article className="overdue"><small>Em atraso</small><strong>{money(totals.Atrasado)}</strong></article></div><section className="finance-card"><div className="finance-toolbar"><select value={clientFilter} onChange={event => setClientFilter(event.target.value)} aria-label="Filtrar por cliente"><option value="">Todos os clientes</option>{clients.map(client => <option value={String(client.id)} key={client.id}>{clientName(client)}</option>)}</select><label><span>Competência</span><input type="month" value={competence} onInput={event => setCompetence(event.currentTarget.value)} onChange={event => setCompetence(event.target.value)} /></label><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filtrar por status"><option value="">Todos os status</option>{statuses.map(item => <option key={item}>{item}</option>)}</select><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente ou descrição" /><button type="button" onClick={generateRecurring}>Gerar recorrentes</button></div><div className="finance-table"><div className="finance-row finance-head"><span>Cliente</span><span>Descrição</span><span>Competência</span><span>Vencimento</span><span>Valor</span><span>Status</span><span /></div>{rows.map(charge => { const client = clientsById.get(String(charge.clienteId)); return <article className="finance-row" key={charge.id}><div><b>{client ? clientName(client) : (charge.cliente || 'Cliente')}</b>{client?.status === 'Inativo' ? <em>Inativo</em> : null}</div><span>{charge.descricao}</span><span>{charge.competencia || '—'}</span><span>{formatDate(charge.vencimento)}</span><strong>{money(charge.valor)}</strong><div><select className={`finance-status status-${normalizeText(charge.status)}`} value={charge.status} onChange={event => changeStatus(charge.id, event.target.value)} aria-label={`Status de ${charge.descricao}`}>{statuses.map(item => <option key={item}>{item}</option>)}</select>{charge.recebidoEm ? <small>Recebido em {formatDate(charge.recebidoEm)}</small> : null}</div><button type="button" className="danger" onClick={() => deleteCharge(charge.id)} aria-label={`Excluir cobrança ${charge.descricao}`}>×</button></article>})}{!rows.length ? <p className="finance-empty">Nenhuma cobrança nesta competência.</p> : null}</div></section>{creating ? <ChargeForm clients={activeClients} competence={competence} initialClientId={clientFilter || initialClientId} onClose={() => setCreating(false)} onSave={saveCharge} /> : null}{notice ? <div className="finance-notice" role="status">{notice}</div> : null}</div>
+  return <div className="react-module-page finance-page"><div className="react-module-topbar"><div><h1>Financeiro</h1><p>Honorários mensais recorrentes são gerados automaticamente para clientes ativos.</p></div><div className="react-module-actions"><span className="sync-indicator">{sync}</span><button type="button" className="primary" onClick={() => setCreating(true)}>+ Nova cobrança</button></div></div><div className="finance-kpis"><article><small>Recebido</small><strong>{money(totals.Recebido)}</strong></article><article><small>A receber</small><strong>{money(totals.Pendente)}</strong></article><article className="overdue"><small>Em atraso</small><strong>{money(totals.Atrasado)}</strong></article></div><section className="finance-card"><div className="finance-toolbar"><select value={clientFilter} onChange={event => setClientFilter(event.target.value)} aria-label="Filtrar por cliente"><option value="">Todos os clientes</option>{clients.map(client => <option value={String(client.id)} key={client.id}>{clientName(client)}</option>)}</select><label><span>Competência</span><input type="month" value={competence} onInput={event => setCompetence(event.currentTarget.value)} onChange={event => setCompetence(event.target.value)} /></label><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filtrar por status"><option value="">Todos os status</option>{statuses.map(item => <option key={item}>{item}</option>)}</select><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente ou descrição" /><button type="button" onClick={generateRecurring}>Verificar recorrentes</button></div><div className="finance-table"><div className="finance-row finance-head"><span>Cliente</span><span>Descrição</span><span>Competência</span><span>Vencimento</span><span>Valor</span><span>Status</span><span /></div>{rows.map(charge => { const client = clientsById.get(String(charge.clienteId)); return <article className="finance-row" key={charge.id}><div><b>{client ? clientName(client) : (charge.cliente || 'Cliente')}</b>{client?.status === 'Inativo' ? <em>Inativo</em> : null}</div><span>{charge.descricao}</span><span>{charge.competencia || '—'}</span><span>{formatDate(charge.vencimento)}</span><strong>{money(charge.valor)}</strong><div><select className={`finance-status status-${normalizeText(charge.status)}`} value={charge.status} onChange={event => changeStatus(charge.id, event.target.value)} aria-label={`Status de ${charge.descricao}`}>{statuses.map(item => <option key={item}>{item}</option>)}</select>{charge.recebidoEm ? <small>Recebido em {formatDate(charge.recebidoEm)}</small> : null}</div><button type="button" className="danger" onClick={() => deleteCharge(charge.id)} aria-label={`Excluir cobrança ${charge.descricao}`}>×</button></article>})}{!rows.length ? <p className="finance-empty">Nenhuma cobrança nesta competência.</p> : null}</div></section>{creating ? <ChargeForm clients={activeClients} competence={competence} initialClientId={clientFilter || initialClientId} onClose={() => setCreating(false)} onSave={saveCharge} /> : null}{notice ? <div className="finance-notice" role="status">{notice}</div> : null}</div>
 }
