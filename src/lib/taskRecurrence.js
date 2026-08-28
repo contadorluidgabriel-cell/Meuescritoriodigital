@@ -1,4 +1,5 @@
 import { isDone, today, uid } from './storage.js'
+import { reconcileExternalTaskPayload, taskCompletionBlocker } from './taskProgress.js'
 
 export function nextTaskDue(date, recurrence) {
   const next = new Date(`${date || today()}T12:00:00`)
@@ -25,20 +26,25 @@ export function appendNextRecurringTask(tasks, task, clients) {
   return [...tasks, {
     ...structuredClone(task), id: uid('tar'), status: 'Pendente', prazo: nextDue,
     subtarefas: (task.subtarefas || []).map(item => ({ ...item, id: uid('sub'), concluida: false })),
+    quantidadeConcluida: task.quantitativo ? 0 : task.quantidadeConcluida,
     updatedAt: new Date().toISOString(),
   }]
 }
 
 export function reconcileGoogleTaskPayload(remoteTasks, currentTasks, clients) {
-  const currentById = new Map(currentTasks.map(task => [task.id, task]))
-  let nextTasks = remoteTasks.map(task => {
-    const previous = currentById.get(task.id)
-    return { ...task, subtarefas: Array.isArray(task.subtarefas) ? task.subtarefas : structuredClone(previous?.subtarefas || []) }
+  const currentById = new Map(currentTasks.map(task => [String(task.id), task]))
+  let nextTasks = reconcileExternalTaskPayload(remoteTasks, currentTasks)
+  nextTasks = nextTasks.map(task => {
+    const previous = currentById.get(String(task.id))
+    if (previous && !isDone(previous.status) && isDone(task.status) && taskCompletionBlocker(task)) {
+      return { ...task, status: previous.status }
+    }
+    return task
   })
-  remoteTasks.forEach(task => {
-    const previous = currentById.get(task.id)
+  nextTasks.forEach(task => {
+    const previous = currentById.get(String(task.id))
     if (previous && !isDone(previous.status) && isDone(task.status)) {
-      nextTasks = appendNextRecurringTask(nextTasks, { ...task, subtarefas: structuredClone(previous.subtarefas || []) }, clients)
+      nextTasks = appendNextRecurringTask(nextTasks, task, clients)
     }
   })
   return nextTasks

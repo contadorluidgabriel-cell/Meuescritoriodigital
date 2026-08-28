@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
+import { reconcileExternalTaskPayload } from '../lib/taskProgress.js'
 
 const todoistFunctionUrl = 'https://pbwnzkmbcuoyyoojgnay.supabase.co/functions/v1/todoist-sync'
 
@@ -76,8 +77,9 @@ export function useTodoistTasks({ enabled, tasks, update }) {
     if (!silent) setState(current => ({ ...current, busy: true, message: 'Sincronizando Todoist…' }))
     try {
       const data = await invokeTodoist({ action: 'sync', tasks: sourceTasks || tasksRef.current || [] })
-      if (Array.isArray(data.tasks) && JSON.stringify(data.tasks) !== JSON.stringify(tasksRef.current || [])) {
-        update(draft => { draft.tasks = data.tasks })
+      if (Array.isArray(data.tasks)) {
+        const nextTasks = reconcileExternalTaskPayload(data.tasks, tasksRef.current || [])
+        if (JSON.stringify(nextTasks) !== JSON.stringify(tasksRef.current || [])) update(draft => { draft.tasks = nextTasks })
       }
       const time = data.syncedAt
         ? new Date(data.syncedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
