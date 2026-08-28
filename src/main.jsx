@@ -12,10 +12,7 @@ import './dashboard-react.css'
 import './calendar-react.css'
 import './obligations-react.css'
 import './processes-react.css'
-import './visual-polish-v11.css'
-import './nav-icons-v11.css'
-import './design-refinement-v11.css'
-import './premium-structure-v11.css'
+import './saas-system-v11.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
