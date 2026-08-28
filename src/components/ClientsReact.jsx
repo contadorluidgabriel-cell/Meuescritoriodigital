@@ -6,6 +6,8 @@ const emptyClient = {
   telefone: '', whatsapp: '', email: '', endereco: '', relacionamento: 'Recorrente', mensalidade: '', vencimento: '',
   status: 'Ativo', drive: '', observacoes: '', dataEntrada: '', dataSaida: '', motivoSaida: '', comunicacoes: [],
 }
+const emptyLinkedCompany = { cnpj: '', razao: '', fantasia: '', relacao: 'Empresa relacionada', observacoes: '', status: 'Ativo' }
+const linkedRelationshipOptions = ['Empresa relacionada', 'Empresa do cliente/sócio', 'Cliente de parceiro', 'Terceiro', 'Outro']
 const taxOptions = ['MEI', 'Simples Nacional', 'Lucro Presumido', 'Lucro Real', 'Outro']
 const activityOptions = ['Comércio', 'Serviço', 'Comércio + Serviço', 'Indústria', 'Todas']
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -32,10 +34,11 @@ const formatDocument = (value, type = '') => {
 const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 const formatDate = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : '—'
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
+const linkedCompanyName = company => company?.razao || company?.fantasia || 'CNPJ vinculado'
 const addDays = (date, amount) => { const next = new Date(`${date || today()}T00:00:00`); next.setDate(next.getDate() + Number(amount || 0)); return today(next) }
 
 function Field({ label, full = false, children }) { return <label className={`client-field ${full ? 'full' : ''}`}><span>{label}</span>{children}</label> }
-function Modal({ title, subtitle, onClose, children, wide = false }) { return <div className="client-modal" role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><div className={`client-modal-card ${wide ? 'wide' : ''}`}><header><div><h2>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</div></div> }
+function Modal({ title, subtitle, onClose, children, wide = false, className = '' }) { return <div className={`client-modal ${className}`.trim()} role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><div className={`client-modal-card ${wide ? 'wide' : ''}`}><header><div><h2>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</div></div> }
 
 export default function ClientsReact({ office, update, sync, onOpenTasks, onOpenProcesses, onOpenFinance, initialClientId = '', openClientRequest = 0 }) {
   const [query, setQuery] = useState(''), [status, setStatus] = useState(''), [relationship, setRelationship] = useState('')
@@ -76,6 +79,7 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
     if (!editing.razao.trim() || !normalizedDocument) { setError('Informe nome e CPF/CNPJ.'); return }
     if (normalizedDocument.length !== expectedLength) { setError(`Informe um ${documentLabel} com ${expectedLength} dígitos.`); return }
     if (office.clients.some(client => client.id !== editing.id && documentDigits(client.documento) === normalizedDocument)) { setError('Este CPF/CNPJ já está cadastrado.'); return }
+    if (editing.tipo === 'PJ' && (office.linkedCompanies || []).some(company => company.status !== 'Inativo' && documentDigits(company.cnpj) === normalizedDocument)) { setError('Este CNPJ está cadastrado como CNPJ vinculado. Inative o vínculo antes de cadastrá-lo como cliente.'); return }
     const isNew = !editing.id
     const client = { ...editing, id: editing.id || uid('cli'), documento: formatDocument(normalizedDocument, editing.tipo), razao: editing.razao.trim(), fantasia: editing.fantasia.trim(), atividade: editing.atividade.trim(), telefone: editing.telefone.trim(), whatsapp: editing.whatsapp.trim(), email: editing.email.trim(), endereco: editing.endereco.trim(), mensalidade: Number(editing.mensalidade) || 0, vencimento: Number(editing.vencimento) || null, drive: editing.drive.trim(), observacoes: editing.observacoes.trim(), motivoSaida: editing.motivoSaida.trim(), comunicacoes: editing.comunicacoes || [] }
     update(draft => {
@@ -110,16 +114,20 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
       <Field label="Observações" full><textarea value={editing.observacoes} onChange={event => setField('observacoes', event.target.value)} /></Field>{error ? <p className="client-error">{error}</p> : null}<footer className="client-form-actions"><button type="button" onClick={() => setEditing(null)}>Cancelar</button><button className="primary">Salvar cliente</button></footer>
     </form></Modal> : null}
 
-    {details ? <ClientDetails client={details} office={office} onClose={() => setDetails(null)} onEdit={() => { setDetails(null); openEdit(details) }} onOpenTasks={() => onOpenTasks(details.id)} onNewProcess={() => onOpenProcesses(details.id)} onOpenProcess={processId => onOpenProcesses('', processId)} onOpenFinance={create => onOpenFinance?.(details.id, create)} /> : null}
+    {details ? <ClientDetails client={details} office={office} update={update} onClose={() => setDetails(null)} onEdit={() => { setDetails(null); openEdit(details) }} onOpenTasks={() => onOpenTasks(details.id)} onNewProcess={() => onOpenProcesses(details.id)} onOpenProcess={processId => onOpenProcesses('', processId)} onOpenFinance={create => onOpenFinance?.(details.id, create)} /> : null}
   </div>
 }
 
-function ClientDetails({ client, office, onClose, onEdit, onOpenTasks, onNewProcess, onOpenProcess, onOpenFinance }) {
+function ClientDetails({ client, office, update, onClose, onEdit, onOpenTasks, onNewProcess, onOpenProcess, onOpenFinance }) {
   const [tab, setTab] = useState('overview')
+  const [linkedEditing, setLinkedEditing] = useState(null)
+  const [linkedError, setLinkedError] = useState('')
   const clientId = String(client.id)
   const tasks = office.tasks.filter(item => String(item.clientId) === clientId)
   const processes = office.processes.filter(item => String(item.clientId) === clientId || (item.relacionados || []).some(id => String(id) === clientId))
   const obligations = office.obligations.filter(item => (item.clientes || []).some(link => String(link.clienteId) === clientId))
+  const linkedCompanies = (office.linkedCompanies || []).filter(item => String(item.clientId) === clientId).sort((a, b) => Number(a.status === 'Inativo') - Number(b.status === 'Inativo') || linkedCompanyName(a).localeCompare(linkedCompanyName(b), 'pt-BR'))
+  const activeLinkedCompanies = linkedCompanies.filter(item => item.status !== 'Inativo')
   const charges = (office.finance || []).filter(item => String(item.clienteId) === clientId).sort((a, b) => String(b.vencimento || b.competencia || '').localeCompare(String(a.vencimento || a.competencia || '')))
   const financeTotals = charges.reduce((result, charge) => {
     const value = Number(charge.valor) || 0
@@ -129,17 +137,85 @@ function ClientDetails({ client, office, onClose, onEdit, onOpenTasks, onNewProc
     return result
   }, { received: 0, pending: 0, overdue: 0 })
   const canCharge = client.status !== 'Inativo'
+
+  function openNewLinkedCompany() {
+    setLinkedEditing({ ...emptyLinkedCompany, clientId })
+    setLinkedError('')
+  }
+
+  function openEditLinkedCompany(company) {
+    setLinkedEditing({ ...emptyLinkedCompany, ...structuredClone(company), cnpj: formatDocument(company.cnpj, 'PJ') })
+    setLinkedError('')
+  }
+
+  function setLinkedField(name, value) {
+    setLinkedEditing(current => ({ ...current, [name]: value }))
+  }
+
+  function saveLinkedCompany(event) {
+    event.preventDefault()
+    const cnpj = documentDigits(linkedEditing.cnpj)
+    if (cnpj.length !== 14) { setLinkedError('Informe um CNPJ com 14 dígitos.'); return }
+    if (!linkedEditing.razao.trim()) { setLinkedError('Informe a razão social do CNPJ vinculado.'); return }
+    if ((office.clients || []).some(item => documentDigits(item.documento) === cnpj)) { setLinkedError('Este CNPJ já está cadastrado como cliente do escritório.'); return }
+    if ((office.linkedCompanies || []).some(item => item.id !== linkedEditing.id && String(item.clientId) === clientId && documentDigits(item.cnpj) === cnpj)) { setLinkedError('Este CNPJ já está vinculado a este cliente.'); return }
+
+    const record = {
+      ...linkedEditing,
+      id: linkedEditing.id || uid('cnpjv'),
+      clientId,
+      cnpj: formatDocument(cnpj, 'PJ'),
+      razao: linkedEditing.razao.trim(),
+      fantasia: linkedEditing.fantasia.trim(),
+      relacao: linkedEditing.relacao || 'Empresa relacionada',
+      observacoes: linkedEditing.observacoes.trim(),
+      status: linkedEditing.status || 'Ativo',
+      createdAt: linkedEditing.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+
+    update(draft => {
+      const current = draft.linkedCompanies || []
+      draft.linkedCompanies = record.id && current.some(item => item.id === record.id)
+        ? current.map(item => item.id === record.id ? record : item)
+        : [...current, record]
+    })
+    setLinkedEditing(null)
+  }
+
+  function toggleLinkedCompanyStatus(company) {
+    const nextStatus = company.status === 'Inativo' ? 'Ativo' : 'Inativo'
+    update(draft => {
+      draft.linkedCompanies = (draft.linkedCompanies || []).map(item => item.id === company.id ? { ...item, status: nextStatus, updatedAt: new Date().toISOString() } : item)
+    })
+  }
+
   return <Modal title={clientName(client)} subtitle={`${formatDocument(client.documento, client.tipo) || ''} · ${client.tributacao || ''}`} onClose={onClose} wide>
-    <div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${money(client.mensalidade)}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article></div>
-    <div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button>{canCharge ? <button onClick={() => onOpenFinance?.(true)}>+ Cobrança</button> : null}<button onClick={onEdit}>Editar cliente</button></div>
-    <div className="details-tabs">{[['overview','Visão geral'],['finance','Financeiro'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>
-    {tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}
+    <div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${money(client.mensalidade)}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article><article><b>CNPJs vinculados</b><p>{activeLinkedCompanies.length} ativo{activeLinkedCompanies.length === 1 ? '' : 's'} · não entram na carteira</p></article></div>
+    <div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button><button onClick={() => { setTab('linked'); openNewLinkedCompany() }}>+ Vincular CNPJ</button>{canCharge ? <button onClick={() => onOpenFinance?.(true)}>+ Cobrança</button> : null}<button onClick={onEdit}>Editar cliente</button></div>
+    <div className="details-tabs">{[['overview','Visão geral'],['linked','CNPJs vinculados'],['finance','Financeiro'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>
+    {tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><article><small>CNPJs vinculados</small><strong>{activeLinkedCompanies.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}
+    {tab === 'linked' ? <div className="linked-companies-panel">
+      <div className="linked-companies-head"><div><h3>CNPJs vinculados</h3><p>Empresas relacionadas a este cliente, mas que não fazem parte da carteira do escritório e não geram mensalidades ou obrigações automáticas.</p></div><button type="button" className="primary" onClick={openNewLinkedCompany}>+ Vincular CNPJ</button></div>
+      <div className="linked-companies-list">{linkedCompanies.map(company => <article className={company.status === 'Inativo' ? 'inactive' : ''} key={company.id}><div className="linked-company-main"><div><span className="linked-company-badge">Não é cliente</span><b>{linkedCompanyName(company)}</b><small>{formatDocument(company.cnpj, 'PJ')} · {company.relacao || 'Empresa relacionada'}{company.fantasia ? ` · ${company.fantasia}` : ''}</small>{company.observacoes ? <p>{company.observacoes}</p> : null}</div><span className={`client-status ${company.status === 'Inativo' ? 'inactive' : ''}`}>{company.status || 'Ativo'}</span></div><div className="linked-company-actions"><button type="button" onClick={() => openEditLinkedCompany(company)}>Editar</button><button type="button" onClick={() => toggleLinkedCompanyStatus(company)}>{company.status === 'Inativo' ? 'Reativar vínculo' : 'Inativar vínculo'}</button></div></article>)}{!linkedCompanies.length ? <div className="empty">Nenhum CNPJ vinculado a este cliente.</div> : null}</div>
+    </div> : null}
     {tab === 'finance' ? <div>
       <div className="overview-grid"><article><small>Mensalidade</small><strong>{money(client.mensalidade)}</strong></article><article><small>Recebido</small><strong>{money(financeTotals.received)}</strong></article><article><small>A receber</small><strong>{money(financeTotals.pending + financeTotals.overdue)}</strong></article></div>
       <div className="details-actions"><button type="button" onClick={() => onOpenFinance?.(false)}>Abrir no Financeiro</button>{canCharge ? <button type="button" onClick={() => onOpenFinance?.(true)}>+ Nova cobrança</button> : null}</div>
       <div className="detail-list">{charges.slice(0, 12).map(charge => <article key={charge.id}><div><b>{charge.descricao || 'Cobrança'}</b><small>{charge.competencia || 'Sem competência'} · {charge.status || 'Pendente'} · {formatDate(charge.vencimento)}</small></div><strong>{money(charge.valor)}</strong></article>)}{!charges.length ? <div className="empty">Nenhuma cobrança vinculada a este cliente.</div> : null}</div>
     </div> : null}
     {tab === 'tasks' ? <DetailList rows={tasks} title="titulo" /> : null}{tab === 'processes' ? <DetailList rows={processes} title="tipo" onOpen={item => onOpenProcess(item.id)} /> : null}{tab === 'obligations' ? <DetailList rows={obligations} title="nome" /> : null}
+
+    {linkedEditing ? <Modal title={linkedEditing.id ? 'Editar CNPJ vinculado' : 'Vincular CNPJ'} subtitle="Este cadastro é apenas relacionado ao cliente e não entra na carteira do escritório." onClose={() => setLinkedEditing(null)} className="linked-company-modal"><form className="linked-company-form" onSubmit={saveLinkedCompany}>
+      <Field label="CNPJ *" full><input inputMode="numeric" maxLength={18} value={formatDocument(linkedEditing.cnpj, 'PJ')} onChange={event => setLinkedField('cnpj', formatDocument(event.target.value, 'PJ'))} placeholder="00.000.000/0000-00" /></Field>
+      <Field label="Razão Social *" full><input value={linkedEditing.razao} onChange={event => setLinkedField('razao', event.target.value)} /></Field>
+      <Field label="Nome Fantasia" full><input value={linkedEditing.fantasia} onChange={event => setLinkedField('fantasia', event.target.value)} /></Field>
+      <Field label="Relação"><select value={linkedEditing.relacao} onChange={event => setLinkedField('relacao', event.target.value)}>{linkedRelationshipOptions.map(item => <option key={item}>{item}</option>)}</select></Field>
+      <Field label="Status"><select value={linkedEditing.status} onChange={event => setLinkedField('status', event.target.value)}><option>Ativo</option><option>Inativo</option></select></Field>
+      <Field label="Observações" full><textarea value={linkedEditing.observacoes} onChange={event => setLinkedField('observacoes', event.target.value)} placeholder="Ex.: empresa atendida por outro contador; este CNPJ aparece somente neste relacionamento." /></Field>
+      {linkedError ? <p className="client-error linked-company-error">{linkedError}</p> : null}
+      <footer className="linked-company-form-actions"><button type="button" onClick={() => setLinkedEditing(null)}>Cancelar</button><button className="primary">Salvar vínculo</button></footer>
+    </form></Modal> : null}
   </Modal>
 }
 function DetailList({ rows, title, onOpen }) { return <div className="detail-list">{rows.map(item => <article key={item.id}><div><b>{item[title]}</b><small>{item.status || item.categoria || 'Registro vinculado'}</small></div>{onOpen ? <button type="button" onClick={() => onOpen(item)}>Abrir</button> : null}</article>)}{!rows.length ? <div className="empty">Nenhum registro.</div> : null}</div> }
