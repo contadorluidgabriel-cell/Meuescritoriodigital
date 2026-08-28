@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { ACTIVE_USER_KEY, getLocalUpdatedAt, loadOffice, officePayload, payloadToOffice, saveOffice, userStoragePrefix } from '../lib/storage.js'
+import { useTodoistTasks } from './useTodoistTasks.js'
 
 const timeValue = value => {
   const parsed = Date.parse(value || '')
@@ -160,5 +161,11 @@ export function useOfficeData(session) {
     return draft
   }), [])
 
-  return { office, update, ready, sync }
+  const todoist = useTodoistTasks({
+    enabled: Boolean(ready && session?.user?.id),
+    tasks: office.tasks || [],
+    update,
+  })
+
+  return { office, update, ready, sync, todoist }
 }
