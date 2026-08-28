@@ -1,12 +1,12 @@
 export const KEYS = {
-  clients: 'med_clientes', tasks: 'med_tarefas', taskTemplates: 'med_tarefas_modelos',
+  clients: 'med_clientes', linkedCompanies: 'med_cnpjs_vinculados', tasks: 'med_tarefas', taskTemplates: 'med_tarefas_modelos',
   processes: 'med_processos', obligations: 'med_obrigacoes', processModels: 'med_processos_modelos',
   finance: 'med_financeiro', settings: 'med_configuracoes', departments: 'med_departamentos',
   ui: 'med_preferencias', history: 'med_historico_painel', meta: 'med_meta', lastBackup: 'med_last_backup',
 }
 
 export const defaults = {
-  clients: [], tasks: [], taskTemplates: [], processes: [], obligations: [], processModels: [], finance: [], history: [],
+  clients: [], linkedCompanies: [], tasks: [], taskTemplates: [], processes: [], obligations: [], processModels: [], finance: [], history: [],
   settings: { office: 'Meu Escritório', system: 'Meu Escritório Digital', user: 'Usuário', role: 'Administrador', initials: 'ME', visual: 'macos' },
   departments: ['Fiscal', 'Contábil', 'DP', 'Societário', 'Administrativo'].map(name => ({ name, active: true })),
   ui: {}, meta: { version: '11.1' }, lastBackup: '',
