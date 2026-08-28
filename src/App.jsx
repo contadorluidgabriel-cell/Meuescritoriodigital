@@ -6,41 +6,17 @@ import TasksReact from './components/TasksReact.jsx'
 import Dashboard from './components/Dashboard.jsx'
 import CalendarReact from './components/CalendarReact.jsx'
 import ObligationsReact from './components/ObligationsReact.jsx'
+import { AppSidebar, AppTopbar } from './components/AppChrome.jsx'
 import { useAuthSession } from './hooks/useAuthSession.js'
 import { useLegacyIdentity } from './hooks/useLegacyIdentity.js'
 import { useOfficeData } from './hooks/useOfficeData.js'
 import { collectCalendarEvents } from './lib/calendarEvents.js'
 
-const navigationGroups = [
-  {
-    label: 'Visão geral',
-    items: [
-      ['dashboard', 'Painel Principal', '⌂'],
-      ['calendario', 'Calendário', '▣'],
-    ],
-  },
-  {
-    label: 'Operação',
-    items: [
-      ['clientes', 'Clientes', '◎'],
-      ['tarefas', 'Tarefas', '☑'],
-      ['processos', 'Processos', '↗'],
-      ['obrigacoes', 'Obrigações', '✓'],
-    ],
-  },
-  {
-    label: 'Gestão',
-    items: [
-      ['honorarios', 'Financeiro', 'R$'],
-      ['configuracoes', 'Configurações', '⚙'],
-    ],
-  },
-]
-
 const ProcessesReact = lazy(() => import('./components/ProcessesReact.jsx'))
 const FinanceReact = lazy(() => import('./components/FinanceReact.jsx'))
-
 const notificationWindows = [0, 1, 3, 5, 7, 15, 30]
+const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 
 function localDateOnly(value) {
   const [year, month, day] = String(value || '').split('-').map(Number)
@@ -77,6 +53,8 @@ export default function App() {
   const [legacyTarget, setLegacyTarget] = useState({ type: '', id: '', request: 0 })
   const [collapsed, setCollapsed] = useState(() => localStorage.getItem('med_react_sidebar_collapsed') === '1')
   const [notificationsOpen, setNotificationsOpen] = useState(false)
+  const [globalQuery, setGlobalQuery] = useState('')
+
   const configuredNotificationDays = Number(office.ui?.notifications?.daysBefore ?? 3)
   const notificationDays = notificationWindows.includes(configuredNotificationDays) ? configuredNotificationDays : 3
   const notificationItems = useMemo(() => collectCalendarEvents(office)
@@ -88,6 +66,33 @@ export default function App() {
     today: notificationItems.filter(item => item.days === 0).length,
     upcoming: notificationItems.filter(item => item.days > 0).length,
   }), [notificationItems])
+
+  const searchResults = useMemo(() => {
+    const query = normalize(globalQuery)
+    if (!query) return []
+    const clients = new Map((office.clients || []).map(client => [String(client.id), clientName(client)]))
+    const results = []
+    ;(office.clients || []).forEach(client => {
+      const haystack = normalize(`${clientName(client)} ${client.fantasia || ''} ${client.documento || ''} ${client.id || ''}`)
+      if (haystack.includes(query)) results.push({ key: `client-${client.id}`, type: 'client', typeLabel: 'Cliente', id: String(client.id), title: clientName(client), subtitle: client.documento || client.tributacao || 'Cadastro de cliente' })
+    })
+    ;(office.tasks || []).forEach(task => {
+      const customer = task.clientId ? clients.get(String(task.clientId)) || 'Cliente' : 'Interna'
+      const haystack = normalize(`${task.titulo || ''} ${customer} ${task.departamento || ''} ${task.responsavel || ''}`)
+      if (haystack.includes(query)) results.push({ key: `task-${task.id}`, type: 'task', typeLabel: 'Tarefa', id: String(task.id), title: task.titulo || 'Tarefa', subtitle: `${customer}${task.departamento ? ` · ${task.departamento}` : ''}` })
+    })
+    ;(office.processes || []).forEach(process => {
+      const customer = clients.get(String(process.clientId)) || 'Cliente'
+      const haystack = normalize(`${process.tipo || ''} ${customer} ${process.status || ''} ${process.origem || ''}`)
+      if (haystack.includes(query)) results.push({ key: `process-${process.id}`, type: 'process', typeLabel: 'Processo', id: String(process.id), title: process.tipo || 'Processo', subtitle: `${customer}${process.status ? ` · ${process.status}` : ''}` })
+    })
+    ;(office.obligations || []).forEach(obligation => {
+      const firstClientId = obligation.clientes?.[0]?.clienteId ? String(obligation.clientes[0].clienteId) : ''
+      const haystack = normalize(`${obligation.nome || ''} ${obligation.categoria || ''} ${obligation.competencia || ''}`)
+      if (haystack.includes(query)) results.push({ key: `obligation-${obligation.id}`, type: 'obligation', typeLabel: 'Obrigação', id: String(obligation.id), clientId: firstClientId, title: obligation.nome || 'Obrigação', subtitle: obligation.categoria || 'Obrigação do escritório' })
+    })
+    return results.slice(0, 30)
+  }, [globalQuery, office.clients, office.obligations, office.processes, office.tasks])
 
   if (!authReady && !localPreview) return <div className="react-loading"><span>ED</span><b>Verificando acesso…</b></div>
   if (!session && !localPreview) return <Login />
@@ -105,6 +110,7 @@ export default function App() {
     setProcessTarget({ id: '', clientId: '', openRequest: 0, newRequest: 0 })
     setLegacyTarget({ type: '', id: '', request: 0 })
     setNotificationsOpen(false)
+    setGlobalQuery('')
     setView(nextView)
   }
 
@@ -152,31 +158,32 @@ export default function App() {
     setView('processos')
   }
 
+  function chooseSearchResult(item) {
+    setGlobalQuery('')
+    setNotificationsOpen(false)
+    if (item.type === 'task') {
+      setTaskClientId('')
+      setTaskOpenRequest(0)
+      setTaskEditTarget(current => ({ id: item.id, request: current.request + 1 }))
+      setView('tarefas')
+      return
+    }
+    if (item.type === 'process') {
+      setProcessTarget(current => ({ id: item.id, clientId: '', openRequest: current.openRequest + 1, newRequest: 0 }))
+      setView('processos')
+      return
+    }
+    if (item.type === 'obligation') {
+      setObligationTarget(current => ({ id: item.id, clientId: item.clientId || '', request: current.request + 1 }))
+      setView('obrigacoes')
+      return
+    }
+    setView('clientes')
+  }
+
   return <div className={`react-shell ${collapsed ? 'is-collapsed' : ''}`}>
-    <aside className="react-sidebar">
-      <header className="react-brand">
-        <span className="react-logo">{identity.initials || 'ED'}</span>
-        <div><strong>{identity.office}</strong><small>{identity.system} · V11.1</small></div>
-        <button type="button" className="collapse-button" onClick={toggleSidebar} aria-label={collapsed ? 'Expandir menu' : 'Recolher menu'}>‹</button>
-      </header>
-
-      <div className="react-nav-stack">
-        {navigationGroups.map(group => <section className="react-nav-group" key={group.label}>
-          <div className="react-nav-title">{group.label}</div>
-          <nav aria-label={group.label}>{group.items.map(([id, label, icon]) => <button type="button" className={view === id ? 'active' : ''} onClick={() => navigate(id)} title={label} key={id}><i aria-hidden="true">{icon}</i><span>{label}</span></button>)}</nav>
-        </section>)}
-      </div>
-
-      <div className="react-notification-nav">
-        <button type="button" className={notificationItems.length ? 'has-alerts' : ''} onClick={() => setNotificationsOpen(current => !current)} aria-label={`Notificações: ${notificationItems.length} alerta(s)`} aria-expanded={notificationsOpen} title="Notificações">
-          <svg className="notification-bell-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>
-          <span>Notificações</span>
-          {notificationItems.length ? <b>{notificationItems.length > 99 ? '99+' : notificationItems.length}</b> : null}
-        </button>
-      </div>
-
-      <footer className="react-profile"><span>{identity.initials || 'ME'}</span><div><strong>{identity.user}</strong><small>{identity.role} · {sync}</small></div><button type="button" onClick={signOut}>Sair</button></footer>
-    </aside>
+    <AppSidebar currentView={view} identity={identity} sync={sync} collapsed={collapsed} onToggle={toggleSidebar} onNavigate={navigate} onSignOut={signOut} />
+    <AppTopbar currentView={view} query={globalQuery} onQueryChange={setGlobalQuery} searchResults={searchResults} onChooseResult={chooseSearchResult} notificationsCount={notificationItems.length} notificationsOpen={notificationsOpen} onToggleNotifications={() => setNotificationsOpen(current => !current)} identity={identity} />
 
     {notificationsOpen ? <div className="react-notifications"><section className="notification-panel" aria-label="Central de notificações">
       <header>
