@@ -31,7 +31,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
   useEffect(() => { setMobileMoreOpen(false) }, [currentView, notificationsOpen])
 
   return <>
-    <aside className="react-sidebar saas-sidebar">
+    <aside className="react-sidebar saas-sidebar app-sidebar-desktop">
       <header className="react-brand saas-brand">
         <span className="react-logo">{identity.initials || 'ED'}</span>
         <div className="saas-brand-copy"><strong>{identity.office}</strong><small>{identity.system} · V11.1</small></div>
@@ -45,20 +45,20 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
         </section>)}
       </div>
 
-      <nav className="saas-mobile-nav" aria-label="Navegação principal mobile">
-        {mobilePrimary.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-nav-icon"><Icon name={icon} size={19} /></span><span className="saas-mobile-nav-label">{label}</span></button>)}
-        <button type="button" className={mobileMoreActive || mobileMoreOpen ? 'active' : ''} onClick={() => setMobileMoreOpen(current => !current)} aria-expanded={mobileMoreOpen}><span className="saas-mobile-nav-icon"><Icon name="more" size={20} /></span><span className="saas-mobile-nav-label">Mais</span></button>
-      </nav>
-
       <div className="saas-sidebar-bottom">
         <nav aria-label="Preferências"><button type="button" className={currentView === 'configuracoes' ? 'active' : ''} onClick={() => go('configuracoes')} title="Configurações"><Icon name="settings" size={18} /><span>Configurações</span></button></nav>
         <footer className="react-profile saas-profile"><span>{identity.initials || 'ME'}</span><div><strong>{identity.user}</strong><small>{identity.role} · {sync}</small></div><Button variant="ghost-inverse" size="sm" icon="logout" iconOnly onClick={onSignOut}>Sair</Button></footer>
       </div>
     </aside>
 
+    <nav className="saas-mobile-nav app-mobile-nav" aria-label="Navegação principal mobile">
+      {mobilePrimary.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-nav-icon"><Icon name={icon} size={19} /></span><span className="saas-mobile-nav-label">{label}</span></button>)}
+      <button type="button" className={mobileMoreActive || mobileMoreOpen ? 'active' : ''} onClick={() => setMobileMoreOpen(current => !current)} aria-expanded={mobileMoreOpen}><span className="saas-mobile-nav-icon"><Icon name="more" size={20} /></span><span className="saas-mobile-nav-label">Mais</span></button>
+    </nav>
+
     {mobileMoreOpen ? <>
       <button type="button" className="saas-mobile-more-backdrop" onClick={() => setMobileMoreOpen(false)} aria-label="Fechar menu" />
-      <section className="saas-mobile-more-sheet" aria-label="Mais módulos">
+      <section className="saas-mobile-more-sheet app-mobile-more-panel" aria-label="Mais módulos">
         <header><div><strong>Mais áreas</strong><small>Gestão e configurações do escritório</small></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Fechar"><Icon name="close" size={18} /></button></header>
         <div className="saas-mobile-more-grid">
           {mobileMore.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' ? 'Honorários e recebimentos' : 'Sistema e integrações'}</small></div></button>)}

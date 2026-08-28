@@ -13,6 +13,7 @@ import './obligations-react.css'
 import './processes-react.css'
 import './saas-system-v11.css'
 import './mobile-saas-v11.css'
+import './mobile-nav-fix.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>

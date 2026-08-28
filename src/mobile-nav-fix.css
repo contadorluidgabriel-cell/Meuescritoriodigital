@@ -1,0 +1,72 @@
+/* Mobile navigation isolation hotfix — keeps desktop sidebar and mobile nav as separate surfaces. */
+@media(max-width:820px){
+  .react-shell .app-sidebar-desktop,
+  .react-shell.is-collapsed .app-sidebar-desktop{
+    display:none!important;
+    visibility:hidden!important;
+    pointer-events:none!important;
+    width:0!important;
+    height:0!important;
+    overflow:hidden!important;
+  }
+
+  .saas-mobile-nav.app-mobile-nav{
+    position:fixed!important;
+    left:0!important;
+    right:0!important;
+    bottom:0!important;
+    z-index:1000!important;
+    display:grid!important;
+    grid-template-columns:repeat(5,minmax(0,1fr))!important;
+    gap:2px!important;
+    width:100%!important;
+    height:calc(70px + env(safe-area-inset-bottom))!important;
+    min-height:70px!important;
+    padding:5px 8px max(5px,env(safe-area-inset-bottom))!important;
+    margin:0!important;
+    border:0!important;
+    border-top:1px solid #E4E7EC!important;
+    border-radius:0!important;
+    background:rgba(255,255,255,.98)!important;
+    box-shadow:0 -8px 30px rgba(16,24,40,.07)!important;
+    backdrop-filter:blur(14px)!important;
+    overflow:hidden!important;
+    transform:translateZ(0);
+  }
+
+  .saas-mobile-nav.app-mobile-nav>button{
+    width:100%!important;
+    min-width:0!important;
+    max-width:none!important;
+  }
+
+  .react-workspace,
+  .react-shell.is-collapsed .react-workspace{
+    margin-left:0!important;
+    width:100%!important;
+    max-width:100%!important;
+  }
+
+  .saas-mobile-more-sheet.app-mobile-more-panel{
+    position:fixed!important;
+    left:10px!important;
+    right:10px!important;
+    bottom:calc(80px + env(safe-area-inset-bottom))!important;
+    z-index:1005!important;
+    width:auto!important;
+    max-width:430px!important;
+    max-height:min(60dvh,520px)!important;
+    margin:0 auto!important;
+    overflow:auto!important;
+  }
+
+  .saas-mobile-more-backdrop{
+    position:fixed!important;
+    inset:0 0 calc(70px + env(safe-area-inset-bottom))!important;
+    z-index:990!important;
+  }
+}
+
+@media(min-width:821px){
+  .app-mobile-nav{display:none!important}
+}
