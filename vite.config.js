@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import { applyThirdPartyWorkPatches } from './scripts/patch-third-party-work.mjs'
 import { applyClientOutsourcingPatch } from './scripts/patch-client-outsourcing.mjs'
-import { inspectTaskSource } from './scripts/inspect-task-source.mjs'
+import { applyTaskDeletionPatch } from './scripts/patch-task-deletion.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -56,8 +56,8 @@ function restorePayloads() {
 
 restorePayloads()
 applyThirdPartyWorkPatches(root)
+applyTaskDeletionPatch(root)
 applyClientOutsourcingPatch(root)
-inspectTaskSource(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 
