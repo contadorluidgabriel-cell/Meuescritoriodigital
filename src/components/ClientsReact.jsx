@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { today, uid } from '../lib/storage.js'
 
 const emptyClient = {
@@ -11,15 +11,16 @@ const activityOptions = ['Comércio', 'Serviço', 'Comércio + Serviço', 'Indú
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 const documentDigits = value => String(value || '').replace(/\D/g, '')
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
-const addDays = (date, amount) => { const next = new Date(`${date || today()}T00:00:00`); next.setDate(next.getDate() + Number(amount || 0)); return next.toISOString().slice(0, 10) }
+const addDays = (date, amount) => { const next = new Date(`${date || today()}T00:00:00`); next.setDate(next.getDate() + Number(amount || 0)); return today(next) }
 
 function Field({ label, full = false, children }) { return <label className={`client-field ${full ? 'full' : ''}`}><span>{label}</span>{children}</label> }
 function Modal({ title, subtitle, onClose, children, wide = false }) { return <div className="client-modal" role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><div className={`client-modal-card ${wide ? 'wide' : ''}`}><header><div><h2>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</div></div> }
 
-export default function ClientsReact({ office, update, sync, onOpenTasks, onOpenProcesses }) {
+export default function ClientsReact({ office, update, sync, onOpenTasks, onOpenProcesses, initialClientId = '', openClientRequest = 0 }) {
   const [query, setQuery] = useState(''), [status, setStatus] = useState(''), [relationship, setRelationship] = useState('')
   const [editing, setEditing] = useState(null), [details, setDetails] = useState(null), [error, setError] = useState('')
   const [selectedTemplates, setSelectedTemplates] = useState(new Set())
+  const handledClientOpen = useRef(0)
   const rows = useMemo(() => office.clients.filter(client => {
     const matchesQuery = !query || normalize(`${clientName(client)} ${client.fantasia || ''} ${client.documento || ''} ${client.id}`).includes(normalize(query))
     return matchesQuery && (!status || client.status === status) && (!relationship || client.relacionamento === relationship)
@@ -31,6 +32,13 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
   }, [editing?.departamentos, office.departments])
   const activeDepartments = useMemo(() => new Set((office.departments || []).filter(item => item.active !== false).map(item => item.name)), [office.departments])
   const matchingTemplates = useMemo(() => !editing?.id ? (office.taskTemplates || []).filter(model => (!model.departamento || editing?.departamentos?.includes(model.departamento)) && (!(model.regimes || []).length || model.regimes.includes(editing?.tributacao))) : [], [editing, office.taskTemplates])
+
+  useEffect(() => {
+    if (!initialClientId || !openClientRequest || handledClientOpen.current === openClientRequest) return
+    handledClientOpen.current = openClientRequest
+    const client = (office.clients || []).find(item => String(item.id) === String(initialClientId))
+    if (client) setDetails(client)
+  }, [initialClientId, office.clients, openClientRequest])
 
   function openNew() { setEditing({ ...emptyClient, departamentos: [], dataEntrada: today() }); setSelectedTemplates(new Set()); setError('') }
   function openEdit(client) { setEditing({ ...emptyClient, ...structuredClone(client), departamentos: [...(client.departamentos || [])], comunicacoes: [...(client.comunicacoes || [])] }); setSelectedTemplates(new Set()); setError('') }
@@ -83,9 +91,10 @@ export default function ClientsReact({ office, update, sync, onOpenTasks, onOpen
 
 function ClientDetails({ client, office, onClose, onEdit, onOpenTasks, onNewProcess, onOpenProcess }) {
   const [tab, setTab] = useState('overview')
-  const tasks = office.tasks.filter(item => item.clientId === client.id)
-  const processes = office.processes.filter(item => item.clientId === client.id || (item.relacionados || []).includes(client.id))
-  const obligations = office.obligations.filter(item => (item.clientes || []).some(link => link.clienteId === client.id))
+  const clientId = String(client.id)
+  const tasks = office.tasks.filter(item => String(item.clientId) === clientId)
+  const processes = office.processes.filter(item => String(item.clientId) === clientId || (item.relacionados || []).some(id => String(id) === clientId))
+  const obligations = office.obligations.filter(item => (item.clientes || []).some(link => String(link.clienteId) === clientId))
   return <Modal title={clientName(client)} subtitle={`${client.documento || ''} · ${client.tributacao || ''}`} onClose={onClose} wide><div className="client-summary"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${Number(client.mensalidade || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}` : ''}</p></article><article><b>Documentos</b><p>{client.drive ? <a href={client.drive} target="_blank" rel="noreferrer">Abrir Google Drive</a> : 'Sem link de Drive'}</p></article></div><div className="details-actions"><button onClick={onOpenTasks}>+ Tarefa</button><button onClick={onNewProcess}>+ Processo</button><button onClick={onEdit}>Editar cliente</button></div><div className="details-tabs">{[['overview','Visão geral'],['obligations','Obrigações'],['processes','Processos'],['tasks','Tarefas']].map(([id,label]) => <button className={tab === id ? 'active' : ''} onClick={() => setTab(id)} key={id}>{label}</button>)}</div>{tab === 'overview' ? <div className="overview-grid"><article><small>Tarefas abertas</small><strong>{tasks.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Processos ativos</small><strong>{processes.filter(item => !/conclu/i.test(item.status)).length}</strong></article><article><small>Obrigações</small><strong>{obligations.length}</strong></article><p>{client.observacoes || 'Nenhuma observação.'}</p></div> : null}{tab === 'tasks' ? <DetailList rows={tasks} title="titulo" /> : null}{tab === 'processes' ? <DetailList rows={processes} title="tipo" onOpen={item => onOpenProcess(item.id)} /> : null}{tab === 'obligations' ? <DetailList rows={obligations} title="nome" /> : null}</Modal>
 }
 function DetailList({ rows, title, onOpen }) { return <div className="detail-list">{rows.map(item => <article key={item.id}><div><b>{item[title]}</b><small>{item.status || item.categoria || 'Registro vinculado'}</small></div>{onOpen ? <button type="button" onClick={() => onOpen(item)}>Abrir</button> : null}</article>)}{!rows.length ? <div className="empty">Nenhum registro.</div> : null}</div> }
