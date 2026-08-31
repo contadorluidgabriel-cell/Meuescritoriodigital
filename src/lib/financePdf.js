@@ -59,9 +59,12 @@ function hashNumber(value = '') {
 }
 
 export function financeDocumentNumber(charge = {}, type = 'invoice') {
-  const date = charge.faturaEmitidaEm || charge.recebidoEm || charge.vencimento || new Date().toISOString().slice(0, 10)
+  const receipt = type === 'receipt'
+  const date = receipt
+    ? (charge.reciboEmitidoEm || charge.recebidoEm || charge.vencimento || new Date().toISOString().slice(0, 10))
+    : (charge.faturaEmitidaEm || charge.vencimento || new Date().toISOString().slice(0, 10))
   const year = String(date).slice(0, 4) || String(new Date().getFullYear())
-  const prefix = type === 'receipt' ? 'REC' : 'FAT'
+  const prefix = receipt ? 'REC' : 'FAT'
   return `${prefix}-${year}-${String(hashNumber(charge.id || `${charge.clienteId}-${charge.descricao}-${charge.valor}`)).padStart(6, '0')}`
 }
 
@@ -72,8 +75,10 @@ function textCommand({ x = 48, y, text, size = 10, bold = false, white = false }
 export function buildFinanceDocumentBytes({ type = 'invoice', charge = {}, client = {}, office = {} } = {}) {
   const receipt = type === 'receipt'
   const summary = paymentSummary(charge)
-  const issuedAt = receipt ? (summary.lastPaymentDate || charge.recebidoEm || new Date().toISOString().slice(0, 10)) : (charge.faturaEmitidaEm || new Date().toISOString().slice(0, 10))
-  const number = financeDocumentNumber({ ...charge, faturaEmitidaEm: issuedAt }, receipt ? 'receipt' : 'invoice')
+  const issuedAt = receipt
+    ? (charge.reciboEmitidoEm || summary.lastPaymentDate || charge.recebidoEm || new Date().toISOString().slice(0, 10))
+    : (charge.faturaEmitidaEm || new Date().toISOString().slice(0, 10))
+  const number = financeDocumentNumber({ ...charge, ...(receipt ? { reciboEmitidoEm: issuedAt } : { faturaEmitidaEm: issuedAt }) }, receipt ? 'receipt' : 'invoice')
   const title = receipt ? 'RECIBO DE PAGAMENTO' : 'FATURA DE SERVIÇOS'
   let content = `${blue} rg 0 756 595 86 re f\n`
   content += textCommand({ x: 46, y: 808, text: officeName(office), size: 16, bold: true, white: true })
