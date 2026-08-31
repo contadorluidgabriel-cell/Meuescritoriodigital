@@ -1,4 +1,3 @@
-import { useMemo } from 'react'
 import { clientPartnerIds, partnerShares, responsibilityFor } from '../lib/sharedWork.js'
 
 const partnerName = partner => partner?.nome || partner?.razao || 'Parceiro'
@@ -16,11 +15,10 @@ export default function SharedClientFields({ editing, setField, office }) {
     .filter(Boolean)
   const shares = partnerShares(editing)
   const shareMap = new Map(shares.map(item => [String(item.parceiroId), Number(item.valor) || 0]))
-  const departmentNames = useMemo(() => {
-    const active = (editing.departamentos || []).map(String)
-    const configured = Object.keys(editing.responsabilidadesCompartilhadas || {})
-    return [...new Set([...active, ...configured])]
-  }, [editing.departamentos, editing.responsabilidadesCompartilhadas])
+  const departmentNames = [...new Set([
+    ...(editing.departamentos || []).map(String),
+    ...Object.keys(editing.responsabilidadesCompartilhadas || {}),
+  ])]
 
   function togglePartner(id) {
     const key = String(id)
