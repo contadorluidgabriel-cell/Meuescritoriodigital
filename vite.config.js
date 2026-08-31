@@ -9,6 +9,7 @@ import { applyClientOutsourcingPatch } from './scripts/patch-client-outsourcing.
 import { applyTaskDeletionPatch } from './scripts/patch-task-deletion.mjs'
 import { applyQuantitativeAndAvulsoPatches } from './scripts/patch-quantitative-and-avulsos.mjs'
 import { applyQuantitativeDuplicatePatch } from './scripts/patch-quantitative-duplicate.mjs'
+import { applyAvulsoSelectorPositionPatch } from './scripts/patch-avulso-selector-position.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -62,6 +63,7 @@ applyTaskDeletionPatch(root)
 applyClientOutsourcingPatch(root)
 applyQuantitativeAndAvulsoPatches(root)
 applyQuantitativeDuplicatePatch(root)
+applyAvulsoSelectorPositionPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 
