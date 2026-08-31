@@ -86,7 +86,8 @@ export function addPaymentToCharge(charge = {}, payment = {}, makeId = () => `pa
 }
 
 export function removePaymentFromCharge(charge = {}, paymentId = '', day = '') {
-  const next = { ...charge, pagamentos: (charge.pagamentos || []).filter(item => String(item.id) !== String(paymentId)) }
+  const payments = (charge.pagamentos || []).filter(item => String(item.id) !== String(paymentId))
+  const next = { ...charge, pagamentos: payments, status: payments.length ? charge.status : 'Pendente', recebidoEm: '' }
   const summary = paymentSummary(next)
   next.status = effectiveChargeStatus({ ...next, status: summary.balance <= 0.009 && summary.total > 0 ? 'Recebido' : 'Pendente' }, day)
   next.recebidoEm = next.status === 'Recebido' ? summary.lastPaymentDate : ''
