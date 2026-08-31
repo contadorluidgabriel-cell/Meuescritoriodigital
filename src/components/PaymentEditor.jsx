@@ -12,7 +12,6 @@ export default function PaymentEditor({ charge, onClose, onSave, onRemove }) {
   const applied = Math.max(0, Number(draft.valorRecebido || 0) + Number(draft.desconto || 0) - Number(draft.acrescimo || 0))
   const remaining = Math.max(0, current.balance - applied)
 
-  function setField(name, value) { setDraft(value => ({ ...value, [name]: value })) }
   function change(name, value) { setDraft(currentDraft => ({ ...currentDraft, [name]: value })) }
   function submit(event) {
     event.preventDefault()
@@ -29,9 +28,12 @@ export default function PaymentEditor({ charge, onClose, onSave, onRemove }) {
 
   return <div className="finance-modal" role="dialog" aria-modal="true" aria-label="Registrar recebimento" onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}>
     <div className="finance-modal-card payment-modal-card">
-      <header><div><h2>Registrar recebimento</h2><p>Baixa total ou parcial sem alterar o valor original da cobrança.</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>
-      <form className="finance-form" onSubmit={submit}>
+      <header><div><h2>{current.balance > 0.009 ? 'Registrar recebimento' : 'Histórico de recebimentos'}</h2><p>{current.balance > 0.009 ? 'Baixa total ou parcial sem alterar o valor original da cobrança.' : 'Esta cobrança está quitada. Você pode consultar ou estornar baixas registradas.'}</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>
+      <div className="finance-form">
         <div className="payment-summary full"><span><small>Valor original</small><b>{money(current.total)}</b></span><span><small>Já recebido</small><b>{money(current.receivedCash)}</b></span><span><small>Saldo atual</small><b>{money(current.balance)}</b></span></div>
+      </div>
+
+      {current.balance > 0.009 ? <form className="finance-form payment-entry-form" onSubmit={submit}>
         <label className="finance-field"><span>Data do recebimento *</span><input type="date" value={draft.data} onChange={event => change('data', event.target.value)} /></label>
         <label className="finance-field"><span>Valor efetivamente recebido *</span><input type="number" min="0" step="0.01" value={draft.valorRecebido} onChange={event => change('valorRecebido', event.target.value)} /></label>
         <label className="finance-field"><span>Desconto concedido</span><input type="number" min="0" step="0.01" value={draft.desconto} onChange={event => change('desconto', event.target.value)} /></label>
@@ -40,9 +42,9 @@ export default function PaymentEditor({ charge, onClose, onSave, onRemove }) {
         <div className="payment-preview full"><span>Abatimento desta cobrança: <b>{money(applied)}</b></span><span>Saldo após a baixa: <b>{money(remaining)}</b></span></div>
         {error ? <p className="finance-error">{error}</p> : null}
         <footer><button type="button" onClick={onClose}>Cancelar</button><button className="primary" type="submit">Registrar baixa</button></footer>
-      </form>
+      </form> : null}
 
-      {current.payments.length ? <section className="payment-history"><h3>Baixas registradas</h3>{current.payments.map(payment => <article key={payment.id}><div><b>{dateBr(payment.data)} · {money(payment.valorRecebido)}</b><small>{payment.desconto ? `Desconto ${money(payment.desconto)} · ` : ''}{payment.acrescimo ? `Acréscimo ${money(payment.acrescimo)} · ` : ''}{payment.observacao || (payment.legacy ? 'Recebimento legado' : 'Sem observação')}</small></div>{!payment.legacy ? <button type="button" className="danger" onClick={() => onRemove(payment.id)}>Estornar</button> : null}</article>)}</section> : null}
+      {current.payments.length ? <section className="payment-history"><h3>Baixas registradas</h3>{current.payments.map(payment => <article key={payment.id}><div><b>{dateBr(payment.data)} · {money(payment.valorRecebido)}</b><small>{payment.desconto ? `Desconto ${money(payment.desconto)} · ` : ''}{payment.acrescimo ? `Acréscimo ${money(payment.acrescimo)} · ` : ''}{payment.observacao || (payment.legacy ? 'Recebimento legado' : 'Sem observação')}</small></div>{!payment.legacy ? <button type="button" className="danger" onClick={() => onRemove(payment.id)}>Estornar</button> : null}</article>)}</section> : <section className="payment-history"><p>Nenhuma baixa registrada.</p></section>}
     </div>
   </div>
 }
