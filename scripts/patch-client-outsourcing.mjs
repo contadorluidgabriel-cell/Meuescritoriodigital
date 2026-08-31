@@ -18,8 +18,8 @@ export function applyClientOutsourcingPatch(root) {
     ],
     [
       "<Field label=\"E-mail\"><input type=\"email\" value={editing.email} onChange={event => setField('email', event.target.value)} /></Field><Field label=\"Relacionamento\"><select value={editing.relacionamento} onChange={event => setField('relacionamento', event.target.value)}><option>Recorrente</option><option>Avulso</option></select></Field>",
-      "<Field label=\"E-mail\"><input type=\"email\" value={editing.email} onChange={event => setField('email', event.target.value)} /></Field><Field label=\"Tipo de cliente\"><select value={editing.perfilAtendimento || 'Direto'} onChange={event => setField('perfilAtendimento', event.target.value)}><option value=\"Direto\">Cliente direto</option><option value=\"Terceirizador\">Cliente terceirizador</option></select></Field><Field label=\"Relacionamento\"><select value={editing.relacionamento} onChange={event => setField('relacionamento', event.target.value)}><option>Recorrente</option><option>Avulso</option></select></Field>",
-      'client profile field',
+      "<Field label=\"E-mail\"><input type=\"email\" value={editing.email} onChange={event => setField('email', event.target.value)} /></Field><Field label=\"Relacionamento\"><select value={editing.relacionamento} onChange={event => setField('relacionamento', event.target.value)}><option>Recorrente</option><option>Avulso</option></select></Field><Field label=\"Forma de atendimento\"><select value={editing.perfilAtendimento || 'Direto'} onChange={event => setField('perfilAtendimento', event.target.value)}><option value=\"Direto\">Direto</option><option value=\"Terceirizador\">Terceirizador</option><option value=\"Compartilhado\">Compartilhado</option></select></Field>",
+      'client service profile field',
     ],
     [
       "    </section>\n\n    {editing ? <Modal",
