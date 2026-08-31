@@ -59,7 +59,7 @@ export function normalizedSharedClientFields(client = {}) {
   const partnerIds = clientPartnerIds(client)
   const monthly = moneyNumber(client.mensalidade)
   let mine = moneyNumber(client.compartilhadoMinhaParte)
-  let shares = partnerShares(client)
+  const shares = partnerShares(client)
     .filter(item => partnerIds.includes(item.parceiroId))
   const known = new Set(shares.map(item => item.parceiroId))
   partnerIds.forEach(id => { if (!known.has(id)) shares.push({ parceiroId: id, valor: 0 }) })
@@ -131,15 +131,16 @@ export function responsibilityLabel({ responsavel = 'Escritorio', parceiroId = '
 
 export function normalizeSharedCharge(charge = {}, client = {}) {
   const clientFields = normalizedSharedClientFields(client)
-  const ids = unique([
+  const explicitIds = unique([
     ...(Array.isArray(charge.parceiroIds) ? charge.parceiroIds : []),
     charge.parceiroId,
-    ...clientFields.parceiroIds,
   ])
+  const ids = explicitIds.length ? explicitIds : clientFields.parceiroIds
   let shares = partnerShares(charge, { ...client, ...clientFields })
+    .filter(item => ids.includes(item.parceiroId))
   const known = new Set(shares.map(item => item.parceiroId))
   ids.forEach(id => { if (!known.has(id)) shares.push({ parceiroId: id, valor: 0 }) })
-  const receiver = sharedReceiver({ ...charge, parceiroIds: ids, compartilhadoPartesParceiros: shares }, { ...client, ...clientFields })
+  const receiver = sharedReceiver({ ...charge, parceiroIds: ids, parceiroId: ids[0] || '', compartilhadoPartesParceiros: shares }, { ...client, ...clientFields, parceiroIds: ids, parceiroId: ids[0] || '' })
   return {
     ...charge,
     compartilhado: true,
@@ -161,6 +162,7 @@ export function sharedChargeError(charge = {}, client = {}) {
   const normalized = normalizeSharedCharge(charge, client)
   const split = sharedSplit(normalized)
   if (split.total <= 0) return 'Informe um valor maior que zero.'
+  if (!normalized.parceiroIds.length) return 'Selecione pelo menos um parceiro para esta divisão.'
   if (Math.abs(split.difference) > 0.009) return 'Sua parte + partes dos parceiros deve ser igual ao valor total.'
   if (normalized.compartilhadoRecebedor.startsWith('partner:') && !normalized.parceiroIds.includes(normalized.compartilhadoRecebedor.slice(8))) return 'Quem recebeu precisa ser um parceiro vinculado.'
   return ''
@@ -168,6 +170,7 @@ export function sharedChargeError(charge = {}, client = {}) {
 
 export function settlementEntries(charge = {}, client = {}) {
   if (!charge.compartilhado && client.perfilAtendimento !== 'Compartilhado') return []
+  if (!/recebido/i.test(String(charge.status || ''))) return []
   const normalized = normalizeSharedCharge(charge, client)
   if (normalized.compartilhadoAcertoStatus === SETTLEMENT_DONE) return []
   const split = sharedSplit(normalized)
