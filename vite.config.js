@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { gunzipSync } from 'node:zlib'
 import { applyThirdPartyWorkPatches } from './scripts/patch-third-party-work.mjs'
 import { applyClientOutsourcingPatch } from './scripts/patch-client-outsourcing.mjs'
+import { applyClientSharingPatch } from './scripts/patch-client-sharing.mjs'
 import { applyTaskDeletionPatch } from './scripts/patch-task-deletion.mjs'
 import { applyQuantitativeAndAvulsoPatches } from './scripts/patch-quantitative-and-avulsos.mjs'
 import { applyQuantitativeDuplicatePatch } from './scripts/patch-quantitative-duplicate.mjs'
@@ -61,6 +62,7 @@ restorePayloads()
 applyThirdPartyWorkPatches(root)
 applyTaskDeletionPatch(root)
 applyClientOutsourcingPatch(root)
+applyClientSharingPatch(root)
 applyQuantitativeAndAvulsoPatches(root)
 applyQuantitativeDuplicatePatch(root)
 applyAvulsoSelectorPositionPatch(root)
