@@ -11,6 +11,8 @@ import { applyTaskDeletionPatch } from './scripts/patch-task-deletion.mjs'
 import { applyQuantitativeAndAvulsoPatches } from './scripts/patch-quantitative-and-avulsos.mjs'
 import { applyQuantitativeDuplicatePatch } from './scripts/patch-quantitative-duplicate.mjs'
 import { applyAvulsoSelectorPositionPatch } from './scripts/patch-avulso-selector-position.mjs'
+import { applySharedResponsibilityPatches } from './scripts/patch-shared-responsibility.mjs'
+import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -66,6 +68,8 @@ applyClientSharingPatch(root)
 applyQuantitativeAndAvulsoPatches(root)
 applyQuantitativeDuplicatePatch(root)
 applyAvulsoSelectorPositionPatch(root)
+applySharedResponsibilityPatches(root)
+applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 
