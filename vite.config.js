@@ -14,6 +14,7 @@ import { applyAvulsoSelectorPositionPatch } from './scripts/patch-avulso-selecto
 import { applySharedResponsibilityPatches } from './scripts/patch-shared-responsibility.mjs'
 import { applyProcessFinancePatch } from './scripts/patch-process-finance.mjs'
 import { applyOfficialPdfBrandPatch } from './scripts/patch-official-pdf-brand.mjs'
+import { applyFinanceEditingPatch } from './scripts/patch-finance-editing.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -73,6 +74,7 @@ applyAvulsoSelectorPositionPatch(root)
 applySharedResponsibilityPatches(root)
 applyProcessFinancePatch(root)
 applyOfficialPdfBrandPatch(root)
+applyFinanceEditingPatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))

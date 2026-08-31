@@ -1,3 +1,4 @@
+import { monthlyFeeForCompetence } from './financeEditing.js'
 import { normalizedSharedClientFields, SETTLEMENT_PENDING } from './sharedWork.js'
 
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
@@ -19,7 +20,7 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
   return clients
     .filter(client => {
       const id = String(client?.id || '')
-      const monthlyValue = Number(client?.mensalidade ?? client?.honorario ?? 0) || 0
+      const monthlyValue = monthlyFeeForCompetence(client, competence)
       return id
         && client?.status !== 'Inativo'
         && client?.relacionamento === 'Recorrente'
@@ -31,6 +32,7 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
       const requestedDay = Math.max(1, Number(client?.vencimento) || 10)
       const lastDay = new Date(year, month, 0).getDate()
       const dueDay = Math.min(requestedDay, lastDay)
+      const monthlyValue = monthlyFeeForCompetence(client, competence)
       const base = {
         id: typeof makeId === 'function' ? makeId() : `fin-${competence}-${client.id}`,
         clienteId: String(client.id),
@@ -38,14 +40,14 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
         descricao: 'Honorários contábeis',
         competencia: competence,
         vencimento: `${competence}-${String(dueDay).padStart(2, '0')}`,
-        valor: Number(client.mensalidade ?? client.honorario ?? 0) || 0,
+        valor: monthlyValue,
         status: 'Pendente',
         recebidoEm: '',
         origem: 'recorrente',
       }
 
       if (client?.perfilAtendimento !== 'Compartilhado') return base
-      const shared = normalizedSharedClientFields(client)
+      const shared = normalizedSharedClientFields({ ...client, mensalidade: monthlyValue })
       return {
         ...base,
         compartilhado: true,
