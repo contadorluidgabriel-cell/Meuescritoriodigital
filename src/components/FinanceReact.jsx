@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { today, uid } from '../lib/storage.js'
 import { buildMissingRecurringCharges } from '../lib/financeRecurring.js'
+import SharedFinanceEditor from './SharedFinanceEditor.jsx'
 import '../finance-react.css'
 
 const statuses = ['Pendente', 'Recebido', 'Atrasado', 'Cancelado']
@@ -11,11 +12,21 @@ const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'curr
 const formatDate = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : '—'
 
 function normalizedCharge(charge) {
-  return {
+  const normalized = {
     id: charge.id || uid('fin'), clienteId: String(charge.clienteId || ''), cliente: charge.cliente || '',
     descricao: charge.descricao || charge.referencia || 'Honorários contábeis', competencia: charge.competencia || '',
     vencimento: charge.vencimento || charge.data || '', valor: Number(charge.valor) || 0,
     status: statuses.includes(charge.status) ? charge.status : 'Pendente', recebidoEm: charge.recebidoEm || '', origem: charge.origem || 'manual',
+  }
+  if (!charge.compartilhado) return normalized
+  return {
+    ...normalized,
+    compartilhado: true,
+    parceiroId: String(charge.parceiroId || ''),
+    compartilhadoRecebedor: charge.compartilhadoRecebedor || 'Escritorio',
+    compartilhadoMinhaParte: Number(charge.compartilhadoMinhaParte) || 0,
+    compartilhadoParceiroParte: Number(charge.compartilhadoParceiroParte) || 0,
+    compartilhadoPersonalizado: Boolean(charge.compartilhadoPersonalizado),
   }
 }
 
@@ -43,11 +54,23 @@ function ChargeForm({ clients, competence, initialClientId = '', onClose, onSave
 export default function FinanceReact({ office, update, sync, initialClientId = '', openClientRequest = 0, openNewRequest = 0 }) {
   const [competence, setCompetence] = useState(currentCompetence), [status, setStatus] = useState(''), [query, setQuery] = useState(''), [clientFilter, setClientFilter] = useState('')
   const [creating, setCreating] = useState(false), [notice, setNotice] = useState('')
-  const clients = office.clients || [], finance = office.finance || []
+  const [editingShared, setEditingShared] = useState('')
+  const clients = office.clients || [], finance = office.finance || [], partners = office.partners || []
   const clientsById = useMemo(() => new Map(clients.map(client => [String(client.id), client])), [clients])
+  const partnersById = useMemo(() => new Map(partners.map(partner => [String(partner.id), partner])), [partners])
   const activeClients = useMemo(() => clients.filter(client => client.status !== 'Inativo'), [clients])
   const rows = useMemo(() => finance.filter(charge => (!competence || charge.competencia === competence) && (!clientFilter || String(charge.clienteId) === String(clientFilter)) && (!status || charge.status === status) && (!query || normalizeText(`${clientName(clientsById.get(String(charge.clienteId)))} ${charge.cliente} ${charge.descricao}`).includes(normalizeText(query)))), [clientFilter, clientsById, competence, finance, query, status])
   const totals = useMemo(() => finance.reduce((result, charge) => { if ((!competence || charge.competencia === competence) && (!clientFilter || String(charge.clienteId) === String(clientFilter)) && charge.status in result) result[charge.status] += Number(charge.valor) || 0; return result }, { Recebido: 0, Pendente: 0, Atrasado: 0 }), [clientFilter, competence, finance])
+  const rawSharedCharge = useMemo(() => finance.find(charge => String(charge.id) === String(editingShared)) || null, [editingShared, finance])
+  const sharedClient = rawSharedCharge ? clientsById.get(String(rawSharedCharge.clienteId)) : null
+  const sharedEditorCharge = rawSharedCharge ? {
+    ...rawSharedCharge,
+    parceiroId: rawSharedCharge.parceiroId || sharedClient?.parceiroId || '',
+    compartilhadoRecebedor: rawSharedCharge.compartilhadoRecebedor || sharedClient?.compartilhadoRecebedor || 'Escritorio',
+    compartilhadoMinhaParte: rawSharedCharge.compartilhado ? (Number(rawSharedCharge.compartilhadoMinhaParte) || 0) : (Number(sharedClient?.compartilhadoMinhaParte) || 0),
+    compartilhadoParceiroParte: rawSharedCharge.compartilhado ? (Number(rawSharedCharge.compartilhadoParceiroParte) || 0) : (Number(sharedClient?.compartilhadoParceiroParte) || 0),
+  } : null
+  const sharedPartner = sharedEditorCharge ? partnersById.get(String(sharedEditorCharge.parceiroId || '')) : null
 
   useEffect(() => {
     const seen = new Set(), normalized = [], day = today()
@@ -97,6 +120,17 @@ export default function FinanceReact({ office, update, sync, initialClientId = '
   function saveCharge(charge) { update(draft => { draft.finance = [...draft.finance, charge] }); setCreating(false); setNotice('Cobrança salva.') }
   function changeStatus(id, nextStatus) { update(draft => { const charge = draft.finance.find(item => String(item.id) === String(id)); if (!charge) return; const previous = charge.status; charge.status = nextStatus; charge.recebidoEm = nextStatus === 'Recebido' ? (previous === 'Recebido' ? charge.recebidoEm : today()) : '' }); setNotice(nextStatus === 'Recebido' ? 'Recebimento registrado.' : 'Status atualizado.') }
   function deleteCharge(id) { if (!window.confirm('Excluir esta cobrança?')) return; update(draft => { draft.finance = draft.finance.filter(item => String(item.id) !== String(id)) }); setNotice('Cobrança excluída.') }
+  function saveSharedAdjustment(values) {
+    if (!editingShared) return
+    update(draft => {
+      const charge = (draft.finance || []).find(item => String(item.id) === String(editingShared))
+      if (!charge) return
+      const client = (draft.clients || []).find(item => String(item.id) === String(charge.clienteId))
+      Object.assign(charge, values, { compartilhado: true, parceiroId: charge.parceiroId || client?.parceiroId || '' })
+    })
+    setEditingShared('')
+    setNotice('Divisão desta competência atualizada.')
+  }
   function generateRecurring() {
     if (!/^\d{4}-\d{2}$/.test(competence)) { setNotice('Selecione uma competência válida.'); return }
     const additions = buildMissingRecurringCharges({ clients: activeClients, finance, competence, clientId: clientFilter, makeId: () => uid('fin') })
@@ -108,5 +142,13 @@ export default function FinanceReact({ office, update, sync, initialClientId = '
     setNotice(`${additions.length} cobrança${additions.length === 1 ? '' : 's'} recorrente${additions.length === 1 ? '' : 's'} gerada${additions.length === 1 ? '' : 's'}.`)
   }
 
-  return <div className="react-module-page finance-page"><div className="react-module-topbar"><div><h1>Financeiro</h1><p>Honorários mensais recorrentes são gerados automaticamente para clientes ativos.</p></div><div className="react-module-actions"><span className="sync-indicator">{sync}</span><button type="button" className="primary" onClick={() => setCreating(true)}>+ Nova cobrança</button></div></div><div className="finance-kpis"><article><small>Recebido</small><strong>{money(totals.Recebido)}</strong></article><article><small>A receber</small><strong>{money(totals.Pendente)}</strong></article><article className="overdue"><small>Em atraso</small><strong>{money(totals.Atrasado)}</strong></article></div><section className="finance-card"><div className="finance-toolbar"><select value={clientFilter} onChange={event => setClientFilter(event.target.value)} aria-label="Filtrar por cliente"><option value="">Todos os clientes</option>{clients.map(client => <option value={String(client.id)} key={client.id}>{clientName(client)}</option>)}</select><label><span>Competência</span><input type="month" value={competence} onInput={event => setCompetence(event.currentTarget.value)} onChange={event => setCompetence(event.target.value)} /></label><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filtrar por status"><option value="">Todos os status</option>{statuses.map(item => <option key={item}>{item}</option>)}</select><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente ou descrição" /><button type="button" onClick={generateRecurring}>Verificar recorrentes</button></div><div className="finance-table"><div className="finance-row finance-head"><span>Cliente</span><span>Descrição</span><span>Competência</span><span>Vencimento</span><span>Valor</span><span>Status</span><span /></div>{rows.map(charge => { const client = clientsById.get(String(charge.clienteId)); return <article className="finance-row" key={charge.id}><div><b>{client ? clientName(client) : (charge.cliente || 'Cliente')}</b>{client?.status === 'Inativo' ? <em>Inativo</em> : null}</div><span>{charge.descricao}</span><span>{charge.competencia || '—'}</span><span>{formatDate(charge.vencimento)}</span><strong>{money(charge.valor)}</strong><div><select className={`finance-status status-${normalizeText(charge.status)}`} value={charge.status} onChange={event => changeStatus(charge.id, event.target.value)} aria-label={`Status de ${charge.descricao}`}>{statuses.map(item => <option key={item}>{item}</option>)}</select>{charge.recebidoEm ? <small>Recebido em {formatDate(charge.recebidoEm)}</small> : null}</div><button type="button" className="danger" onClick={() => deleteCharge(charge.id)} aria-label={`Excluir cobrança ${charge.descricao}`}>×</button></article>})}{!rows.length ? <p className="finance-empty">Nenhuma cobrança nesta competência.</p> : null}</div></section>{creating ? <ChargeForm clients={activeClients} competence={competence} initialClientId={clientFilter || initialClientId} onClose={() => setCreating(false)} onSave={saveCharge} /> : null}{notice ? <div className="finance-notice" role="status">{notice}</div> : null}</div>
+  return <div className="react-module-page finance-page"><div className="react-module-topbar"><div><h1>Financeiro</h1><p>Honorários mensais recorrentes são gerados automaticamente para clientes ativos.</p></div><div className="react-module-actions"><span className="sync-indicator">{sync}</span><button type="button" className="primary" onClick={() => setCreating(true)}>+ Nova cobrança</button></div></div><div className="finance-kpis"><article><small>Recebido</small><strong>{money(totals.Recebido)}</strong></article><article><small>A receber</small><strong>{money(totals.Pendente)}</strong></article><article className="overdue"><small>Em atraso</small><strong>{money(totals.Atrasado)}</strong></article></div><section className="finance-card"><div className="finance-toolbar"><select value={clientFilter} onChange={event => setClientFilter(event.target.value)} aria-label="Filtrar por cliente"><option value="">Todos os clientes</option>{clients.map(client => <option value={String(client.id)} key={client.id}>{clientName(client)}</option>)}</select><label><span>Competência</span><input type="month" value={competence} onInput={event => setCompetence(event.currentTarget.value)} onChange={event => setCompetence(event.target.value)} /></label><select value={status} onChange={event => setStatus(event.target.value)} aria-label="Filtrar por status"><option value="">Todos os status</option>{statuses.map(item => <option key={item}>{item}</option>)}</select><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar cliente ou descrição" /><button type="button" onClick={generateRecurring}>Verificar recorrentes</button></div><div className="finance-table"><div className="finance-row finance-head"><span>Cliente</span><span>Descrição</span><span>Competência</span><span>Vencimento</span><span>Valor</span><span>Status</span><span /></div>{rows.map(charge => {
+    const client = clientsById.get(String(charge.clienteId))
+    const sharedRecurring = client?.perfilAtendimento === 'Compartilhado' && charge.origem === 'recorrente'
+    const partner = sharedRecurring ? partnersById.get(String(charge.parceiroId || client?.parceiroId || '')) : null
+    const receiver = charge.compartilhadoRecebedor || client?.compartilhadoRecebedor || 'Escritorio'
+    const mine = charge.compartilhado ? Number(charge.compartilhadoMinhaParte) || 0 : Number(client?.compartilhadoMinhaParte) || 0
+    const theirs = charge.compartilhado ? Number(charge.compartilhadoParceiroParte) || 0 : Number(client?.compartilhadoParceiroParte) || 0
+    return <article className="finance-row" key={charge.id}><div><b>{client ? clientName(client) : (charge.cliente || 'Cliente')}</b>{client?.status === 'Inativo' ? <em>Inativo</em> : null}</div><div><span>{charge.descricao}</span>{sharedRecurring ? <small>{partner?.nome || 'Parceiro'} · {receiver === 'Parceiro' ? 'parceiro recebe' : 'meu escritório recebe'} · minha parte {money(mine)} · parceiro {money(theirs)}{charge.compartilhadoPersonalizado ? ' · ajustado neste mês' : ' · padrão'}</small> : null}</div><span>{charge.competencia || '—'}</span><span>{formatDate(charge.vencimento)}</span><strong>{money(charge.valor)}</strong><div><select className={`finance-status status-${normalizeText(charge.status)}`} value={charge.status} onChange={event => changeStatus(charge.id, event.target.value)} aria-label={`Status de ${charge.descricao}`}>{statuses.map(item => <option key={item}>{item}</option>)}</select>{charge.recebidoEm ? <small>Recebido em {formatDate(charge.recebidoEm)}</small> : null}</div><div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>{sharedRecurring ? <button type="button" onClick={() => setEditingShared(String(charge.id))}>Divisão</button> : null}<button type="button" className="danger" onClick={() => deleteCharge(charge.id)} aria-label={`Excluir cobrança ${charge.descricao}`}>×</button></div></article>
+  })}{!rows.length ? <p className="finance-empty">Nenhuma cobrança nesta competência.</p> : null}</div></section>{creating ? <ChargeForm clients={activeClients} competence={competence} initialClientId={clientFilter || initialClientId} onClose={() => setCreating(false)} onSave={saveCharge} /> : null}{sharedEditorCharge ? <SharedFinanceEditor charge={sharedEditorCharge} partner={sharedPartner} onClose={() => setEditingShared('')} onSave={saveSharedAdjustment} /> : null}{notice ? <div className="finance-notice" role="status">{notice}</div> : null}</div>
 }
