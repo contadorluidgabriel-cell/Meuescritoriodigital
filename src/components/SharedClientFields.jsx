@@ -1,4 +1,4 @@
-import { clientPartnerIds, partnerShares, responsibilityFor } from '../lib/sharedWork.js'
+import { clientPartnerIds, partnerShares, responsibilityFor, sharedReceiver } from '../lib/sharedWork.js'
 
 const partnerName = partner => partner?.nome || partner?.razao || 'Parceiro'
 const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -28,8 +28,7 @@ export default function SharedClientFields({ editing, setField, office }) {
     Object.entries(nextResponsibilities).forEach(([department, rule]) => {
       if (String(rule?.parceiroId || '') === key && !nextIds.includes(key)) nextResponsibilities[department] = { responsavel: 'Escritorio', parceiroId: '' }
     })
-    let receiver = editing.compartilhadoRecebedor || 'Escritorio'
-    if (receiver === 'Parceiro' && !nextIds.length) receiver = 'Escritorio'
+    let receiver = sharedReceiver(editing, editing)
     if (receiver.startsWith('partner:') && !nextIds.includes(receiver.slice(8))) receiver = 'Escritorio'
     setField('parceiroIds', nextIds)
     setField('parceiroId', nextIds[0] || '')
@@ -61,6 +60,7 @@ export default function SharedClientFields({ editing, setField, office }) {
   const mine = Number(editing.compartilhadoMinhaParte) || 0
   const partnerTotal = selectedIds.reduce((sum, id) => sum + (shareMap.get(id) || 0), 0)
   const difference = Math.round((monthly - mine - partnerTotal) * 100) / 100
+  const receiver = sharedReceiver(editing, editing)
 
   return <>
     <label className="client-field full shared-client-box">
@@ -93,7 +93,7 @@ export default function SharedClientFields({ editing, setField, office }) {
     {editing.relacionamento === 'Recorrente' && selectedIds.length ? <div className="client-field full shared-finance-default-box">
       <span>Padrão financeiro recorrente</span>
       <div className="shared-finance-default-grid">
-        <label><span>Quem normalmente recebe</span><select value={editing.compartilhadoRecebedor || 'Escritorio'} onChange={event => setField('compartilhadoRecebedor', event.target.value)}><option value="Escritorio">Meu escritório</option>{selectedPartners.map(partner => <option key={partner.id} value={`partner:${partner.id}`}>{partnerName(partner)}</option>)}<option value="CadaUm">Cada um recebe sua parte</option></select></label>
+        <label><span>Quem normalmente recebe</span><select value={receiver} onChange={event => setField('compartilhadoRecebedor', event.target.value)}><option value="Escritorio">Meu escritório</option>{selectedPartners.map(partner => <option key={partner.id} value={`partner:${partner.id}`}>{partnerName(partner)}</option>)}<option value="CadaUm">Cada um recebe sua parte</option></select></label>
         <label><span>Minha parte padrão</span><input type="number" min="0" step="0.01" value={editing.compartilhadoMinhaParte ?? ''} onChange={event => setField('compartilhadoMinhaParte', event.target.value)} /></label>
         {selectedPartners.map(partner => <label key={partner.id}><span>Parte de {partnerName(partner)}</span><input type="number" min="0" step="0.01" value={shareMap.get(String(partner.id)) ?? 0} onChange={event => setPartnerShare(partner.id, event.target.value)} /></label>)}
       </div>
