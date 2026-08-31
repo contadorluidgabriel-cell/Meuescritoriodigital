@@ -29,6 +29,7 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
       const requestedDay = Math.max(1, Number(client?.vencimento) || 10)
       const lastDay = new Date(year, month, 0).getDate()
       const dueDay = Math.min(requestedDay, lastDay)
+      const shared = client?.perfilAtendimento === 'Compartilhado'
       return {
         id: typeof makeId === 'function' ? makeId() : `fin-${competence}-${client.id}`,
         clienteId: String(client.id),
@@ -40,6 +41,12 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
         status: 'Pendente',
         recebidoEm: '',
         origem: 'recorrente',
+        compartilhado: shared,
+        parceiroId: shared ? String(client?.parceiroId || '') : '',
+        compartilhadoRecebedor: shared ? (client?.compartilhadoRecebedor || 'Escritorio') : '',
+        compartilhadoMinhaParte: shared ? (Number(client?.compartilhadoMinhaParte) || 0) : 0,
+        compartilhadoParceiroParte: shared ? (Number(client?.compartilhadoParceiroParte) || 0) : 0,
+        compartilhadoPersonalizado: false,
       }
     })
 }
