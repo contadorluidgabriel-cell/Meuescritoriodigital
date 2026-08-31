@@ -11,11 +11,15 @@ function patchFile(path, marker, replacements) {
 }
 
 export function applyOfficialPdfBrandPatch(root) {
-  patchFile(`${root}src/lib/financePdf.js`, "OFFICIAL_REDUCED_LOGO } from '../assets/officialReducedLogo.js'", [
+  const mainBase64 = readFileSync(`${root}src/assets/brand-main.jpg`).toString('base64')
+  const reducedBase64 = readFileSync(`${root}src/assets/brand-reduced.jpg`).toString('base64')
+  const brandConstants = `const OFFICIAL_MAIN_LOGO = { width: 240, height: 64, base64: '${mainBase64}' }\nconst OFFICIAL_REDUCED_LOGO = { width: 80, height: 68, base64: '${reducedBase64}' }`
+
+  patchFile(`${root}src/lib/financePdf.js`, "const OFFICIAL_MAIN_LOGO = { width: 240, height: 64", [
     [
       "import { paymentSummary } from './financePro.js'",
-      "import { paymentSummary } from './financePro.js'\nimport { OFFICIAL_MAIN_LOGO } from '../assets/officialBrandJpegs.js'\nimport { OFFICIAL_REDUCED_LOGO } from '../assets/officialReducedLogo.js'",
-      'brand asset import',
+      `import { paymentSummary } from './financePro.js'\n\n${brandConstants}`,
+      'brand assets',
     ],
     [
       "function concatBytes(chunks) {\n  const size = chunks.reduce((sum, chunk) => sum + chunk.length, 0)\n  const result = new Uint8Array(size)\n  let offset = 0\n  chunks.forEach(chunk => { result.set(chunk, offset); offset += chunk.length })\n  return result\n}",
@@ -29,12 +33,12 @@ export function applyOfficialPdfBrandPatch(root) {
     ],
     [
       "  let content = ''\n  content += parseLgPath({ x: 46, y: 744, size: 72, color: COLORS.black })\n  content += lineCommand({ x1: 126, y1: 754, x2: 126, y2: 808, color: COLORS.line, lineWidth: 1 })\n  content += textCommand({ x: 143, y: 790, text: 'LUID', size: 19, bold: true })\n  content += textCommand({ x: 194, y: 790, text: 'GABRIEL', size: 19 })\n  content += textCommand({ x: 143, y: 770, text: 'CONTADOR', size: 9, bold: true, color: COLORS.blue, tracking: 2.6 })",
-      "  let content = ''\n  // Marca principal horizontal extraída diretamente do Kit Oficial da Marca.\n  content += imageCommand({ name: 'BrandMain', x: 46, y: 756, width: 238, height: 63 })",
+      "  let content = ''\n  // Assinatura horizontal oficial, extraída diretamente do Kit Oficial da Marca.\n  content += imageCommand({ name: 'BrandMain', x: 46, y: 756, width: 238, height: 63 })",
       'official header brand',
     ],
     [
       "  content += lineCommand({ x1: 46, y1: 65, x2: 549, y2: 65, color: COLORS.line, lineWidth: 0.8 })\n  content += parseLgPath({ x: 46, y: 18, size: 38, color: COLORS.black })\n  content += textCommand({ x: 92, y: 42, text: 'LUID', size: 10, bold: true })\n  content += textCommand({ x: 120, y: 42, text: 'GABRIEL', size: 10 })\n  content += textCommand({ x: 92, y: 29, text: 'CONTADOR', size: 5.7, bold: true, color: COLORS.blue, tracking: 1.5 })",
-      "  content += lineCommand({ x1: 46, y1: 65, x2: 549, y2: 65, color: COLORS.line, lineWidth: 0.8 })\n  // Marca reduzida oficial, conforme hierarquia de uso do kit para rodapés.\n  content += imageCommand({ name: 'BrandReduced', x: 46, y: 17, width: 50, height: 43 })",
+      "  content += lineCommand({ x1: 46, y1: 65, x2: 549, y2: 65, color: COLORS.line, lineWidth: 0.8 })\n  // Assinatura reduzida oficial para rodapé.\n  content += imageCommand({ name: 'BrandReduced', x: 46, y: 17, width: 50, height: 43 })",
       'official footer brand',
     ],
     [
