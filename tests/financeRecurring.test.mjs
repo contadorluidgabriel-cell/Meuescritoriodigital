@@ -35,6 +35,28 @@ test('creates one monthly charge for an active recurring client', () => {
   })
 })
 
+test('copies shared recurring defaults into the competence snapshot', () => {
+  const [charge] = buildMissingRecurringCharges({
+    clients: [client({
+      perfilAtendimento: 'Compartilhado',
+      parceiroId: 'par-1',
+      compartilhadoRecebedor: 'Parceiro',
+      compartilhadoMinhaParte: 300,
+      compartilhadoParceiroParte: 200,
+    })],
+    finance: [],
+    competence: '2026-08',
+    makeId: () => 'fin-shared',
+  })
+
+  assert.equal(charge.compartilhado, true)
+  assert.equal(charge.parceiroId, 'par-1')
+  assert.equal(charge.compartilhadoRecebedor, 'Parceiro')
+  assert.equal(charge.compartilhadoMinhaParte, 300)
+  assert.equal(charge.compartilhadoParceiroParte, 200)
+  assert.equal(charge.compartilhadoPersonalizado, false)
+})
+
 test('does not duplicate a recurring charge in the same competence', () => {
   const charges = buildMissingRecurringCharges({
     clients: [client()],
