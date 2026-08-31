@@ -13,6 +13,7 @@ import { applyQuantitativeDuplicatePatch } from './scripts/patch-quantitative-du
 import { applyAvulsoSelectorPositionPatch } from './scripts/patch-avulso-selector-position.mjs'
 import { applySharedResponsibilityPatches } from './scripts/patch-shared-responsibility.mjs'
 import { applyProcessFinancePatch } from './scripts/patch-process-finance.mjs'
+import { applyOfficialPdfBrandPatch } from './scripts/patch-official-pdf-brand.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -71,6 +72,7 @@ applyQuantitativeDuplicatePatch(root)
 applyAvulsoSelectorPositionPatch(root)
 applySharedResponsibilityPatches(root)
 applyProcessFinancePatch(root)
+applyOfficialPdfBrandPatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
