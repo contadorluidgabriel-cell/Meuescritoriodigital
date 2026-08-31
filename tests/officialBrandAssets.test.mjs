@@ -1,22 +1,21 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { OFFICIAL_MAIN_LOGO } from '../src/assets/officialBrandJpegs.js'
-import { OFFICIAL_REDUCED_LOGO } from '../src/assets/officialReducedLogo.js'
+import { readFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
 
-function jpegBytes(asset) {
-  return Buffer.from(asset.base64, 'base64')
-}
+const fixtures = [
+  ['brand-main.jpg', 4181, '8c1a62f820d89dd3b248b3ee8ff8a37a5852300f3d331ee3187e594b34402d2b'],
+  ['brand-reduced.jpg', 2017, 'ff33e30d902f0c90291dd96e6fa425db97697a7751775e3288f9f843244c443b'],
+]
 
-test('PDF brand assets use the official horizontal and reduced signatures', () => {
-  assert.deepEqual([OFFICIAL_MAIN_LOGO.width, OFFICIAL_MAIN_LOGO.height], [320, 85])
-  assert.deepEqual([OFFICIAL_REDUCED_LOGO.width, OFFICIAL_REDUCED_LOGO.height], [120, 102])
-
-  for (const asset of [OFFICIAL_MAIN_LOGO, OFFICIAL_REDUCED_LOGO]) {
-    const bytes = jpegBytes(asset)
-    assert.ok(bytes.length > 1000)
+test('PDF uses the exact official logo binaries extracted from the brand kit', () => {
+  for (const [filename, expectedSize, expectedHash] of fixtures) {
+    const bytes = readFileSync(new URL(`../src/assets/${filename}`, import.meta.url))
+    assert.equal(bytes.length, expectedSize)
     assert.equal(bytes[0], 0xff)
     assert.equal(bytes[1], 0xd8)
     assert.equal(bytes.at(-2), 0xff)
     assert.equal(bytes.at(-1), 0xd9)
+    assert.equal(createHash('sha256').update(bytes).digest('hex'), expectedHash)
   }
 })
