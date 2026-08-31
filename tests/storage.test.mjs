@@ -73,6 +73,20 @@ test('linked CNPJs persist separately and do not become clients', () => {
   assert.equal(restored.linkedCompanies[0].cnpj, '22.222.222/0001-22')
 })
 
+test('work partners persist separately and can be referenced by shared clients', () => {
+  localStorage.clear()
+  const office = freshOffice()
+  office.partners = [{ id: 'par-a', nome: 'Parceiro A', status: 'Ativo' }]
+  office.clients = [{ id: 'cli-a', razao: 'Cliente A', perfilAtendimento: 'Compartilhado', parceiroId: 'par-a' }]
+
+  saveOffice(office, 'user-a', { touch: false })
+  const restored = loadOffice('user-a')
+
+  assert.equal(restored.partners.length, 1)
+  assert.equal(restored.partners[0].id, 'par-a')
+  assert.equal(restored.clients[0].parceiroId, 'par-a')
+})
+
 test('local modification timestamp changes only when touch is requested', () => {
   localStorage.clear()
   const office = freshOffice()
@@ -87,6 +101,7 @@ test('cloud payload does not leak user-scoped cache metadata', () => {
   const office = freshOffice()
   office.clients = [{ id: 'a', razao: 'Empresa A' }]
   office.linkedCompanies = [{ id: 'cnpjv-a', clientId: 'a', razao: 'Relacionada', cnpj: '22.222.222/0001-22' }]
+  office.partners = [{ id: 'par-a', nome: 'Parceiro A' }]
   saveOffice(office, 'user-a', { touch: true })
 
   const payload = officePayload(office, 'user-a')
@@ -94,4 +109,5 @@ test('cloud payload does not leak user-scoped cache metadata', () => {
   assert.equal(Object.keys(payload).some(key => key.startsWith(userStoragePrefix('user-a'))), false)
   assert.equal(payload[KEYS.clients][0].id, 'a')
   assert.equal(payload[KEYS.linkedCompanies][0].clientId, 'a')
+  assert.equal(payload[KEYS.partners][0].id, 'par-a')
 })
