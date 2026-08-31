@@ -11,10 +11,10 @@ function patchFile(path, marker, replacements) {
 }
 
 export function applyOfficialPdfBrandPatch(root) {
-  patchFile(`${root}src/lib/financePdf.js`, "OFFICIAL_MAIN_LOGO, OFFICIAL_REDUCED_LOGO", [
+  patchFile(`${root}src/lib/financePdf.js`, "OFFICIAL_REDUCED_LOGO } from '../assets/officialReducedLogo.js'", [
     [
       "import { paymentSummary } from './financePro.js'",
-      "import { paymentSummary } from './financePro.js'\nimport { OFFICIAL_MAIN_LOGO, OFFICIAL_REDUCED_LOGO } from '../assets/officialBrandJpegs.js'",
+      "import { paymentSummary } from './financePro.js'\nimport { OFFICIAL_MAIN_LOGO } from '../assets/officialBrandJpegs.js'\nimport { OFFICIAL_REDUCED_LOGO } from '../assets/officialReducedLogo.js'",
       'brand asset import',
     ],
     [
