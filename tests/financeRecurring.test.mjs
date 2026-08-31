@@ -35,7 +35,38 @@ test('creates one monthly charge for an active recurring client', () => {
   })
 })
 
-test('copies shared recurring defaults into the competence snapshot', () => {
+test('copies multi-partner shared defaults into the competence snapshot', () => {
+  const [charge] = buildMissingRecurringCharges({
+    clients: [client({
+      perfilAtendimento: 'Compartilhado',
+      parceiroIds: ['par-1', 'par-2'],
+      parceiroId: 'par-1',
+      compartilhadoRecebedor: 'partner:par-1',
+      compartilhadoMinhaParte: 250,
+      compartilhadoPartesParceiros: [
+        { parceiroId: 'par-1', valor: 150 },
+        { parceiroId: 'par-2', valor: 100 },
+      ],
+    })],
+    finance: [],
+    competence: '2026-08',
+    makeId: () => 'fin-shared',
+  })
+
+  assert.equal(charge.compartilhado, true)
+  assert.deepEqual(charge.parceiroIds, ['par-1', 'par-2'])
+  assert.equal(charge.parceiroId, 'par-1')
+  assert.equal(charge.compartilhadoRecebedor, 'partner:par-1')
+  assert.equal(charge.compartilhadoMinhaParte, 250)
+  assert.deepEqual(charge.compartilhadoPartesParceiros, [
+    { parceiroId: 'par-1', valor: 150 },
+    { parceiroId: 'par-2', valor: 100 },
+  ])
+  assert.equal(charge.compartilhadoAcertoStatus, 'Pendente')
+  assert.equal(charge.compartilhadoPersonalizado, false)
+})
+
+test('legacy single partner defaults remain compatible', () => {
   const [charge] = buildMissingRecurringCharges({
     clients: [client({
       perfilAtendimento: 'Compartilhado',
@@ -46,15 +77,10 @@ test('copies shared recurring defaults into the competence snapshot', () => {
     })],
     finance: [],
     competence: '2026-08',
-    makeId: () => 'fin-shared',
+    makeId: () => 'fin-legacy-shared',
   })
-
-  assert.equal(charge.compartilhado, true)
-  assert.equal(charge.parceiroId, 'par-1')
-  assert.equal(charge.compartilhadoRecebedor, 'Parceiro')
-  assert.equal(charge.compartilhadoMinhaParte, 300)
-  assert.equal(charge.compartilhadoParceiroParte, 200)
-  assert.equal(charge.compartilhadoPersonalizado, false)
+  assert.equal(charge.compartilhadoRecebedor, 'partner:par-1')
+  assert.deepEqual(charge.compartilhadoPartesParceiros, [{ parceiroId: 'par-1', valor: 200 }])
 })
 
 test('does not duplicate a recurring charge in the same competence', () => {
