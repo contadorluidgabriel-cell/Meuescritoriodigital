@@ -1,3 +1,5 @@
+import { normalizedSharedClientFields, SETTLEMENT_PENDING } from './sharedWork.js'
+
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 
 export function buildMissingRecurringCharges({ clients = [], finance = [], competence = '', clientId = '', makeId } = {}) {
@@ -29,7 +31,6 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
       const requestedDay = Math.max(1, Number(client?.vencimento) || 10)
       const lastDay = new Date(year, month, 0).getDate()
       const dueDay = Math.min(requestedDay, lastDay)
-      const shared = client?.perfilAtendimento === 'Compartilhado'
       const base = {
         id: typeof makeId === 'function' ? makeId() : `fin-${competence}-${client.id}`,
         clienteId: String(client.id),
@@ -42,14 +43,21 @@ export function buildMissingRecurringCharges({ clients = [], finance = [], compe
         recebidoEm: '',
         origem: 'recorrente',
       }
-      if (!shared) return base
+
+      if (client?.perfilAtendimento !== 'Compartilhado') return base
+      const shared = normalizedSharedClientFields(client)
       return {
         ...base,
         compartilhado: true,
-        parceiroId: String(client?.parceiroId || ''),
-        compartilhadoRecebedor: client?.compartilhadoRecebedor || 'Escritorio',
-        compartilhadoMinhaParte: Number(client?.compartilhadoMinhaParte) || 0,
-        compartilhadoParceiroParte: Number(client?.compartilhadoParceiroParte) || 0,
+        parceiroIds: shared.parceiroIds,
+        parceiroId: shared.parceiroId,
+        compartilhadoRecebedor: shared.compartilhadoRecebedor,
+        compartilhadoMinhaParte: shared.compartilhadoMinhaParte,
+        compartilhadoPartesParceiros: shared.compartilhadoPartesParceiros,
+        compartilhadoParceiroParte: shared.compartilhadoParceiroParte,
+        compartilhadoAcertoStatus: SETTLEMENT_PENDING,
+        compartilhadoAcertoEm: '',
+        compartilhadoObservacao: '',
         compartilhadoPersonalizado: false,
       }
     })
