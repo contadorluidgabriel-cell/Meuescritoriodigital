@@ -3,43 +3,53 @@ import { readFileSync, writeFileSync } from 'node:fs'
 export function applyClientSharingPatch(root) {
   const path = `${root}src/components/ClientsReact.jsx`
   let source = readFileSync(path, 'utf8')
-  if (source.includes("import PartnersPanel from './PartnersPanel.jsx'")) return
+  if (source.includes("import SharedClientFields from './SharedClientFields.jsx'")) return
 
   const replacements = [
     [
       "import OutsourcedCompaniesPanel from './OutsourcedCompaniesPanel.jsx'",
-      "import OutsourcedCompaniesPanel from './OutsourcedCompaniesPanel.jsx'\nimport PartnersPanel from './PartnersPanel.jsx'",
-      'partners import',
+      "import OutsourcedCompaniesPanel from './OutsourcedCompaniesPanel.jsx'\nimport PartnersPanel from './PartnersPanel.jsx'\nimport SharedClientFields from './SharedClientFields.jsx'\nimport { clientPartnerIds, normalizedSharedClientFields, sharedClientError, sharedSplit } from '../lib/sharedWork.js'",
+      'shared imports',
     ],
     [
       "status: 'Ativo', perfilAtendimento: 'Direto', drive: '', observacoes: '', dataEntrada: '', dataSaida: '', motivoSaida: '', comunicacoes: [],",
-      "status: 'Ativo', perfilAtendimento: 'Direto', parceiroId: '', compartilhadoRecebedor: 'Escritorio', compartilhadoMinhaParte: '', compartilhadoParceiroParte: '', drive: '', observacoes: '', dataEntrada: '', dataSaida: '', motivoSaida: '', comunicacoes: [],",
+      "status: 'Ativo', perfilAtendimento: 'Direto', parceiroIds: [], parceiroId: '', responsabilidadesCompartilhadas: {}, compartilhadoRecebedor: 'Escritorio', compartilhadoMinhaParte: '', compartilhadoPartesParceiros: [], compartilhadoParceiroParte: '', drive: '', observacoes: '', dataEntrada: '', dataSaida: '', motivoSaida: '', comunicacoes: [],",
       'shared defaults',
     ],
     [
       "    if (office.clients.some(client => client.id !== editing.id && documentDigits(client.documento) === normalizedDocument)) { setError('Este CPF/CNPJ já está cadastrado.'); return }\n    const isNew = !editing.id",
-      "    if (office.clients.some(client => client.id !== editing.id && documentDigits(client.documento) === normalizedDocument)) { setError('Este CPF/CNPJ já está cadastrado.'); return }\n    if (editing.perfilAtendimento === 'Compartilhado' && !editing.parceiroId) { setError('Selecione o parceiro deste cliente compartilhado.'); return }\n    const sharedMonthlyValue = Number(editing.mensalidade) || 0\n    const sharedMyPart = Number(editing.compartilhadoMinhaParte) || 0\n    const sharedPartnerPart = Number(editing.compartilhadoParceiroParte) || 0\n    if (editing.perfilAtendimento === 'Compartilhado' && editing.relacionamento === 'Recorrente' && (sharedMyPart > 0 || sharedPartnerPart > 0) && Math.abs((sharedMyPart + sharedPartnerPart) - sharedMonthlyValue) > 0.009) { setError('No padrão financeiro, sua parte + parte do parceiro deve ser igual à mensalidade.'); return }\n    const isNew = !editing.id",
+      "    if (office.clients.some(client => client.id !== editing.id && documentDigits(client.documento) === normalizedDocument)) { setError('Este CPF/CNPJ já está cadastrado.'); return }\n    const sharingError = sharedClientError(editing, office)\n    if (sharingError) { setError(sharingError); return }\n    const sharedFields = editing.perfilAtendimento === 'Compartilhado' ? normalizedSharedClientFields(editing) : { parceiroIds: [], parceiroId: '', responsabilidadesCompartilhadas: {}, compartilhadoRecebedor: 'Escritorio', compartilhadoMinhaParte: 0, compartilhadoPartesParceiros: [], compartilhadoParceiroParte: 0 }\n    const isNew = !editing.id",
       'shared validation',
     ],
     [
-      "mensalidade: Number(editing.mensalidade) || 0, vencimento: Number(editing.vencimento) || null, drive:",
-      "mensalidade: Number(editing.mensalidade) || 0, compartilhadoMinhaParte: Number(editing.compartilhadoMinhaParte) || 0, compartilhadoParceiroParte: Number(editing.compartilhadoParceiroParte) || 0, vencimento: Number(editing.vencimento) || null, drive:",
-      'shared numeric save',
+      "    const client = { ...editing, id: editing.id || uid('cli'), documento:",
+      "    const client = { ...editing, ...sharedFields, id: editing.id || uid('cli'), documento:",
+      'shared save',
     ],
     [
       "<Field label=\"Forma de atendimento\"><select value={editing.perfilAtendimento || 'Direto'} onChange={event => setField('perfilAtendimento', event.target.value)}><option value=\"Direto\">Direto</option><option value=\"Terceirizador\">Terceirizador</option><option value=\"Compartilhado\">Compartilhado</option></select></Field>",
-      "<Field label=\"Forma de atendimento\"><select value={editing.perfilAtendimento || 'Direto'} onChange={event => setField('perfilAtendimento', event.target.value)}><option value=\"Direto\">Direto</option><option value=\"Terceirizador\">Terceirizador</option><option value=\"Compartilhado\">Compartilhado</option></select></Field>{editing.perfilAtendimento === 'Compartilhado' ? <Field label=\"Parceiro responsável\" full><select value={editing.parceiroId || ''} onChange={event => setField('parceiroId', event.target.value)}><option value=\"\">Selecione um parceiro</option>{(office.partners || []).filter(partner => partner.status !== 'Inativo' || String(partner.id) === String(editing.parceiroId)).map(partner => <option value={partner.id} key={partner.id}>{partner.nome || 'Parceiro'}{partner.status === 'Inativo' ? ' (inativo)' : ''}</option>)}</select>{!(office.partners || []).some(partner => partner.status !== 'Inativo') ? <small>Cadastre primeiro um parceiro no bloco “Parceiros de trabalho”.</small> : null}</Field> : null}",
-      'partner selector',
-    ],
-    [
-      "<Field label=\"Mensalidade\"><input type=\"number\" min=\"0\" step=\"0.01\" value={editing.mensalidade} onChange={event => setField('mensalidade', event.target.value)} /></Field><Field label=\"Dia de vencimento\"><input type=\"number\" min=\"1\" max=\"31\" value={editing.vencimento} onChange={event => setField('vencimento', event.target.value)} /></Field>",
-      "<Field label=\"Mensalidade\"><input type=\"number\" min=\"0\" step=\"0.01\" value={editing.mensalidade} onChange={event => setField('mensalidade', event.target.value)} /></Field><Field label=\"Dia de vencimento\"><input type=\"number\" min=\"1\" max=\"31\" value={editing.vencimento} onChange={event => setField('vencimento', event.target.value)} /></Field>{editing.perfilAtendimento === 'Compartilhado' && editing.relacionamento === 'Recorrente' ? <><Field label=\"Quem normalmente recebe\"><select value={editing.compartilhadoRecebedor || 'Escritorio'} onChange={event => setField('compartilhadoRecebedor', event.target.value)}><option value=\"Escritorio\">Meu escritório</option><option value=\"Parceiro\">Parceiro</option></select></Field><Field label=\"Minha parte padrão\"><input type=\"number\" min=\"0\" step=\"0.01\" value={editing.compartilhadoMinhaParte} onChange={event => setField('compartilhadoMinhaParte', event.target.value)} /></Field><Field label=\"Parte padrão do parceiro\"><input type=\"number\" min=\"0\" step=\"0.01\" value={editing.compartilhadoParceiroParte} onChange={event => setField('compartilhadoParceiroParte', event.target.value)} /></Field><Field label=\"Como funciona\" full><small>Esses valores serão sugeridos nas cobranças mensais. Você poderá alterar uma competência sem mudar este padrão.</small></Field></> : null}",
-      'recurring shared finance fields',
+      "<Field label=\"Forma de atendimento\"><select value={editing.perfilAtendimento || 'Direto'} onChange={event => setField('perfilAtendimento', event.target.value)}><option value=\"Direto\">Direto</option><option value=\"Terceirizador\">Terceirizador</option><option value=\"Compartilhado\">Compartilhado</option></select></Field><SharedClientFields editing={editing} setField={setField} office={office} />",
+      'shared client fields',
     ],
     [
       "    <OutsourcedCompaniesPanel office={office} update={update} />",
       "    <PartnersPanel office={office} update={update} />\n\n    <OutsourcedCompaniesPanel office={office} update={update} />",
       'partners panel',
+    ],
+    [
+      "  const canCharge = client.status !== 'Inativo'\n  return <Modal",
+      "  const canCharge = client.status !== 'Inativo'\n  const partnerIds = clientPartnerIds(client)\n  const clientPartners = partnerIds.map(id => (office.partners || []).find(partner => String(partner.id) === id)).filter(Boolean)\n  return <Modal",
+      'details partners',
+    ],
+    [
+      "<div className=\"client-summary\"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${money(client.mensalidade)}` : ''}</p></article><article><b>Documentos</b>",
+      "<div className=\"client-summary\"><article><b>Contato</b><p>WhatsApp: {client.whatsapp || '—'}<br />Telefone: {client.telefone || '—'}<br />{client.email || '—'}</p></article><article><b>Relacionamento</b><p>{client.relacionamento}{client.relacionamento === 'Recorrente' ? ` · ${money(client.mensalidade)}` : ''}<br />{client.perfilAtendimento || 'Direto'}{client.perfilAtendimento === 'Compartilhado' ? ` · ${clientPartners.map(partner => partner.nome || partner.razao || 'Parceiro').join(', ') || 'Sem parceiro'}` : ''}</p></article><article><b>Documentos</b>",
+      'details shared summary',
+    ],
+    [
+      "<div className=\"detail-list\">{charges.slice(0, 12).map(charge => <article key={charge.id}><div><b>{charge.descricao || 'Cobrança'}</b><small>{charge.competencia || 'Sem competência'} · {charge.status || 'Pendente'} · {formatDate(charge.vencimento)}</small></div><strong>{money(charge.valor)}</strong></article>)}{!charges.length ? <div className=\"empty\">Nenhuma cobrança vinculada a este cliente.</div> : null}</div>",
+      "<div className=\"detail-list\">{charges.slice(0, 12).map(charge => { const split = charge.compartilhado ? sharedSplit(charge, client) : null; return <article key={charge.id}><div><b>{charge.descricao || 'Cobrança'}</b><small>{charge.competencia || 'Sem competência'} · {charge.status || 'Pendente'} · {formatDate(charge.vencimento)}</small>{split ? <small>Minha parte {money(split.mine)} · parceiros {money(split.partnerTotal)} · acerto {charge.compartilhadoAcertoStatus === 'Liquidado' ? 'liquidado' : 'pendente'}</small> : null}</div><strong>{money(charge.valor)}</strong></article>})}{!charges.length ? <div className=\"empty\">Nenhuma cobrança vinculada a este cliente.</div> : null}</div>",
+      'details finance history',
     ],
   ]
 
