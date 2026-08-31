@@ -11,6 +11,17 @@ test('invoice PDF has valid header and deterministic document number', () => {
   assert.equal(financeDocumentNumber(charge, 'invoice'), financeDocumentNumber(charge, 'invoice'))
 })
 
+test('invoice PDF carries official Luid Gabriel identity', () => {
+  const charge = { id: 'fin-brand', clienteId: 'cli-1', descricao: 'Assessoria contábil', valor: 1000, vencimento: '2026-09-10', competencia: '2026-08', status: 'Pendente', faturaEmitidaEm: '2026-08-31' }
+  const bytes = buildFinanceDocumentBytes({ type: 'invoice', charge, client: { razao: 'Empresa Teste' }, office: {} })
+  const pdf = Buffer.from(bytes).toString('latin1')
+  assert.match(pdf, /\(LUID\)/)
+  assert.match(pdf, /\(GABRIEL\)/)
+  assert.match(pdf, /\(CONTADOR\)/)
+  assert.match(pdf, /\(FATURA\)/)
+  assert.match(pdf, /0\.141 0\.337 0\.910 rg/)
+})
+
 test('receipt PDF includes received charge without storing file data', () => {
   const bytes = buildFinanceDocumentBytes({
     type: 'receipt',
