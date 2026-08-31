@@ -1,6 +1,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { OFFICIAL_MAIN_LOGO, OFFICIAL_REDUCED_LOGO } from '../src/assets/officialBrandJpegs.js'
+import { OFFICIAL_MAIN_LOGO } from '../src/assets/officialBrandJpegs.js'
+import { OFFICIAL_REDUCED_LOGO } from '../src/assets/officialReducedLogo.js'
 
 function jpegBytes(asset) {
   return Buffer.from(asset.base64, 'base64')
