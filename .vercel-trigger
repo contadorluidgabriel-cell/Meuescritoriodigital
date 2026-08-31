@@ -4,3 +4,5 @@ Nenhum código funcional foi alterado.
 Retry controlado em 2026-08-28 para publicar o ícone oficial LG e a estrutura mobile atual após liberação do build-rate-limit.
 
 Deploy controlado em 2026-08-28 para publicar a exclusão segura de tarefas após merge do PR #7.
+
+Deploy controlado em 2026-08-31 para publicar tarefas quantitativas, bloqueio por subtarefas/meta e clientes avulsos opcionais após merge do PR #8.
