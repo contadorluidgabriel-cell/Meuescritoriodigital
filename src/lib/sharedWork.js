@@ -68,7 +68,7 @@ export function normalizedSharedClientFields(client = {}) {
     mine = monthly
   }
 
-  const receiver = sharedReceiver({ ...client, parceiroIds, compartilhadoPartesParceiros: shares }, client)
+  const receiver = sharedReceiver({ ...client, parceiroIds: partnerIds, compartilhadoPartesParceiros: shares }, client)
   const responsibilities = {}
   const rawResponsibilities = client.responsabilidadesCompartilhadas && typeof client.responsabilidadesCompartilhadas === 'object'
     ? client.responsabilidadesCompartilhadas
@@ -81,7 +81,7 @@ export function normalizedSharedClientFields(client = {}) {
   })
 
   return {
-    parceiroIds,
+    parceiroIds: partnerIds,
     parceiroId: partnerIds[0] || '',
     compartilhadoRecebedor: receiver,
     compartilhadoMinhaParte: mine,
@@ -136,7 +136,7 @@ export function normalizeSharedCharge(charge = {}, client = {}) {
     charge.parceiroId,
   ])
   const ids = explicitIds.length ? explicitIds : clientFields.parceiroIds
-  let shares = partnerShares(charge, { ...client, ...clientFields })
+  const shares = partnerShares(charge, { ...client, ...clientFields })
     .filter(item => ids.includes(item.parceiroId))
   const known = new Set(shares.map(item => item.parceiroId))
   ids.forEach(id => { if (!known.has(id)) shares.push({ parceiroId: id, valor: 0 }) })
