@@ -2,24 +2,26 @@ import { useEffect, useState } from 'react'
 import { Button, Icon } from './ui/SaasUI.jsx'
 
 export const navigationGroups = [
-  { label: 'Visão geral', items: [['dashboard', 'Painel Principal', 'dashboard'], ['calendario', 'Calendário', 'calendar']] },
-  { label: 'Operação', items: [['clientes', 'Clientes', 'clients'], ['tarefas', 'Tarefas', 'tasks'], ['processos', 'Processos', 'processes'], ['obrigacoes', 'Obrigações', 'obligations']] },
+  { label: 'Visão geral', items: [['meu-dia', 'Meu Dia', 'dashboard'], ['dashboard', 'Painel Principal', 'dashboard'], ['calendario', 'Calendário', 'calendar']] },
+  { label: 'Operação', items: [['pendencias', 'Pendências', 'obligations'], ['clientes', 'Clientes', 'clients'], ['tarefas', 'Tarefas', 'tasks'], ['processos', 'Processos', 'processes'], ['obrigacoes', 'Obrigações', 'obligations']] },
   { label: 'Gestão', items: [['honorarios', 'Financeiro', 'finance']] },
 ]
 
 export const pageNames = Object.fromEntries(navigationGroups.flatMap(group => group.items.map(([id, label]) => [id, label])).concat([['configuracoes', 'Configurações']]))
 
 const mobilePrimary = [
-  ['dashboard', 'Painel', 'dashboard'],
-  ['calendario', 'Agenda', 'calendar'],
-  ['clientes', 'Clientes', 'clients'],
+  ['meu-dia', 'Meu Dia', 'dashboard'],
   ['tarefas', 'Tarefas', 'tasks'],
+  ['clientes', 'Clientes', 'clients'],
+  ['calendario', 'Agenda', 'calendar'],
 ]
 
 const mobileMore = [
+  ['pendencias', 'Pendências', 'obligations'],
   ['processos', 'Processos', 'processes'],
   ['obrigacoes', 'Obrigações', 'obligations'],
   ['honorarios', 'Financeiro', 'finance'],
+  ['dashboard', 'Painel Principal', 'dashboard'],
   ['configuracoes', 'Configurações', 'settings'],
 ]
 
@@ -61,7 +63,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
       <section className="saas-mobile-more-sheet app-mobile-more-panel" aria-label="Mais módulos">
         <header><div><strong>Mais áreas</strong><small>Gestão e configurações do escritório</small></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Fechar"><Icon name="close" size={18} /></button></header>
         <div className="saas-mobile-more-grid">
-          {mobileMore.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' ? 'Honorários e recebimentos' : 'Sistema e integrações'}</small></div></button>)}
+          {mobileMore.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'pendencias' ? 'Tudo que exige atenção' : id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' ? 'Honorários e recebimentos' : id === 'dashboard' ? 'Visão gerencial tradicional' : 'Sistema e integrações'}</small></div></button>)}
         </div>
         <footer><div><span>{identity.initials || 'ME'}</span><div><strong>{identity.user}</strong><small>{identity.role} · {sync}</small></div></div><Button variant="secondary" size="sm" icon="logout" onClick={onSignOut}>Sair</Button></footer>
       </section>
