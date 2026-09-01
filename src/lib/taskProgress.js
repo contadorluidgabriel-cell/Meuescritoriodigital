@@ -42,6 +42,8 @@ export function taskProgressLabel(task = {}) {
   return `${progress.current}/${progress.total} ${progress.unit} · ${progress.pct}%`
 }
 
+// Estes campos pertencem ao Escritório Digital. Integrações externas podem
+// transportar uma cópia antiga deles, mas não são autoridade para alterá-los.
 const preservedKeys = [
   'clientId', 'departamento', 'responsavel', 'recorrencia', 'subtarefas',
   'terceirizado', 'terceiroCnpj', 'terceiroNome',
@@ -54,9 +56,13 @@ export function reconcileExternalTaskPayload(remoteTasks = [], currentTasks = []
     const previous = currentById.get(String(remote.id))
     if (!previous) return remote
     const merged = { ...remote }
+
     for (const key of preservedKeys) {
-      if (merged[key] === undefined || merged[key] === null) merged[key] = structuredClone(previous[key])
+      if (Object.prototype.hasOwnProperty.call(previous, key)) {
+        merged[key] = structuredClone(previous[key])
+      }
     }
+
     if (!isDone(previous.status) && isDone(merged.status) && taskCompletionBlocker({ ...previous, ...merged })) {
       merged.status = previous.status
     }
