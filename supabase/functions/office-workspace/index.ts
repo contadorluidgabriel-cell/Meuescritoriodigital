@@ -365,7 +365,7 @@ async function updateMember(service: any, user: any, body: any) {
   const status = ['invited', 'active', 'disabled'].includes(body.status) ? body.status : member.status
 
   const { data: saved, error: saveError } = await service.from('office_members').update({
-    display_name: String(body.display_name ?? member.display_name || '').trim(),
+    display_name: String(body.display_name ?? member.display_name ?? '').trim(),
     role,
     partner_id: partnerId || null,
     status,
