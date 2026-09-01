@@ -1,12 +1,23 @@
 export const KEYS = {
   clients: 'med_clientes', linkedCompanies: 'med_cnpjs_vinculados', partners: 'med_parceiros_trabalho', tasks: 'med_tarefas', taskTemplates: 'med_tarefas_modelos',
   processes: 'med_processos', obligations: 'med_obrigacoes', processModels: 'med_processos_modelos',
-  finance: 'med_financeiro', settings: 'med_configuracoes', departments: 'med_departamentos',
+  finance: 'med_financeiro',
+  financeAccounts: 'med_financeiro_contas',
+  financePayables: 'med_financeiro_pagar',
+  financeMovements: 'med_financeiro_movimentos',
+  financeCategories: 'med_financeiro_categorias',
+  financeRecurrences: 'med_financeiro_recorrencias',
+  financeClosings: 'med_financeiro_fechamentos',
+  financeCollectionEvents: 'med_financeiro_cobrancas_eventos',
+  financeConfig: 'med_financeiro_configuracoes',
+  settings: 'med_configuracoes', departments: 'med_departamentos',
   ui: 'med_preferencias', history: 'med_historico_painel', meta: 'med_meta', lastBackup: 'med_last_backup',
 }
 
 export const defaults = {
   clients: [], linkedCompanies: [], partners: [], tasks: [], taskTemplates: [], processes: [], obligations: [], processModels: [], finance: [], history: [],
+  financeAccounts: [], financePayables: [], financeMovements: [], financeCategories: [], financeRecurrences: [], financeClosings: [], financeCollectionEvents: [],
+  financeConfig: { defaultAccountId: '', closingDay: 1, forecastDays: 30 },
   settings: { office: 'Meu Escritório', system: 'Meu Escritório Digital', user: 'Usuário', role: 'Administrador', initials: 'ME', visual: 'macos' },
   departments: ['Fiscal', 'Contábil', 'DP', 'Societário', 'Administrativo'].map(name => ({ name, active: true })),
   ui: {}, meta: { version: '11.1' }, lastBackup: '',

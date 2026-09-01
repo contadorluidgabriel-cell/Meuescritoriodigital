@@ -1,4 +1,5 @@
 import { collectCalendarEvents } from './calendarEvents.js'
+import { payableSummary } from './financeComplete.js'
 import { paymentSummary } from './financePro.js'
 import { partnerShares, sharedReceiver, sharedSplit, SETTLEMENT_DONE } from './sharedWork.js'
 import { today } from './storage.js'
@@ -89,6 +90,30 @@ function collectFinanceNotifications(office, day, daysBefore) {
   })
 }
 
+function collectPayableNotifications(office, day, daysBefore) {
+  return (office.financePayables || []).flatMap(payable => {
+    if (String(payable.status || '').toLowerCase() === 'cancelado' || !payable.vencimento) return []
+    const summary = payableSummary(payable)
+    if (summary.balance <= 0.009) return []
+    const days = daysBetween(day, payable.vencimento)
+    if (days === null || days > daysBefore) return []
+    const partial = summary.paidCash > 0.009 || summary.discounts > 0.009
+    return [{
+      key: `payable:${payable.id}`,
+      type: 'payable',
+      category: 'finance',
+      kindLabel: partial ? 'Despesa parcial' : 'Conta a pagar',
+      title: payable.descricao || 'Conta a pagar',
+      subtitle: `${payable.fornecedor || 'Escritório'} · ${deadlineCopy(days)} · saldo ${money(summary.balance)}`,
+      clientId: '',
+      id: String(payable.id || ''),
+      date: payable.vencimento,
+      days,
+      level: deadlineLevel(days),
+    }]
+  })
+}
+
 function collectPartnerNotifications(office, day) {
   const clients = new Map((office.clients || []).map(client => [String(client.id), client]))
   const partners = new Map((office.partners || []).map(partner => [String(partner.id), partner]))
@@ -138,6 +163,7 @@ export function collectOfficeNotifications(office = {}, { daysBefore = 3, day = 
   const items = [
     ...collectOperationNotifications(office, day, safeDays),
     ...collectFinanceNotifications(office, day, safeDays),
+    ...collectPayableNotifications(office, day, safeDays),
     ...collectPartnerNotifications(office, day),
   ]
 
