@@ -15,6 +15,7 @@ import { applySharedResponsibilityPatches } from './scripts/patch-shared-respons
 import { applyProcessFinancePatch } from './scripts/patch-process-finance.mjs'
 import { applyOfficialPdfBrandPatch } from './scripts/patch-official-pdf-brand.mjs'
 import { applyFinanceEditingPatch } from './scripts/patch-finance-editing.mjs'
+import { applyFinanceCompletePatch } from './scripts/patch-finance-complete.mjs'
 import { applyNotificationCenterPatch } from './scripts/patch-notification-center.mjs'
 import { applyPushNotificationsPatch } from './scripts/patch-push-notifications.mjs'
 import { applyOperationalIntelligencePatch } from './scripts/patch-operational-intelligence.mjs'
@@ -78,6 +79,7 @@ applySharedResponsibilityPatches(root)
 applyProcessFinancePatch(root)
 applyOfficialPdfBrandPatch(root)
 applyFinanceEditingPatch(root)
+applyFinanceCompletePatch(root)
 applyNotificationCenterPatch(root)
 applyPushNotificationsPatch(root)
 applyOperationalIntelligencePatch(root)
