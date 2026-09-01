@@ -7,11 +7,20 @@ export const DEFAULT_PUSH_PREFERENCES = {
   timezone: 'America/Sao_Paulo',
   daily_enabled: true,
   daily_time: '08:00',
+  midday_enabled: false,
+  midday_time: '14:00',
   weekly_enabled: true,
   weekly_weekday: 1,
   weekly_time: '08:00',
   closing_enabled: true,
   closing_time: '18:00',
+  weekly_closing_enabled: true,
+  weekly_closing_weekday: 5,
+  weekly_closing_time: '18:00',
+  include_tasks: true,
+  include_processes: true,
+  include_obligations: true,
+  include_finance: true,
 }
 
 export function browserTimeZone() {
@@ -57,15 +66,33 @@ export async function savePushPreferences(userId, values = {}) {
     user_id: userId,
     timezone: values.timezone || browserTimeZone(),
     daily_time: String(values.daily_time || DEFAULT_PUSH_PREFERENCES.daily_time).slice(0, 5),
+    midday_time: String(values.midday_time || DEFAULT_PUSH_PREFERENCES.midday_time).slice(0, 5),
     weekly_time: String(values.weekly_time || DEFAULT_PUSH_PREFERENCES.weekly_time).slice(0, 5),
     closing_time: String(values.closing_time || DEFAULT_PUSH_PREFERENCES.closing_time).slice(0, 5),
+    weekly_closing_time: String(values.weekly_closing_time || DEFAULT_PUSH_PREFERENCES.weekly_closing_time).slice(0, 5),
     weekly_weekday: Number(values.weekly_weekday ?? DEFAULT_PUSH_PREFERENCES.weekly_weekday),
+    weekly_closing_weekday: Number(values.weekly_closing_weekday ?? DEFAULT_PUSH_PREFERENCES.weekly_closing_weekday),
+    include_tasks: Boolean(values.include_tasks ?? DEFAULT_PUSH_PREFERENCES.include_tasks),
+    include_processes: Boolean(values.include_processes ?? DEFAULT_PUSH_PREFERENCES.include_processes),
+    include_obligations: Boolean(values.include_obligations ?? DEFAULT_PUSH_PREFERENCES.include_obligations),
+    include_finance: Boolean(values.include_finance ?? DEFAULT_PUSH_PREFERENCES.include_finance),
     updated_at: new Date().toISOString(),
   }
   delete payload.created_at
   const { data, error } = await supabase.from('office_push_preferences').upsert(payload, { onConflict: 'user_id' }).select().single()
   if (error) throw error
   return data
+}
+
+export async function loadPushHistory(userId, limit = 12) {
+  const { data, error } = await supabase
+    .from('office_push_delivery_log')
+    .select('id,notification_type,period_key,title,body,sent_at')
+    .eq('user_id', userId)
+    .order('sent_at', { ascending: false })
+    .limit(Math.max(1, Math.min(30, Number(limit) || 12)))
+  if (error) throw error
+  return data || []
 }
 
 export async function currentDeviceSubscription() {
