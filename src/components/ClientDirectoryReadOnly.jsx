@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import '../client-directory-readonly.css'
 
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 const normalize = value => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
