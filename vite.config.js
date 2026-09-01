@@ -16,6 +16,7 @@ import { applyProcessFinancePatch } from './scripts/patch-process-finance.mjs'
 import { applyOfficialPdfBrandPatch } from './scripts/patch-official-pdf-brand.mjs'
 import { applyFinanceEditingPatch } from './scripts/patch-finance-editing.mjs'
 import { applyNotificationCenterPatch } from './scripts/patch-notification-center.mjs'
+import { applyPushNotificationsPatch } from './scripts/patch-push-notifications.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -77,6 +78,7 @@ applyProcessFinancePatch(root)
 applyOfficialPdfBrandPatch(root)
 applyFinanceEditingPatch(root)
 applyNotificationCenterPatch(root)
+applyPushNotificationsPatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
