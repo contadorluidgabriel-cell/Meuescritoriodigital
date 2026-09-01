@@ -23,6 +23,7 @@ import { applyFinanceCompleteIntelligencePatch } from './scripts/patch-finance-c
 import { applyMultiuserWorkspacePatch } from './scripts/patch-multiuser-workspace.mjs'
 import { applyAccessRoutesPatch } from './scripts/patch-access-routes.mjs'
 import { applyMultiuserFinanceV2Patch } from './scripts/patch-multiuser-finance-v2.mjs'
+import { applyTaskQuickExecutionPatch } from './scripts/patch-task-quick-execution.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -81,6 +82,7 @@ applyFinanceCompleteIntelligencePatch(root)
 applyMultiuserWorkspacePatch(root)
 applyAccessRoutesPatch(root)
 applyMultiuserFinanceV2Patch(root)
+applyTaskQuickExecutionPatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
