@@ -16,7 +16,7 @@ export function applyMultiuserWorkspacePatch(root) {
 
     app = replaceOrFail(app,
       "import { AppSidebar, AppTopbar } from './components/AppChrome.jsx'",
-      "import { AppSidebar, AppTopbar, navigationGroupsForAccess } from './components/AppChrome.jsx'\nimport TeamManagement from './components/TeamManagement.jsx'\nimport PartnerFinanceView from './components/PartnerFinanceView.jsx'\nimport InviteSetup from './components/InviteSetup.jsx'\nimport './team-multiuser.css'",
+      "import { AppSidebar, AppTopbar, navigationGroupsForAccess } from './components/AppChrome.jsx'\nimport TeamManagement from './components/TeamManagement.jsx'\nimport TeamErrorBoundary from './components/TeamErrorBoundary.jsx'\nimport PartnerFinanceView from './components/PartnerFinanceView.jsx'\nimport InviteSetup from './components/InviteSetup.jsx'\nimport './team-multiuser.css'",
       'imports')
 
     app = replaceOrFail(app,
@@ -46,7 +46,7 @@ export function applyMultiuserWorkspacePatch(root) {
 
     app = replaceOrFail(app,
       "      {view === 'meu-dia' || view === 'pendencias' ? <OperationalCommandCenter office={office} update={update} onOpenItem={openNotification} onNavigate={navigate} initialTab={view === 'pendencias' ? 'pending' : 'today'} /> : null}",
-      "      {view === 'meu-dia' || view === 'pendencias' ? <OperationalCommandCenter office={office} update={update} access={access} onOpenItem={openNotification} onNavigate={navigate} initialTab={view === 'pendencias' ? 'pending' : 'today'} /> : null}\n      {view === 'equipe' && access?.membership?.role === 'admin' ? <TeamManagement office={office} update={update} access={access} onRefresh={refreshWorkspace} /> : null}\n      {view === 'financeiro-parceiro' && access?.membership?.role === 'partner' ? <PartnerFinanceView office={office} access={access} /> : null}",
+      "      {view === 'meu-dia' || view === 'pendencias' ? <OperationalCommandCenter office={office} update={update} access={access} onOpenItem={openNotification} onNavigate={navigate} initialTab={view === 'pendencias' ? 'pending' : 'today'} /> : null}\n      {view === 'equipe' ? (access?.membership?.role === 'admin' ? <TeamErrorBoundary><TeamManagement office={office} update={update} access={access} onRefresh={refreshWorkspace} /></TeamErrorBoundary> : <section className=\"team-shell\"><div className=\"team-panel team-access-state\"><header><div><span>Equipe do escritório</span><h2>{ready ? 'Acesso da equipe indisponível' : 'Carregando acesso…'}</h2><p>{ready ? 'Não foi possível confirmar um perfil de administrador para este workspace. Seus dados continuam preservados.' : 'Estamos confirmando seu perfil e as permissões do escritório.'}</p></div></header><div className=\"team-loading\">{ready ? <button type=\"button\" onClick={() => window.location.reload()}>Tentar novamente</button> : 'Aguarde alguns segundos…'}</div></div></section>) : null}\n      {view === 'financeiro-parceiro' && access?.membership?.role === 'partner' ? <PartnerFinanceView office={office} access={access} /> : null}",
       'workspace routes')
 
     app = replaceOrFail(app,
