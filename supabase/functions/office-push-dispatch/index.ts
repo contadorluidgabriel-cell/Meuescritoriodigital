@@ -1,6 +1,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4'
 import webpush from 'npm:web-push@3.6.7'
 import { buildOfficeDigest, localClockParts, periodKey, shouldDispatch } from './digest.js'
+import { filterPushPayload } from './recipientAccess.js'
 
 const VAPID_PUBLIC_KEY = 'BO02_KpgqpcYBykMrxEOXeua9UfB3H0kebaj--zXw-3OUATgsCJ4tmnh45uP20IMvd5bAbnuWkkwmoSjrRHUzRw'
 const PUSH_TYPES = ['daily', 'midday', 'weekly', 'closing', 'weekly_closing'] as const
@@ -57,18 +58,64 @@ Deno.serve(async (req: Request) => {
 
   if (!due.length) return json({ ok: true, due: 0, sent: 0 })
 
-  const userIds = [...new Set(due.map(item => item.preference.user_id))]
-  const [{ data: snapshots, error: snapshotError }, { data: subscriptions, error: subscriptionError }] = await Promise.all([
-    supabase.from('office_snapshots').select('user_id,payload').in('user_id', userIds),
+  const userIds = [...new Set(due.map(item => String(item.preference.user_id)))]
+  const [
+    { data: workspacePreferences, error: workspacePreferenceError },
+    { data: memberships, error: membershipError },
+    { data: subscriptions, error: subscriptionError },
+    { data: legacySnapshots, error: legacySnapshotError },
+  ] = await Promise.all([
+    supabase.from('office_user_workspace_preferences').select('user_id,active_workspace_id').in('user_id', userIds),
+    supabase.from('office_members').select('user_id,workspace_id,role,partner_id,permissions,status').in('user_id', userIds).eq('status', 'active'),
     supabase.from('office_push_subscriptions').select('id,user_id,endpoint,p256dh,auth_key,enabled').in('user_id', userIds).eq('enabled', true),
+    supabase.from('office_snapshots').select('user_id,payload').in('user_id', userIds),
   ])
 
-  if (snapshotError || subscriptionError) {
-    console.error('push source query failed', snapshotError?.message || subscriptionError?.message)
+  if (workspacePreferenceError || membershipError || subscriptionError || legacySnapshotError) {
+    console.error('push source query failed', workspacePreferenceError?.message || membershipError?.message || subscriptionError?.message || legacySnapshotError?.message)
     return json({ error: 'source_query_failed' }, 500)
   }
 
-  const snapshotsByUser = new Map((snapshots || []).map(row => [String(row.user_id), row.payload || {}]))
+  const preferredWorkspaceByUser = new Map((workspacePreferences || []).map(row => [String(row.user_id), String(row.active_workspace_id || '')]))
+  const membershipsByUser = new Map<string, any[]>()
+  for (const membership of memberships || []) {
+    const key = String(membership.user_id)
+    membershipsByUser.set(key, [...(membershipsByUser.get(key) || []), membership])
+  }
+
+  const selectedMembershipByUser = new Map<string, any>()
+  for (const userId of userIds) {
+    const rows = membershipsByUser.get(userId) || []
+    const preferred = preferredWorkspaceByUser.get(userId) || ''
+    const selected = rows.find(row => String(row.workspace_id) === preferred) || rows.find(row => row.role === 'admin') || rows[0]
+    if (selected) selectedMembershipByUser.set(userId, selected)
+  }
+
+  const workspaceIds = [...new Set([...selectedMembershipByUser.values()].map(row => String(row.workspace_id)).filter(Boolean))]
+  const { data: workspaceSnapshots, error: workspaceSnapshotError } = workspaceIds.length
+    ? await supabase.from('office_workspace_snapshots').select('workspace_id,payload').in('workspace_id', workspaceIds)
+    : { data: [], error: null }
+  if (workspaceSnapshotError) {
+    console.error('workspace snapshot query failed', workspaceSnapshotError.message)
+    return json({ error: 'workspace_snapshot_query_failed' }, 500)
+  }
+
+  const workspacePayloads = new Map((workspaceSnapshots || []).map(row => [String(row.workspace_id), row.payload || {}]))
+  const legacyByUser = new Map((legacySnapshots || []).map(row => [String(row.user_id), row.payload || {}]))
+  const payloadByUser = new Map<string, any>()
+  for (const userId of userIds) {
+    const membership = selectedMembershipByUser.get(userId)
+    if (membership) {
+      const fullPayload = workspacePayloads.get(String(membership.workspace_id))
+      if (fullPayload) {
+        payloadByUser.set(userId, filterPushPayload(fullPayload, membership, userId))
+        continue
+      }
+    }
+    const legacy = legacyByUser.get(userId)
+    if (legacy) payloadByUser.set(userId, legacy)
+  }
+
   const subscriptionsByUser = new Map<string, any[]>()
   for (const subscription of subscriptions || []) {
     const key = String(subscription.user_id)
@@ -95,10 +142,10 @@ Deno.serve(async (req: Request) => {
 
   for (const item of due) {
     const userId = String(item.preference.user_id)
-    const snapshot = snapshotsByUser.get(userId)
-    if (!snapshot) { skipped += 1; continue }
+    const payloadSource = payloadByUser.get(userId)
+    if (!payloadSource) { skipped += 1; continue }
 
-    const digest = buildOfficeDigest(snapshot, item.type, item.localDate, item.preference)
+    const digest = buildOfficeDigest(payloadSource, item.type, item.localDate, item.preference)
     const targets = subscriptionsByUser.get(userId) || []
 
     for (const subscription of targets) {
@@ -109,7 +156,7 @@ Deno.serve(async (req: Request) => {
         endpoint: subscription.endpoint,
         keys: { p256dh: subscription.p256dh, auth: subscription.auth_key },
       }
-      const payload = JSON.stringify({
+      const pushPayload = JSON.stringify({
         title: digest.title,
         body: digest.body,
         tag: digest.tag,
@@ -120,7 +167,7 @@ Deno.serve(async (req: Request) => {
 
       try {
         const longLived = item.type === 'weekly' || item.type === 'weekly_closing'
-        await webpush.sendNotification(pushSubscription, payload, { TTL: longLived ? 21600 : 7200 })
+        await webpush.sendNotification(pushSubscription, pushPayload, { TTL: longLived ? 21600 : 7200 })
         const { error: insertError } = await supabase.from('office_push_delivery_log').insert({
           subscription_id: subscription.id,
           user_id: userId,
