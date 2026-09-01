@@ -1,9 +1,9 @@
 import { createClient } from 'npm:@supabase/supabase-js@2.57.4'
 import webpush from 'npm:web-push@3.6.7'
-import { buildTaskDigest, localClockParts, periodKey, shouldDispatch } from './digest.js'
+import { buildOfficeDigest, localClockParts, periodKey, shouldDispatch } from './digest.js'
 
 const VAPID_PUBLIC_KEY = 'BO02_KpgqpcYBykMrxEOXeua9UfB3H0kebaj--zXw-3OUATgsCJ4tmnh45uP20IMvd5bAbnuWkkwmoSjrRHUzRw'
-const PUSH_TYPES = ['daily', 'weekly', 'closing'] as const
+const PUSH_TYPES = ['daily', 'midday', 'weekly', 'closing', 'weekly_closing'] as const
 
 type PushType = typeof PUSH_TYPES[number]
 
@@ -75,7 +75,7 @@ Deno.serve(async (req: Request) => {
     subscriptionsByUser.set(key, [...(subscriptionsByUser.get(key) || []), subscription])
   }
 
-  const earliestLog = new Date(now.getTime() - 9 * 86400000).toISOString()
+  const earliestLog = new Date(now.getTime() - 10 * 86400000).toISOString()
   const { data: recentLogs, error: logsError } = await supabase
     .from('office_push_delivery_log')
     .select('subscription_id,notification_type,period_key')
@@ -98,7 +98,7 @@ Deno.serve(async (req: Request) => {
     const snapshot = snapshotsByUser.get(userId)
     if (!snapshot) { skipped += 1; continue }
 
-    const digest = buildTaskDigest(snapshot, item.type, item.localDate)
+    const digest = buildOfficeDigest(snapshot, item.type, item.localDate, item.preference)
     const targets = subscriptionsByUser.get(userId) || []
 
     for (const subscription of targets) {
@@ -114,16 +114,20 @@ Deno.serve(async (req: Request) => {
         body: digest.body,
         tag: digest.tag,
         url: digest.url,
+        actions: digest.actions || [],
         type: item.type,
       })
 
       try {
-        await webpush.sendNotification(pushSubscription, payload, { TTL: item.type === 'weekly' ? 21600 : 7200 })
+        const longLived = item.type === 'weekly' || item.type === 'weekly_closing'
+        await webpush.sendNotification(pushSubscription, payload, { TTL: longLived ? 21600 : 7200 })
         const { error: insertError } = await supabase.from('office_push_delivery_log').insert({
           subscription_id: subscription.id,
           user_id: userId,
           notification_type: item.type,
           period_key: item.period,
+          title: digest.title,
+          body: digest.body,
         })
         if (insertError && insertError.code !== '23505') console.error('push log insert failed', insertError.message)
         delivered.add(deliveryKey)
