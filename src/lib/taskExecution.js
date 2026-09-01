@@ -21,23 +21,25 @@ function nextRecurringDate(date, recurrence) {
 }
 
 function appendRecurringIfNeeded(tasks, completed) {
-  if (!completed?.recorrencia || !completed?.prazo) return tasks
+  if (!completed?.recorrencia || !completed?.prazo) return { tasks, generatedTaskId: '' }
   const nextDue = nextRecurringDate(completed.prazo, completed.recorrencia)
-  if (!nextDue) return tasks
+  if (!nextDue) return { tasks, generatedTaskId: '' }
   const exists = tasks.some(task => String(task.templateId || '') === String(completed.templateId || '') && String(task.clientId || '') === String(completed.clientId || '') && task.prazo === nextDue && !isDone(task.status))
-  if (exists) return tasks
+  if (exists) return { tasks, generatedTaskId: '' }
+  const generatedTaskId = uid('task')
   const next = {
     ...clone(completed),
-    id: uid('task'),
+    id: generatedTaskId,
     status: 'Pendente',
     prazo: nextDue,
     planejadoPara: '',
+    completedAt: '',
     quantidadeConcluida: completed.quantitativo ? 0 : completed.quantidadeConcluida,
     subtarefas: (completed.subtarefas || []).map(item => ({ ...clone(item), concluida: false })),
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   }
-  return [...tasks, next]
+  return { tasks: [...tasks, next], generatedTaskId }
 }
 
 export function taskExecutionState(task = {}) {
@@ -58,21 +60,45 @@ export function taskExecutionState(task = {}) {
   }
 }
 
-export function toggleTaskCompletion(tasks = [], taskId) {
+export function completeTask(tasks = [], taskId) {
   const nextTasks = clone(tasks) || []
   const index = nextTasks.findIndex(item => String(item.id) === String(taskId))
   if (index < 0) return { tasks: nextTasks, changed: false, error: 'Tarefa não encontrada.' }
   const current = nextTasks[index]
-  if (isDone(current.status)) {
-    nextTasks[index] = { ...current, status: 'Pendente', updatedAt: new Date().toISOString() }
-    return { tasks: nextTasks, changed: true, undone: true, task: nextTasks[index] }
-  }
+  if (isDone(current.status)) return { tasks: nextTasks, changed: false, error: 'A tarefa já está concluída.' }
   const blocker = taskCompletionBlocker(current)
   if (blocker) return { tasks: nextTasks, changed: false, error: blocker }
   const completedAt = new Date().toISOString()
   const completed = { ...current, status: 'Concluída', updatedAt: completedAt, completedAt }
   nextTasks[index] = completed
-  return { tasks: appendRecurringIfNeeded(nextTasks, completed), changed: true, undone: false, task: completed }
+  const recurring = appendRecurringIfNeeded(nextTasks, completed)
+  return {
+    tasks: recurring.tasks,
+    changed: true,
+    task: completed,
+    transaction: {
+      type: 'complete',
+      taskId: String(taskId),
+      previousStatus: current.status || 'Pendente',
+      previousCompletedAt: current.completedAt || '',
+      generatedTaskId: recurring.generatedTaskId,
+    },
+  }
+}
+
+export function undoTaskCompletion(tasks = [], transaction = {}) {
+  if (transaction?.type !== 'complete' || !transaction.taskId) return { tasks: clone(tasks) || [], changed: false, error: 'Não há conclusão para desfazer.' }
+  let nextTasks = clone(tasks) || []
+  const index = nextTasks.findIndex(item => String(item.id) === String(transaction.taskId))
+  if (index < 0) return { tasks: nextTasks, changed: false, error: 'A tarefa original não foi encontrada.' }
+  nextTasks[index] = {
+    ...nextTasks[index],
+    status: transaction.previousStatus || 'Pendente',
+    completedAt: transaction.previousCompletedAt || '',
+    updatedAt: new Date().toISOString(),
+  }
+  if (transaction.generatedTaskId) nextTasks = nextTasks.filter(item => String(item.id) !== String(transaction.generatedTaskId))
+  return { tasks: nextTasks, changed: true, task: nextTasks.find(item => String(item.id) === String(transaction.taskId)) }
 }
 
 export function toggleSubtask(tasks = [], taskId, subtaskIndex) {
