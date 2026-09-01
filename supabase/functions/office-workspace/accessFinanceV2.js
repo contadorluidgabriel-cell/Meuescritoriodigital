@@ -1,4 +1,4 @@
-import * as base from './access.js'
+import * as base from './accessLegacy.js'
 
 export const ROLE_ADMIN = base.ROLE_ADMIN
 export const ROLE_COLLABORATOR = base.ROLE_COLLABORATOR
@@ -37,9 +37,7 @@ export function permissionsFor(membership = {}) {
   const role = roleOf(membership)
   const raw = membership.permissions || {}
   const merged = { ...DEFAULT_PERMISSIONS[role], ...raw }
-  if (role === ROLE_COLLABORATOR && raw.finance_receivables == null && raw.finance != null) {
-    merged.finance_receivables = Boolean(raw.finance)
-  }
+  if (role === ROLE_COLLABORATOR && raw.finance_receivables == null && raw.finance != null) merged.finance_receivables = Boolean(raw.finance)
   merged.finance = role === ROLE_ADMIN ? true : Boolean(merged.finance_receivables)
   merged.finance_edit = role === ROLE_ADMIN ? true : Boolean(merged.finance_receivables || merged.finance_payables || merged.finance_cash)
   return merged
@@ -47,14 +45,7 @@ export function permissionsFor(membership = {}) {
 
 function compatMembership(membership = {}) {
   const permissions = permissionsFor(membership)
-  return {
-    ...membership,
-    permissions: {
-      ...permissions,
-      finance: Boolean(permissions.finance_receivables),
-      finance_edit: Boolean(permissions.finance_receivables),
-    },
-  }
+  return { ...membership, permissions: { ...permissions, finance: Boolean(permissions.finance_receivables), finance_edit: Boolean(permissions.finance_receivables) } }
 }
 
 const FINANCE_V2_KEYS = {
@@ -86,16 +77,9 @@ export function filterPayloadForMembership(payload = {}, membership = {}) {
   const next = base.filterPayloadForMembership(payload, compatMembership(membership))
   if (role === ROLE_ADMIN) return next
   if (role === ROLE_PARTNER) return emptyFinanceV2(next)
-
-  if (!permissions.finance_receivables) {
-    next.med_financeiro = []
-    next.med_financeiro_cobrancas_eventos = []
-  }
+  if (!permissions.finance_receivables) { next.med_financeiro = []; next.med_financeiro_cobrancas_eventos = [] }
   if (!permissions.finance_payables) next.med_financeiro_pagar = []
-  if (!permissions.finance_cash) {
-    next.med_financeiro_contas = []
-    next.med_financeiro_movimentos = []
-  }
+  if (!permissions.finance_cash) { next.med_financeiro_contas = []; next.med_financeiro_movimentos = [] }
   const anyFinance = permissions.finance_receivables || permissions.finance_payables || permissions.finance_cash || permissions.finance_reports
   if (!anyFinance) next.med_financeiro_categorias = []
   next.med_financeiro_recorrencias = []
@@ -106,34 +90,19 @@ export function filterPayloadForMembership(payload = {}, membership = {}) {
 
 const arrayNames = new Set(['financeAccounts', 'financePayables', 'financeMovements', 'financeCategories', 'financeRecurrences', 'financeClosings', 'financeCollectionEvents'])
 const recordKey = (name, record = {}) => name === 'financeClosings' ? String(record.competencia || record.id || '') : String(record.id || '')
-
 function applyArrayPatch(records = [], change = {}, name = '', allowDelete = false) {
   const map = new Map((Array.isArray(records) ? records : []).map(item => [recordKey(name, item), clone(item)]).filter(([key]) => key))
-  ;(Array.isArray(change.upserts) ? change.upserts : []).forEach(item => {
-    const key = recordKey(name, item)
-    if (key) map.set(key, clone(item))
-  })
+  ;(Array.isArray(change.upserts) ? change.upserts : []).forEach(item => { const key = recordKey(name, item); if (key) map.set(key, clone(item)) })
   if (allowDelete) (Array.isArray(change.deletes) ? change.deletes : []).forEach(id => map.delete(String(id)))
   return [...map.values()]
 }
-
 function auditEntries(name, change = {}, allowDelete = false) {
-  const labels = {
-    financeAccounts: 'conta financeira',
-    financePayables: 'conta a pagar',
-    financeMovements: 'movimentação financeira',
-    financeCategories: 'categoria financeira',
-    financeRecurrences: 'recorrência financeira',
-    financeClosings: 'fechamento financeiro',
-    financeCollectionEvents: 'contato de cobrança',
-    financeConfig: 'configuração financeira',
-  }
+  const labels = { financeAccounts: 'conta financeira', financePayables: 'conta a pagar', financeMovements: 'movimentação financeira', financeCategories: 'categoria financeira', financeRecurrences: 'recorrência financeira', financeClosings: 'fechamento financeiro', financeCollectionEvents: 'contato de cobrança', financeConfig: 'configuração financeira' }
   const result = []
   ;(change.upserts || []).forEach(item => result.push({ action: 'upsert', entity_type: name, entity_id: recordKey(name, item), summary: `${labels[name] || name} alterado(a)` }))
   if (allowDelete) (change.deletes || []).forEach(id => result.push({ action: 'delete', entity_type: name, entity_id: String(id), summary: `${labels[name] || name} removido(a)` }))
   return result
 }
-
 function canWriteFinanceV2(name, role, permissions) {
   if (role === ROLE_ADMIN) return true
   if (role !== ROLE_COLLABORATOR) return false
@@ -148,12 +117,10 @@ export function applyOfficePatch(fullPayload = {}, patch = {}, membership = {}) 
   const permissions = permissionsFor(membership)
   const legacyPatch = { ...patch }
   Object.keys(FINANCE_V2_KEYS).forEach(name => delete legacyPatch[name])
-
   const baseResult = base.applyOfficePatch(fullPayload, legacyPatch, compatMembership(membership))
   const payload = baseResult.payload
   const audit = [...baseResult.audit]
   if (role === ROLE_PARTNER) return { payload, audit }
-
   for (const [name, payloadKey] of Object.entries(FINANCE_V2_KEYS)) {
     const change = patch?.[name]
     if (!change || !canWriteFinanceV2(name, role, permissions)) continue
@@ -161,9 +128,7 @@ export function applyOfficePatch(fullPayload = {}, patch = {}, membership = {}) 
     if (arrayNames.has(name)) {
       payload[payloadKey] = applyArrayPatch(payload[payloadKey], change, name, allowDelete)
       audit.push(...auditEntries(name, change, allowDelete))
-      continue
-    }
-    if (Object.prototype.hasOwnProperty.call(change || {}, 'replace')) {
+    } else if (Object.prototype.hasOwnProperty.call(change || {}, 'replace')) {
       payload[payloadKey] = clone(change.replace)
       audit.push({ action: 'update', entity_type: name, entity_id: '', summary: 'configuração financeira atualizada' })
     }
