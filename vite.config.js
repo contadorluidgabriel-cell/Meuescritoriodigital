@@ -18,6 +18,7 @@ import { applyFinanceEditingPatch } from './scripts/patch-finance-editing.mjs'
 import { applyNotificationCenterPatch } from './scripts/patch-notification-center.mjs'
 import { applyPushNotificationsPatch } from './scripts/patch-push-notifications.mjs'
 import { applyOperationalIntelligencePatch } from './scripts/patch-operational-intelligence.mjs'
+import { applyMultiuserWorkspacePatch } from './scripts/patch-multiuser-workspace.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -81,6 +82,7 @@ applyFinanceEditingPatch(root)
 applyNotificationCenterPatch(root)
 applyPushNotificationsPatch(root)
 applyOperationalIntelligencePatch(root)
+applyMultiuserWorkspacePatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
