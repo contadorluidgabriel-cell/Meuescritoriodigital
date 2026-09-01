@@ -15,8 +15,17 @@ export function applyMultiuserFinanceV2Patch(root) {
       "    if (permissions.finance_receivables || permissions.finance_payables || permissions.finance_cash || permissions.finance_reports || permissions.finance) management.push(item('honorarios', 'Financeiro', 'finance'))",
       'finance navigation',
     )
-    writeFileSync(chromePath, chrome)
   }
+  if (!chrome.includes("role === 'pending'")) {
+    chrome = replaceOrFail(
+      chrome,
+      "  const role = membership.role || 'admin'\n  const permissions = membership.permissions || {}\n  if (role === 'partner') return [",
+      "  const role = membership.role || 'pending'\n  const permissions = membership.permissions || {}\n  if (role === 'pending') return [\n    { label: 'Visão geral', items: [common.myDay, common.calendar] },\n  ]\n  if (role === 'partner') return [",
+      'pending access navigation',
+    )
+    chrome = chrome.replace("  const role = access?.membership?.role || 'admin'", "  const role = access?.membership?.role || 'pending'")
+  }
+  writeFileSync(chromePath, chrome)
 
   const appPath = `${root}src/App.jsx`
   let app = readFileSync(appPath, 'utf8')
