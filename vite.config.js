@@ -20,11 +20,13 @@ import { applyNotificationCenterPatch } from './scripts/patch-notification-cente
 import { applyPushNotificationsPatch } from './scripts/patch-push-notifications.mjs'
 import { applyOperationalIntelligencePatch } from './scripts/patch-operational-intelligence.mjs'
 import { applyFinanceCompleteIntelligencePatch } from './scripts/patch-finance-complete-intelligence.mjs'
+import { applyMultiuserWorkspacePatch } from './scripts/patch-multiuser-workspace.mjs'
+import { applyAccessRoutesPatch } from './scripts/patch-access-routes.mjs'
+import { applyMultiuserFinanceV2Patch } from './scripts/patch-multiuser-finance-v2.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
-
 const payloadMap = [
   ['ProcessesReact.jsx.gz.b64', 'src/components/ProcessesReact.jsx'],
   ['TasksReact.jsx.gz.b64', 'src/components/TasksReactBase.jsx'],
@@ -38,20 +40,12 @@ const payloadMap = [
   ['styles.css.gz.b64', 'src/styles.css'],
   ['tasks-react.css.gz.b64', 'src/tasks-react.css'],
 ]
-
-function decodePayload(text) {
-  return gunzipSync(Buffer.from(text.replace(/\s+/g, ''), 'base64'))
-}
-
+function decodePayload(text) { return gunzipSync(Buffer.from(text.replace(/\s+/g, ''), 'base64')) }
 function readLegacyChunk(index) {
   const part = String(index).padStart(2, '0')
-  if (index === 2 || index === 8) {
-    return readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}a`, 'utf8')
-      + readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}b`, 'utf8')
-  }
+  if (index === 2 || index === 8) return readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}a`, 'utf8') + readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}b`, 'utf8')
   return readFileSync(`${payloadDir}legacy-v10-7.html.gz.b64.part${part}`, 'utf8')
 }
-
 function restorePayloads() {
   for (const [payloadName, targetName] of payloadMap) {
     const target = `${root}${targetName}`
@@ -60,7 +54,6 @@ function restorePayloads() {
     mkdirSync(dirname(target), { recursive: true })
     writeFileSync(target, decodePayload(payload))
   }
-
   const legacyTarget = `${root}legacy-v10-7.html`
   if (!existsSync(legacyTarget)) {
     const chunks = Array.from({ length: 10 }, (_, index) => readLegacyChunk(index))
@@ -85,10 +78,12 @@ applyNotificationCenterPatch(root)
 applyPushNotificationsPatch(root)
 applyOperationalIntelligencePatch(root)
 applyFinanceCompleteIntelligencePatch(root)
+applyMultiuserWorkspacePatch(root)
+applyAccessRoutesPatch(root)
+applyMultiuserFinanceV2Patch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
-
 function legacyCompatibilityFile() {
   return {
     name: 'legacy-compatibility-file',
@@ -98,13 +93,7 @@ function legacyCompatibilityFile() {
         response.end(readFileSync(legacyFile))
       })
     },
-    closeBundle() {
-      copyFileSync(legacyFile, fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url)))
-    },
+    closeBundle() { copyFileSync(legacyFile, fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url))) },
   }
 }
-
-export default defineConfig({
-  plugins: [react(), legacyCompatibilityFile()],
-  build: { target: 'es2022' },
-})
+export default defineConfig({ plugins: [react(), legacyCompatibilityFile()], build: { target: 'es2022' } })
