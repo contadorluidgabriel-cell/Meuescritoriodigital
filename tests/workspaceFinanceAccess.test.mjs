@@ -1,0 +1,54 @@
+import test from 'node:test'
+import assert from 'node:assert/strict'
+import { applyOfficePatch, filterPayloadForMembership, permissionsFor } from '../supabase/functions/office-workspace/accessFinanceV2.js'
+
+const payload = {
+  med_clientes: [{ id: 'c1', razao: 'Cliente', perfilAtendimento: 'Compartilhado', parceiroIds: ['p1'] }],
+  med_financeiro: [{ id: 'r1', clienteId: 'c1', valor: 1000, compartilhado: true, parceiroIds: ['p1'], compartilhadoPartesParceiros: [{ parceiroId: 'p1', valor: 400 }], pagamentos: [] }],
+  med_financeiro_pagar: [{ id: 'd1', descricao: 'Sistema', valor: 100 }],
+  med_financeiro_contas: [{ id: 'a1', nome: 'Banco' }],
+  med_financeiro_movimentos: [{ id: 'm1', tipo: 'saida', valor: 30 }],
+  med_financeiro_categorias: [{ id: 'cat1', nome: 'Teste' }],
+  med_financeiro_recorrencias: [{ id: 'rec1' }],
+  med_financeiro_fechamentos: [{ id: 'f1', competencia: '2026-09' }],
+  med_financeiro_cobrancas_eventos: [{ id: 'ev1', chargeId: 'r1' }],
+  med_financeiro_configuracoes: { forecastDays: 30 },
+}
+
+test('colaborador recebe apenas os escopos financeiros autorizados', () => {
+  const member = { role: 'collaborator', permissions: { clients: true, finance_receivables: true, finance_payables: false, finance_cash: false, finance_reports: false } }
+  const filtered = filterPayloadForMembership(payload, member)
+  assert.equal(filtered.med_financeiro.length, 1)
+  assert.equal(filtered.med_financeiro_cobrancas_eventos.length, 1)
+  assert.deepEqual(filtered.med_financeiro_pagar, [])
+  assert.deepEqual(filtered.med_financeiro_contas, [])
+  assert.deepEqual(filtered.med_financeiro_movimentos, [])
+  assert.deepEqual(filtered.med_financeiro_fechamentos, [])
+})
+
+test('parceiro nunca recebe caixa, contas a pagar ou DRE geral', () => {
+  const filtered = filterPayloadForMembership(payload, { role: 'partner', partner_id: 'p1', permissions: { finance_shared: true } })
+  assert.equal(filtered.med_financeiro.length, 1)
+  assert.equal(filtered.med_financeiro[0].compartilhadoParceiroParte, 400)
+  assert.deepEqual(filtered.med_financeiro_pagar, [])
+  assert.deepEqual(filtered.med_financeiro_contas, [])
+  assert.deepEqual(filtered.med_financeiro_movimentos, [])
+  assert.deepEqual(filtered.med_financeiro_fechamentos, [])
+  assert.deepEqual(filtered.med_financeiro_configuracoes, {})
+})
+
+test('permissão financeira legada migra apenas para Receber', () => {
+  const p = permissionsFor({ role: 'collaborator', permissions: { finance: true } })
+  assert.equal(p.finance_receivables, true)
+  assert.equal(p.finance_payables, false)
+  assert.equal(p.finance_cash, false)
+})
+
+test('colaborador autorizado em Pagar pode alterar conta sem excluir registros', () => {
+  const member = { role: 'collaborator', permissions: { finance_payables: true, delete_records: false } }
+  const result = applyOfficePatch(payload, { financePayables: { upserts: [{ id: 'd1', descricao: 'Sistema atualizado', valor: 120 }], deletes: ['d1'] }, financeCategories: { upserts: [{ id: 'cat2', nome: 'Proibida' }] } }, member)
+  assert.equal(result.payload.med_financeiro_pagar.length, 1)
+  assert.equal(result.payload.med_financeiro_pagar[0].valor, 120)
+  assert.equal(result.payload.med_financeiro_categorias.length, 1)
+  assert.ok(result.audit.some(row => row.entity_type === 'financePayables'))
+})
