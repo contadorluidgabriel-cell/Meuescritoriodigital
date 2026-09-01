@@ -30,3 +30,37 @@ test('sincronização externa preserva campos internos e não burla bloqueio', (
   assert.equal(result.quantidadeTotal, 450)
   assert.equal(result.subtarefas.length, 1)
 })
+
+test('sincronização externa não reverte subtarefa recém concluída', () => {
+  const current = [{
+    id: 't1',
+    titulo: 'Fechamento',
+    status: 'Pendente',
+    subtarefas: [
+      { id: 's1', titulo: 'Apuração', concluida: true },
+      { id: 's2', titulo: 'Envio', concluida: false },
+    ],
+    quantitativo: true,
+    quantidadeTotal: 100,
+    quantidadeConcluida: 60,
+    unidade: 'itens',
+  }]
+  const remote = [{
+    id: 't1',
+    titulo: 'Fechamento',
+    status: 'Pendente',
+    subtarefas: [
+      { id: 's1', titulo: 'Apuração', concluida: false },
+      { id: 's2', titulo: 'Envio', concluida: false },
+    ],
+    quantitativo: true,
+    quantidadeTotal: 100,
+    quantidadeConcluida: 20,
+    unidade: 'itens',
+  }]
+
+  const [result] = reconcileExternalTaskPayload(remote, current)
+  assert.equal(result.subtarefas[0].concluida, true)
+  assert.equal(result.subtarefas[1].concluida, false)
+  assert.equal(result.quantidadeConcluida, 60)
+})
