@@ -30,7 +30,7 @@ export function applyNotificationCenterPatch(root) {
   const openStart = source.indexOf('  function openNotification(event) {')
   const calendarStart = source.indexOf('  function openCalendarEvent(event) {', openStart)
   if (openStart < 0 || calendarStart < 0) throw new Error('Notification center patch failed (notification navigation)')
-  source = source.slice(0, openStart) + `  function openNotification(event) {\n    setNotificationsOpen(false)\n    if (event.type === 'finance' || event.type === 'partner') {\n      openFinanceForClient(event.clientId || '')\n      return\n    }\n    openCalendarEvent(event)\n  }\n\n` + source.slice(calendarStart)
+  source = source.slice(0, openStart) + `  function openNotification(event) {\n    setNotificationsOpen(false)\n    if (event.type === 'finance' || event.type === 'payable' || event.type === 'partner') {\n      openFinanceForClient(event.clientId || '')\n      return\n    }\n    openCalendarEvent(event)\n  }\n\n` + source.slice(calendarStart)
 
   source = replaceOrFail(source, 'Agenda do escritório · atualização automática', 'Central do escritório · atualização automática', 'panel subtitle')
 
