@@ -11,7 +11,7 @@ async function invoke(action, body = {}) {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
-  const { data, error } = await supabase.functions.invoke('office-workspace', { body: { action, ...body }, headers: { Authorization: `Bearer ${token}` } })
+  const { data, error } = await supabase.functions.invoke('office-workspace-web', { body: { action, ...body }, headers: { Authorization: `Bearer ${token}` } })
   if (error) throw new Error(error.message || 'Falha ao acessar o escritório.')
   if (data?.error) throw new Error(data.message || 'Falha ao acessar o escritório.')
   return data
