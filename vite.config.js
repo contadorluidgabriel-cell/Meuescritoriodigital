@@ -19,6 +19,7 @@ import { applyFinanceCompletePatch } from './scripts/patch-finance-complete.mjs'
 import { applyNotificationCenterPatch } from './scripts/patch-notification-center.mjs'
 import { applyPushNotificationsPatch } from './scripts/patch-push-notifications.mjs'
 import { applyOperationalIntelligencePatch } from './scripts/patch-operational-intelligence.mjs'
+import { applyFinanceCompleteIntelligencePatch } from './scripts/patch-finance-complete-intelligence.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -83,6 +84,7 @@ applyFinanceCompletePatch(root)
 applyNotificationCenterPatch(root)
 applyPushNotificationsPatch(root)
 applyOperationalIntelligencePatch(root)
+applyFinanceCompleteIntelligencePatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
