@@ -373,7 +373,7 @@ export function buildRecurringEntries(office = {}, competence = '', makeId = pre
       if (exists) return
       const base = {
         id: makeId('fin'), clienteId: String(recurrence.clienteId || ''), descricao: recurrence.descricao || 'Receita recorrente',
-        competencia, vencimento: due, valor: moneyValue(recurrence.valor), categoriaId: recurrence.categoriaId || 'rec-outras',
+        competencia: competence, vencimento: due, valor: moneyValue(recurrence.valor), categoriaId: recurrence.categoriaId || 'rec-outras',
         status: 'Pendente', pagamentos: [], origem: 'recorrencia_financeira', recorrenciaId: String(recurrence.id || ''),
       }
       receivables.push(...buildInstallmentCharges(base, 1, makeId))
@@ -382,7 +382,7 @@ export function buildRecurringEntries(office = {}, competence = '', makeId = pre
       if (exists) return
       payables.push({
         id: makeId('pagar'), descricao: recurrence.descricao || 'Despesa recorrente', fornecedor: recurrence.fornecedor || '',
-        competencia, vencimento: due, valor: moneyValue(recurrence.valor), categoriaId: recurrence.categoriaId || 'desp-outras',
+        competencia: competence, vencimento: due, valor: moneyValue(recurrence.valor), categoriaId: recurrence.categoriaId || 'desp-outras',
         status: 'Pendente', pagamentos: [], origem: 'recorrencia_financeira', recorrenciaId: String(recurrence.id || ''), parcelaNumero: 1, parcelaTotal: 1,
       })
     }
