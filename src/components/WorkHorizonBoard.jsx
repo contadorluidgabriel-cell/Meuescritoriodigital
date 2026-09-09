@@ -40,7 +40,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       <small>{item.client || 'Escritório'}{item.subtitle ? ` · ${item.subtitle}` : ''}</small>
       <p>{deadline(item, day)}</p>
     </div>
-    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(item)}>Abrir registro</button>}
+    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(item)}>Abrir registro</button>}
   </article>
 }
 
