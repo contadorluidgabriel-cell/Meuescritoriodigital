@@ -4,7 +4,7 @@ import './task-quick-execution.css'
 
 const taskTitle = task => task?.titulo || 'Tarefa'
 
-export default function TaskQuickExecution({ task, tasks = [], update, onOpen, onNotice, onCompleted, compact = false }) {
+export default function TaskQuickExecution({ task, tasks = [], clients = [], update, onOpen, onNotice, onCompleted, compact = false }) {
   const [expanded, setExpanded] = useState(false)
   const state = useMemo(() => taskExecutionState(task), [task])
 
@@ -19,7 +19,7 @@ export default function TaskQuickExecution({ task, tasks = [], update, onOpen, o
   }
 
   function finish() {
-    const result = completeTask(tasks, task.id)
+    const result = completeTask(tasks, task.id, { clients })
     if (!commit(result, `${taskTitle(task)} concluída.`)) return
     onCompleted?.(result.transaction, taskTitle(task))
   }
