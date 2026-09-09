@@ -25,6 +25,7 @@ import { applyAccessRoutesPatch } from './scripts/patch-access-routes.mjs'
 import { applyMultiuserFinanceV2Patch } from './scripts/patch-multiuser-finance-v2.mjs'
 import { applyTaskQuickExecutionPatch } from './scripts/patch-task-quick-execution.mjs'
 import { applyV12Patch } from './scripts/patch-v12.mjs'
+import { applyV121Patch } from './scripts/patch-v12-1.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -85,6 +86,7 @@ applyAccessRoutesPatch(root)
 applyMultiuserFinanceV2Patch(root)
 applyTaskQuickExecutionPatch(root)
 applyV12Patch(root)
+applyV121Patch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
