@@ -8,20 +8,34 @@ function replaceOrFail(source, from, to, label) {
 function patchCommandCenter(root) {
   const path = `${root}src/components/OperationalCommandCenter.jsx`
   let source = readFileSync(path, 'utf8')
-  if (source.includes("WorkHorizonBoard from './WorkHorizonBoard.jsx'")) return
-  source = replaceOrFail(
-    source,
-    "import TaskQuickExecution from './TaskQuickExecution.jsx'\nimport { undoTaskCompletion } from '../lib/taskExecution.js'",
-    "import TaskQuickExecution from './TaskQuickExecution.jsx'\nimport WorkHorizonBoard from './WorkHorizonBoard.jsx'\nimport { undoTaskCompletion } from '../lib/taskExecution.js'",
-    'command center V12 import',
+  if (!source.includes("WorkHorizonBoard from './WorkHorizonBoard.jsx'")) {
+    source = replaceOrFail(
+      source,
+      "import TaskQuickExecution from './TaskQuickExecution.jsx'\nimport { undoTaskCompletion } from '../lib/taskExecution.js'",
+      "import TaskQuickExecution from './TaskQuickExecution.jsx'\nimport WorkHorizonBoard from './WorkHorizonBoard.jsx'\nimport { undoTaskCompletion } from '../lib/taskExecution.js'",
+      'command center V12 import',
+    )
+    source = replaceOrFail(source, '>Centro de comando</span><h1>Meu Dia</h1>', '>Central de trabalho · V12</span><h1>Meu Dia</h1>', 'command center title')
+    source = replaceOrFail(
+      source,
+      '    <section className="occ-kpis" aria-label="Resumo operacional">',
+      '    <WorkHorizonBoard office={office} update={update} onOpenItem={onOpenItem} onNavigate={onNavigate} day={day} />\n\n    <section className="occ-kpis" aria-label="Resumo operacional">',
+      'work horizon board',
+    )
+  }
+  source = source.replace(
+    'function WorkCard({ item, day, onOpen, tasks, update, onNotice, onCompleted, compact = false })',
+    'function WorkCard({ item, day, onOpen, tasks, clients, update, onNotice, onCompleted, compact = false })',
   )
-  source = replaceOrFail(source, '>Centro de comando</span><h1>Meu Dia</h1>', '>Central de trabalho · V12</span><h1>Meu Dia</h1>', 'command center title')
-  source = replaceOrFail(
-    source,
-    '    <section className="occ-kpis" aria-label="Resumo operacional">',
-    '    <WorkHorizonBoard office={office} update={update} onOpenItem={onOpenItem} onNavigate={onNavigate} day={day} />\n\n    <section className="occ-kpis" aria-label="Resumo operacional">',
-    'work horizon board',
-  )
+  source = source.replaceAll('task={task} tasks={tasks} update={update}', 'task={task} tasks={tasks} clients={clients} update={update}')
+  source = source.replaceAll('tasks={office.tasks || []} update={update}', 'tasks={office.tasks || []} clients={office.clients || []} update={update}')
+  writeFileSync(path, source)
+}
+
+function patchCalendarQuickExecution(root) {
+  const path = `${root}src/components/CalendarReact.jsx`
+  let source = readFileSync(path, 'utf8')
+  source = source.replaceAll('task={selectedTask} tasks={office.tasks || []} update={update}', 'task={selectedTask} tasks={office.tasks || []} clients={office.clients || []} update={update}')
   writeFileSync(path, source)
 }
 
@@ -96,6 +110,7 @@ function patchVersionMeta(root) {
 
 export function applyV12Patch(root) {
   patchCommandCenter(root)
+  patchCalendarQuickExecution(root)
   patchChrome(root)
   patchDashboard(root)
   patchTaskEditing(root)
