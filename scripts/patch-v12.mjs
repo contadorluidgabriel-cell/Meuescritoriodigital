@@ -88,7 +88,12 @@ function patchTaskEditing(root) {
   const quantityAnchor = source.indexOf('const quantityError = quantitativeTaskError(editing)')
   if (quantityAnchor < 0) throw new Error('V12 patch failed (task save validation anchor)')
   const savedAnchor = source.indexOf('    const saved = {', quantityAnchor)
-  if (savedAnchor < 0) throw new Error('V12 patch failed (task saved object)')
+  if (savedAnchor < 0) {
+    console.error('V12_TASK_EDIT_SNIPPET_START')
+    console.error(source.slice(quantityAnchor, quantityAnchor + 2600))
+    console.error('V12_TASK_EDIT_SNIPPET_END')
+    throw new Error('V12 patch failed (task saved object)')
+  }
   source = source.slice(0, savedAnchor)
     + "    const existingTask = editing.id ? (office.tasks || []).find(item => String(item.id) === String(editing.id)) : null // V12_PRESERVE_TASK_METADATA\n    const saved = { ...(existingTask || {}),"
     + source.slice(savedAnchor + '    const saved = {'.length)
