@@ -26,6 +26,7 @@ import { applyMultiuserFinanceV2Patch } from './scripts/patch-multiuser-finance-
 import { applyTaskQuickExecutionPatch } from './scripts/patch-task-quick-execution.mjs'
 import { applyV12Patch } from './scripts/patch-v12.mjs'
 import { applyV121Patch } from './scripts/patch-v12-1.mjs'
+import { applyInviteLinksPatch } from './scripts/patch-invite-links.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -87,6 +88,7 @@ applyMultiuserFinanceV2Patch(root)
 applyTaskQuickExecutionPatch(root)
 applyV12Patch(root)
 applyV121Patch(root)
+applyInviteLinksPatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
