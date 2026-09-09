@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase.js'
 import { acceptWorkspaceInviteLink, inspectWorkspaceInviteLink } from '../lib/inviteLinks.js'
+import '../invite-links.css'
 
 const roleLabel = role => role === 'partner' ? 'Parceiro' : role === 'admin' ? 'Administrador' : 'Colaborador'
 const dateTime = value => value ? new Date(value).toLocaleString('pt-BR') : '—'
