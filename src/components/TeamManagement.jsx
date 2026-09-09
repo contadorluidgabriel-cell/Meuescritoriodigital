@@ -4,7 +4,8 @@ import { inviteWorkspaceMember, listWorkspaceMembers, loadWorkspaceAudit, remove
 
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 const partnerName = partner => partner?.nome || partner?.razao || partner?.fantasia || 'Parceiro'
-const statusLabel = status => status === 'active' ? 'Ativo' : status === 'disabled' ? 'Desativado' : 'Convite pendente'
+const inviteEmailFailed = member => member?.status === 'invited' && !member?.user_id
+const statusLabel = member => member?.status === 'active' ? 'Ativo' : member?.status === 'disabled' ? 'Desativado' : inviteEmailFailed(member) ? 'Envio falhou' : 'Convite pendente'
 const dateTime = value => value ? new Date(value).toLocaleString('pt-BR') : '—'
 const financePermissions = [
   ['finance_receivables', 'Receber', 'Cobranças, recebimentos e régua de cobrança'],
@@ -64,9 +65,23 @@ export default function TeamManagement({ office, update, access, onRefresh }) {
     try {
       const result = await inviteWorkspaceMember(workspaceId, { email: invite.email, display_name: invite.display_name, role: invite.role, partner_id: invite.role === 'partner' ? invite.partner_id : '', permissions: invite.role === 'collaborator' ? collaboratorPermissions(invite) : undefined })
       setInvite(defaultInvite)
-      setMessage(result.email_sent ? 'Convite enviado por e-mail.' : `Acesso cadastrado. ${result.note || 'O usuário pode entrar com este e-mail.'}`)
+      setMessage(result.email_sent ? 'Convite enviado por e-mail.' : `Acesso criado, mas o e-mail não foi enviado. ${result.note || 'Configure um SMTP próprio e use Reenviar convite.'}`)
       await refreshTeam()
     } catch (error) { setMessage(error?.message || 'Não foi possível enviar o convite.') } finally { setBusy(false) }
+  }
+  async function resendInvite(member) {
+    setBusy(true); setMessage('')
+    try {
+      const result = await inviteWorkspaceMember(workspaceId, {
+        email: member.email,
+        display_name: member.display_name,
+        role: member.role,
+        partner_id: member.role === 'partner' ? member.partner_id || '' : '',
+        permissions: member.role === 'collaborator' ? normalizedPermissions(member.permissions || {}) : undefined,
+      })
+      await refreshTeam()
+      setMessage(result.email_sent ? `Convite reenviado para ${member.email}.` : `O e-mail ainda não foi enviado. ${result.note || 'Configure um SMTP próprio no Supabase e tente novamente.'}`)
+    } catch (error) { setMessage(error?.message || 'Não foi possível reenviar o convite.') } finally { setBusy(false) }
   }
   async function toggleMember(member) {
     setBusy(true); setMessage('')
@@ -114,7 +129,8 @@ export default function TeamManagement({ office, update, access, onRefresh }) {
         const linkedPartner = member.partner_id ? partners.find(partner => String(partner.id) === String(member.partner_id)) : null
         const owner = String(member.user_id || '') === String(access.workspace?.owner_user_id || '')
         const perms = normalizedPermissions(member.permissions || {})
-        return <article className="team-member" key={member.id}><div className="team-avatar">{String(member.display_name || member.email || '?').slice(0, 2).toUpperCase()}</div><div className="team-member-copy"><strong>{member.display_name || member.email}</strong><small>{member.email}</small><div><span className={`role-${member.role}`}>{roleLabel(member.role)}</span><span className={`status-${member.status}`}>{statusLabel(member.status)}</span>{linkedPartner ? <span>Vinculado: {partnerName(linkedPartner)}</span> : null}</div>{member.role === 'collaborator' ? <div className="team-permissions member-permissions"><strong>Permissões</strong>{financePermissions.map(([key, label]) => <label key={key}><input type="checkbox" disabled={busy} checked={Boolean(perms[key])} onChange={event => changePermission(member, key, event.target.checked)} /> {label}</label>)}<label><input type="checkbox" disabled={busy} checked={Boolean(perms.manage_clients)} onChange={event => changePermission(member, 'manage_clients', event.target.checked)} /> Alterar clientes</label></div> : null}</div><div className="team-member-actions">{owner ? <span>Proprietário</span> : <><button type="button" disabled={busy} onClick={() => toggleMember(member)}>{member.status === 'disabled' ? 'Reativar' : 'Desativar'}</button><button type="button" className="danger" disabled={busy} onClick={() => removeMember(member)}>Remover</button></>}</div></article>
+        const emailFailed = inviteEmailFailed(member)
+        return <article className="team-member" key={member.id}><div className="team-avatar">{String(member.display_name || member.email || '?').slice(0, 2).toUpperCase()}</div><div className="team-member-copy"><strong>{member.display_name || member.email}</strong><small>{member.email}</small><div><span className={`role-${member.role}`}>{roleLabel(member.role)}</span><span className={`status-${member.status}`}>{statusLabel(member)}</span>{linkedPartner ? <span>Vinculado: {partnerName(linkedPartner)}</span> : null}</div>{emailFailed ? <small>O acesso foi cadastrado, mas o e-mail de convite não foi aceito pelo serviço de envio.</small> : null}{member.role === 'collaborator' ? <div className="team-permissions member-permissions"><strong>Permissões</strong>{financePermissions.map(([key, label]) => <label key={key}><input type="checkbox" disabled={busy} checked={Boolean(perms[key])} onChange={event => changePermission(member, key, event.target.checked)} /> {label}</label>)}<label><input type="checkbox" disabled={busy} checked={Boolean(perms.manage_clients)} onChange={event => changePermission(member, 'manage_clients', event.target.checked)} /> Alterar clientes</label></div> : null}</div><div className="team-member-actions">{owner ? <span>Proprietário</span> : <>{emailFailed ? <button type="button" disabled={busy} onClick={() => resendInvite(member)}>Reenviar convite</button> : null}<button type="button" disabled={busy} onClick={() => toggleMember(member)}>{member.status === 'disabled' ? 'Reativar' : 'Desativar'}</button><button type="button" className="danger" disabled={busy} onClick={() => removeMember(member)}>Remover</button></>}</div></article>
       })}</div></section>
       <form className="team-panel team-invite" onSubmit={submitInvite}><header><div><span>Novo acesso</span><h2>Convidar usuário</h2></div></header><label>Nome<input value={invite.display_name} onChange={event => setInvite(current => ({ ...current, display_name: event.target.value }))} /></label><label>E-mail<input type="email" required value={invite.email} onChange={event => setInvite(current => ({ ...current, email: event.target.value }))} /></label><label>Perfil<select value={invite.role} onChange={event => setInvite(current => ({ ...current, role: event.target.value, partner_id: '' }))}><option value="collaborator">Colaborador</option><option value="partner">Parceiro</option></select></label>{invite.role === 'partner' ? <label>Parceiro cadastrado<select required value={invite.partner_id} onChange={event => setInvite(current => ({ ...current, partner_id: event.target.value }))}><option value="">Selecione…</option>{partners.map(partner => <option key={partner.id} value={partner.id}>{partnerName(partner)}</option>)}</select><small>O login receberá apenas os clientes, trabalhos e financeiro compartilhado desta parceria.</small></label> : <div className="team-permissions"><strong>Permissões do colaborador</strong>{financePermissions.map(([key, label, description]) => <label key={key}><input type="checkbox" checked={Boolean(invite[key])} onChange={event => setInvite(current => withFinanceDependency(current, key, event.target.checked))} /> <span>{label}<small>{description}</small></span></label>)}<label><input type="checkbox" checked={invite.manage_clients} onChange={event => setInvite(current => ({ ...current, manage_clients: event.target.checked }))} /> Pode alterar cadastro de clientes</label><small>Caixa e Relatórios habilitam Receber e Pagar automaticamente para manter os cálculos completos.</small></div>}<button className="primary" disabled={busy}>{busy ? 'Aguarde…' : 'Enviar convite'}</button></form>
     </div> : null}
