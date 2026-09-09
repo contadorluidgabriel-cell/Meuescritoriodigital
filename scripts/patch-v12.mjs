@@ -86,9 +86,18 @@ function patchTaskEditing(root) {
   writeFileSync(path, source)
 }
 
+function patchVersionMeta(root) {
+  const path = `${root}src/lib/storage.js`
+  let source = readFileSync(path, 'utf8')
+  if (source.includes("meta: { version: '12.0' }")) return
+  source = replaceOrFail(source, "ui: {}, meta: { version: '11.1' }, lastBackup: ''", "ui: {}, meta: { version: '12.0' }, lastBackup: ''", 'storage version')
+  writeFileSync(path, source)
+}
+
 export function applyV12Patch(root) {
   patchCommandCenter(root)
   patchChrome(root)
   patchDashboard(root)
   patchTaskEditing(root)
+  patchVersionMeta(root)
 }
