@@ -85,23 +85,35 @@ function patchTaskEditing(root) {
   let source = readFileSync(path, 'utf8')
   if (source.includes('V12_PRESERVE_TASK_METADATA')) return
 
-  const quantityAnchor = source.indexOf('const quantityError = quantitativeTaskError(editing)')
-  if (quantityAnchor < 0) throw new Error('V12 patch failed (task save validation anchor)')
-  const savedAnchor = source.indexOf('    const saved = {', quantityAnchor)
-  if (savedAnchor < 0) {
-    console.error('V12_TASK_EDIT_SNIPPET_START')
-    console.error(source.slice(quantityAnchor, quantityAnchor + 2600))
-    console.error('V12_TASK_EDIT_SNIPPET_END')
-    throw new Error('V12 patch failed (task saved object)')
-  }
-  source = source.slice(0, savedAnchor)
-    + "    const existingTask = editing.id ? (office.tasks || []).find(item => String(item.id) === String(editing.id)) : null // V12_PRESERVE_TASK_METADATA\n    const saved = { ...(existingTask || {}),"
-    + source.slice(savedAnchor + '    const saved = {'.length)
+  source = replaceOrFail(
+    source,
+    "import { quantitativeTaskError, taskCompletionBlocker, taskProgressLabel } from '../lib/taskProgress.js'",
+    "import { quantitativeTaskError, taskCompletionBlocker, taskProgressLabel } from '../lib/taskProgress.js'\nimport { completeTask, reopenTask } from '../lib/taskExecution.js'",
+    'task domain imports',
+  )
 
-  const toggleMarker = '  function toggleSubtask(taskId, index) {\n'
-  if (source.includes(toggleMarker)) {
-    source = source.replace(toggleMarker, "  function toggleSubtask(taskId, index) {\n    const parentTask = (office.tasks || []).find(item => String(item.id) === String(taskId))\n    if (parentTask && isDone(parentTask.status)) { setNotice('Reabra a tarefa antes de alterar as subtarefas.'); return }\n")
-  }
+  source = replaceOrFail(
+    source,
+    "    const old = editing.id ? (office.tasks || []).find(item => item.id === editing.id) : null\n    const task = {",
+    "    const old = editing.id ? (office.tasks || []).find(item => item.id === editing.id) : null\n    const task = { ...(old || {}), // V12_PRESERVE_TASK_METADATA",
+    'task metadata preservation',
+  )
+
+  source = replaceOrFail(
+    source,
+    "  function toggleTask(id) {\n    const current = office.tasks.find(item => item.id === id)\n    if (!current) return\n    const wasDone = isDone(current.status)\n    if (!wasDone) { const blocker = taskCompletionBlocker(current); if (blocker) { setNotice(blocker); return } }\n    const changed = { ...current, status: wasDone ? 'Pendente' : 'Concluída', updatedAt: new Date().toISOString() }\n    let nextTasks = office.tasks.map(item => item.id === id ? changed : item)\n    if (!wasDone) nextTasks = appendNextRecurringTask(nextTasks, changed, office.clients)\n    commitTasks(nextTasks)\n    setNotice(wasDone ? 'Tarefa reaberta.' : 'Tarefa concluída.')\n  }",
+    "  function toggleTask(id) {\n    const current = office.tasks.find(item => item.id === id)\n    if (!current) return\n    const wasDone = isDone(current.status)\n    const result = wasDone ? reopenTask(office.tasks, id) : completeTask(office.tasks, id, { clients: office.clients || [] })\n    if (!result.changed) { setNotice(result.error || 'Não foi possível atualizar a tarefa.'); return }\n    commitTasks(result.tasks)\n    setNotice(wasDone ? 'Tarefa reaberta.' : 'Tarefa concluída.')\n  }",
+    'task central completion',
+  )
+
+  const toggleMarker = '  function toggleSubtask(taskId, subtaskId) {\n'
+  source = replaceOrFail(
+    source,
+    toggleMarker,
+    "  function toggleSubtask(taskId, subtaskId) {\n    const parentTask = (office.tasks || []).find(item => String(item.id) === String(taskId))\n    if (parentTask && isDone(parentTask.status)) { setNotice('Reabra a tarefa antes de alterar as subtarefas.'); return }\n",
+    'completed task subtask guard',
+  )
+
   writeFileSync(path, source)
 }
 
