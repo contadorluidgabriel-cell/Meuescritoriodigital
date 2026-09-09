@@ -1,46 +1,8 @@
-import { isDone, uid } from './storage.js'
+import { isDone } from './storage.js'
 import { taskCompletionBlocker, taskProgress } from './taskProgress.js'
+import { appendNextRecurringTaskWithMeta } from './taskRecurrence.js'
 
 const clone = value => value == null ? value : structuredClone(value)
-
-function nextRecurringDate(date, recurrence) {
-  if (!date || !recurrence) return ''
-  const base = new Date(`${date}T12:00:00`)
-  if (Number.isNaN(base.getTime())) return ''
-  const value = String(recurrence).trim().toLowerCase()
-  if (['diaria', 'diária', 'daily'].includes(value)) base.setDate(base.getDate() + 1)
-  else if (['semanal', 'weekly'].includes(value)) base.setDate(base.getDate() + 7)
-  else if (['quinzenal', 'biweekly'].includes(value)) base.setDate(base.getDate() + 15)
-  else if (['mensal', 'monthly'].includes(value)) base.setMonth(base.getMonth() + 1)
-  else if (['bimestral'].includes(value)) base.setMonth(base.getMonth() + 2)
-  else if (['trimestral', 'quarterly'].includes(value)) base.setMonth(base.getMonth() + 3)
-  else if (['semestral'].includes(value)) base.setMonth(base.getMonth() + 6)
-  else if (['anual', 'yearly'].includes(value)) base.setFullYear(base.getFullYear() + 1)
-  else return ''
-  return `${base.getFullYear()}-${String(base.getMonth() + 1).padStart(2, '0')}-${String(base.getDate()).padStart(2, '0')}`
-}
-
-function appendRecurringIfNeeded(tasks, completed) {
-  if (!completed?.recorrencia || !completed?.prazo) return { tasks, generatedTaskId: '' }
-  const nextDue = nextRecurringDate(completed.prazo, completed.recorrencia)
-  if (!nextDue) return { tasks, generatedTaskId: '' }
-  const exists = tasks.some(task => String(task.templateId || '') === String(completed.templateId || '') && String(task.clientId || '') === String(completed.clientId || '') && task.prazo === nextDue && !isDone(task.status))
-  if (exists) return { tasks, generatedTaskId: '' }
-  const generatedTaskId = uid('task')
-  const next = {
-    ...clone(completed),
-    id: generatedTaskId,
-    status: 'Pendente',
-    prazo: nextDue,
-    planejadoPara: '',
-    completedAt: '',
-    quantidadeConcluida: completed.quantitativo ? 0 : completed.quantidadeConcluida,
-    subtarefas: (completed.subtarefas || []).map(item => ({ ...clone(item), concluida: false })),
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  }
-  return { tasks: [...tasks, next], generatedTaskId }
-}
 
 export function taskExecutionState(task = {}) {
   const subtasks = Array.isArray(task.subtarefas) ? task.subtarefas : []
@@ -60,7 +22,7 @@ export function taskExecutionState(task = {}) {
   }
 }
 
-export function completeTask(tasks = [], taskId) {
+export function completeTask(tasks = [], taskId, { clients = [] } = {}) {
   const nextTasks = clone(tasks) || []
   const index = nextTasks.findIndex(item => String(item.id) === String(taskId))
   if (index < 0) return { tasks: nextTasks, changed: false, error: 'Tarefa não encontrada.' }
@@ -71,7 +33,7 @@ export function completeTask(tasks = [], taskId) {
   const completedAt = new Date().toISOString()
   const completed = { ...current, status: 'Concluída', updatedAt: completedAt, completedAt }
   nextTasks[index] = completed
-  const recurring = appendRecurringIfNeeded(nextTasks, completed)
+  const recurring = appendNextRecurringTaskWithMeta(nextTasks, completed, clients)
   return {
     tasks: recurring.tasks,
     changed: true,
@@ -84,6 +46,15 @@ export function completeTask(tasks = [], taskId) {
       generatedTaskId: recurring.generatedTaskId,
     },
   }
+}
+
+export function reopenTask(tasks = [], taskId) {
+  const nextTasks = clone(tasks) || []
+  const index = nextTasks.findIndex(item => String(item.id) === String(taskId))
+  if (index < 0) return { tasks: nextTasks, changed: false, error: 'Tarefa não encontrada.' }
+  if (!isDone(nextTasks[index].status)) return { tasks: nextTasks, changed: false, error: 'A tarefa já está aberta.' }
+  nextTasks[index] = { ...nextTasks[index], status: 'Pendente', completedAt: '', updatedAt: new Date().toISOString() }
+  return { tasks: nextTasks, changed: true, task: nextTasks[index] }
 }
 
 export function undoTaskCompletion(tasks = [], transaction = {}) {
