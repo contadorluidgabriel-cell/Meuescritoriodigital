@@ -44,14 +44,14 @@ export function orderedProcessSteps(process = {}) {
 
 export function currentProcessStep(process = {}) {
   const steps = orderedProcessSteps(process)
-  if (!steps.length) return { step: null, index: -1, steps }
+  if (!steps.length) return { step: null, index: -1, steps, allDone: false }
   const requested = Math.max(0, Math.min(Number(process.etapaAtual || 0), steps.length - 1))
-  if (!isDone(steps[requested]?.status)) return { step: steps[requested], index: requested, steps }
+  if (!isDone(steps[requested]?.status)) return { step: steps[requested], index: requested, steps, allDone: false }
   const after = steps.findIndex((step, index) => index > requested && !isDone(step.status))
-  if (after >= 0) return { step: steps[after], index: after, steps }
+  if (after >= 0) return { step: steps[after], index: after, steps, allDone: false }
   const firstPending = steps.findIndex(step => !isDone(step.status))
-  if (firstPending >= 0) return { step: steps[firstPending], index: firstPending, steps }
-  return { step: steps[requested], index: requested, steps }
+  if (firstPending >= 0) return { step: steps[firstPending], index: firstPending, steps, allDone: false }
+  return { step: null, index: -1, steps, allDone: true }
 }
 
 export function initializeProcessStep(step = {}, baseDate = today()) {
@@ -122,7 +122,7 @@ export function toggleProcessStep(process = {}, stepId, baseDate = today()) {
 export function continueProcessWaiting(process = {}, baseDate = today()) {
   let next = clone(process) || {}
   const { step } = currentProcessStep(next)
-  if (!step) return { process: next, changed: false, error: 'O processo não possui etapa atual.' }
+  if (!step) return { process: next, changed: false, error: 'O processo não possui etapa pendente para acompanhamento.' }
   const dependency = normalizeProcessDependency(step.responsavelTipo)
   if (dependency === 'interno') return { process: next, changed: false, error: 'A etapa atual depende do escritório, não de acompanhamento externo.' }
   const interval = Math.max(1, Math.trunc(Number(step.followupDias) || 3))
@@ -133,22 +133,32 @@ export function continueProcessWaiting(process = {}, baseDate = today()) {
 }
 
 export function processActionState(process = {}, { day = today() } = {}) {
-  const { step, index, steps } = currentProcessStep(process)
+  const { step, index, steps, allDone } = currentProcessStep(process)
   const internalDue = String(process.previsaoConclusao || '')
   const officialDue = String(process.prazoFinal || '')
   if (!step) {
+    const actionLabel = allDone && steps.length ? 'Concluir processo' : 'Definir próxima etapa'
+    const actionDate = internalDue || officialDue
+    const actionOverdue = Boolean(actionDate && actionDate < day)
+    const officialOverdue = Boolean(officialDue && officialDue < day)
+    const internalOverdue = Boolean(internalDue && internalDue < day)
+    const attention = Boolean(actionDate === day || internalDue === day || (officialDue && officialDue >= day && officialDue <= addBusinessDays(day, 2)))
     return {
       step: null,
       stepIndex: -1,
       stepCount: steps.length,
+      allStepsDone: Boolean(allDone),
       dependency: 'interno',
       dependencyLabel: 'Escritório',
-      actionLabel: 'Definir próxima etapa',
-      actionDate: internalDue || officialDue,
+      actionLabel,
+      actionDate,
       internalDue,
       officialDue,
       waitingSince: '',
-      level: officialDue && officialDue < day ? 'critical' : 'info',
+      actionOverdue,
+      internalOverdue,
+      officialOverdue,
+      level: officialOverdue || actionOverdue || internalOverdue ? 'critical' : attention ? 'attention' : 'info',
     }
   }
   const dependency = normalizeProcessDependency(step.responsavelTipo)
@@ -168,6 +178,7 @@ export function processActionState(process = {}, { day = today() } = {}) {
     step,
     stepIndex: index,
     stepCount: steps.length,
+    allStepsDone: false,
     dependency,
     dependencyLabel: PROCESS_DEPENDENCIES[dependency].label,
     actionLabel,
