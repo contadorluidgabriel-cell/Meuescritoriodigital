@@ -30,6 +30,7 @@ import { applyInviteLinksPatch } from './scripts/patch-invite-links.mjs'
 import { applyTaskDeadlinesPatch } from './scripts/patch-task-deadlines.mjs'
 import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadlines.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
+import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -94,6 +95,7 @@ applyInviteLinksPatch(root)
 applyTaskDeadlinesPatch(root)
 applyObligationDeadlinesPatch(root)
 applySharingStylesPatch(root)
+applyFinancePdfPolishV2(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
