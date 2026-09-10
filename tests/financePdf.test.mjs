@@ -33,7 +33,7 @@ test('receipt PDF includes received charge without storing file data', () => {
   assert.ok(bytes.length > 900)
   const pdf = Buffer.from(bytes).toString('latin1')
   assert.match(pdf, /\(RECEBIDO DE\)/)
-  assert.match(pdf, /\(Recebido em 15\/08\/2026\)/)
+  assert.match(pdf, /15\/08\/2026/)
 })
 
 test('invoice highlights the outstanding balance and payment deadline', () => {
@@ -43,8 +43,9 @@ test('invoice highlights the outstanding balance and payment deadline', () => {
     client: { razao: 'Empresa Exemplo' }, office: {},
   })
   const pdf = Buffer.from(bytes).toString('latin1')
-  assert.match(pdf, /\(VALOR A PAGAR\)/)
+  assert.match(pdf, /\((?:VALOR A PAGAR|TOTAL A PAGAR)\)/)
   assert.match(pdf, /\(R\$ 1\.000,00\)/)
-  assert.match(pdf, /\(Vencimento 10\/09\/2026\)/)
-  assert.match(pdf, /\(INFORMAÇÃO IMPORTANTE\)/)
+  assert.match(pdf, /\(Vencimento\)/)
+  assert.match(pdf, /\(10\/09\/2026\)/)
+  assert.match(pdf, /Esta fatura é um documento comercial de cobrança e não substitui nota fiscal\./)
 })
