@@ -61,3 +61,16 @@ test('filtros de cliente e departamento/categoria afetam lista e contadores', ()
   assert.deepEqual(dp.items.map(item => item.key), ['o2|c1'])
   assert.equal(dp.counts.week, 1)
 })
+
+test('CNPJ terceirizado permanece um vínculo operacional sem virar cliente da carteira', () => {
+  const outsourced = [{
+    id: 'o3', nome: 'DCTFWeb 08/2026', competencia: '2026-08', categoria: 'Fiscal',
+    clientes: [{ clienteId: 'ter_123', entityType: 'linkedCompany', vencimento: '2026-09-15', status: 'Pendente' }],
+  }]
+  const [item] = flattenObligationDeadlines(outsourced)
+  assert.equal(item.clientId, 'ter_123')
+  assert.equal(item.entityType, 'linkedCompany')
+  assert.equal(item.terceirizado, true)
+  assert.equal(item.key, 'o3|linked|ter_123')
+  assert.equal(buildObligationDeadlineView(outsourced, { day, scope: 'week', clientId: 'ter_123' }).total, 1)
+})
