@@ -22,10 +22,14 @@ export function applyAvulsoSelectorPositionPatch(root) {
     'process selector position',
   )
 
-  replaceOnce(
-    `${root}src/components/ObligationsReact.jsx`,
-    '<div className="obligation-picker-tools"><input value={clientQuery} onChange={event => setClientQuery(event.target.value)} placeholder="Buscar cliente" /><button type="button" onClick={toggleVisibleClients}>{visiblePickerSelected ? \'Desmarcar visíveis\' : \'Selecionar visíveis\'}</button><label className="third-party-toggle"><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Incluir clientes avulsos nesta obrigação</label></div>',
-    '<label className="third-party-toggle"><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Mostrar clientes avulsos</label><div className="obligation-picker-tools"><input value={clientQuery} onChange={event => setClientQuery(event.target.value)} placeholder="Buscar cliente" /><button type="button" onClick={toggleVisibleClients}>{visiblePickerSelected ? \'Desmarcar visíveis\' : \'Selecionar visíveis\'}</button></div>',
-    'obligation selector position',
-  )
+  const obligationPath = `${root}src/components/ObligationsReact.jsx`
+  const obligationSource = readFileSync(obligationPath, 'utf8')
+  if (!obligationSource.includes('<Field label="Clientes avulsos" full>')) {
+    replaceOnce(
+      obligationPath,
+      '<div className="obligation-picker-tools"><input value={clientQuery} onChange={event => setClientQuery(event.target.value)} placeholder="Buscar cliente" /><button type="button" onClick={toggleVisibleClients}>{visiblePickerSelected ? \'Desmarcar visíveis\' : \'Selecionar visíveis\'}</button><label className="third-party-toggle"><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Incluir clientes avulsos nesta obrigação</label></div>',
+      '<label className="third-party-toggle"><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Mostrar clientes avulsos</label><div className="obligation-picker-tools"><input value={clientQuery} onChange={event => setClientQuery(event.target.value)} placeholder="Buscar cliente" /><button type="button" onClick={toggleVisibleClients}>{visiblePickerSelected ? \'Desmarcar visíveis\' : \'Selecionar visíveis\'}</button></div>',
+      'obligation selector position',
+    )
+  }
 }
