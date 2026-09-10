@@ -20,11 +20,12 @@
 }
 
 .react-shell,
+.react-shell :where(h1, h2, h3, p, span, strong, small, b, label, a, time, th, td),
 .react-shell button,
 .react-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
 .react-shell select,
 .react-shell textarea {
-  font-family: Montserrat, Poppins, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-family: "Segoe UI", Arial, system-ui, sans-serif !important;
 }
 
 .react-shell {
@@ -884,7 +885,7 @@
 .react-shell .saas-brand-copy small,
 .react-shell .saas-profile small { color: #B3B3B3 !important; }
 .react-shell .saas-profile > span { background: var(--med-blue) !important; color: white !important; }
-.react-shell .occ-hero { padding: 20px 24px !important; border-radius: 14px !important; border-left: 4px solid var(--med-blue) !important; background: #FFFFFF !important; box-shadow: none !important; }
+.react-shell .occ-hero { padding: 0 0 16px !important; border: 0 !important; border-bottom: 1px solid var(--med-line) !important; border-radius: 0 !important; background: #FFFFFF !important; box-shadow: none !important; }
 .react-shell .occ-hero h1 { font-size: clamp(1.75rem, 2.5vw, 2.125rem) !important; line-height: 1.2 !important; letter-spacing: -.025em !important; }
 .react-shell .react-module-actions button,
 .react-shell .row-actions button,
@@ -957,4 +958,79 @@
   .react-shell .finance-modal-card { border-radius: 18px 18px 0 0 !important; max-height: 92dvh !important; }
   .react-shell .react-module-actions { flex-wrap: wrap !important; overflow: visible !important; }
   .react-shell .react-module-actions button { min-height: 44px !important; }
+}
+
+/* Fix conflicts with the V12 Meu Dia theme; desktop chrome only. */
+@media (min-width: 821px) {
+  .react-shell .react-brand.saas-brand,
+  .react-shell .saas-sidebar-bottom,
+  .react-shell .saas-profile {
+    background: #000000 !important;
+    border-color: #292929 !important;
+  }
+  .react-shell .saas-sidebar .collapse-button,
+  .react-shell .saas-sidebar .saas-profile button {
+    color: #D4D4D4 !important;
+    background: transparent !important;
+  }
+  .react-shell .saas-brand-copy strong,
+  .react-shell .saas-profile strong { color: #FFFFFF !important; }
+  .react-shell .saas-brand-copy small,
+  .react-shell .saas-profile small { color: #B3B3B3 !important; }
+  .react-shell .saas-nav-stack {
+    min-height: 0 !important;
+    scrollbar-width: thin;
+    scrollbar-color: #666666 #000000;
+  }
+  .react-shell .saas-nav-stack::-webkit-scrollbar { width: 6px; }
+  .react-shell .saas-nav-stack::-webkit-scrollbar-track { background: #000000; }
+  .react-shell .saas-nav-stack::-webkit-scrollbar-thumb { background: #666666; border-radius: 6px; }
+  .react-shell .saas-topbar {
+    grid-template-columns: minmax(100px,.6fr) minmax(0,2fr) auto !important;
+    gap: 16px !important;
+  }
+  .react-shell .saas-topbar-search-wrap { min-width: 0; }
+}
+.react-shell .occ-hero { flex-wrap: wrap; gap: 16px !important; }
+.react-shell .occ-hero .occ-eyebrow { display: none; }
+.react-shell .v12-horizon-header > div > span { display: none; }
+.react-shell .occ-shell { padding-top: 24px !important; gap: 18px !important; }
+.react-shell .v12-horizon-board { min-width: 0; padding: 20px; border-radius: 16px; box-shadow: var(--med-shadow-sm); }
+.react-shell .v12-horizon-header { flex-wrap: wrap; gap: 16px; }
+.react-shell .v12-horizon-header h2 { font-size: 1.375rem; line-height: 1.3; color: #111111; }
+.react-shell .v12-horizon-header p { font-size: .875rem; line-height: 1.5; color: #525252; }
+.react-shell .v12-horizon-switch { min-width: 0; width: min(100%, 390px); }
+.react-shell .v12-horizon-switch button strong { font-size: .875rem; }
+.react-shell .v12-horizon-switch button small { font-size: .75rem; color: #525252; }
+.react-shell .v12-horizon-switch button.active small { color: #FFFFFF; }
+.react-shell .v12-horizon-kpis button { grid-template-columns: 36px minmax(0,1fr); gap: 6px 10px; padding: 14px; min-width: 0; }
+.react-shell .v12-horizon-kpis button::before { width: 34px; height: 34px; font-family: Arial, sans-serif; }
+.react-shell .v12-horizon-kpis button span { font-size: .875rem; letter-spacing: 0; line-height: 1.4; white-space: normal; }
+.react-shell .v12-horizon-kpis button small { font-size: .75rem; line-height: 1.4; color: #525252; white-space: normal; }
+.react-shell .v12-horizon-kpis button strong { font-size: 1.75rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
+.react-shell .v12-horizon-filters { flex-wrap: wrap; }
+.react-shell .v12-horizon-filters button,
+.react-shell .v12-open-record,
+.react-shell .v12-work-item .task-quick-actions button { font-size: .875rem; min-height: 40px; }
+.react-shell .v12-horizon-filters button span,
+.react-shell .v12-work-tags span,
+.react-shell .v12-work-tags b,
+.react-shell .v12-work-copy > small,
+.react-shell .v12-work-copy > p,
+.react-shell .v12-work-item .task-quick-hint { font-size: .75rem; line-height: 1.5; }
+.react-shell .v12-work-copy > strong { font-size: 1rem; line-height: 1.4; white-space: normal; }
+.react-shell .v12-period-group > header span { font-size: .75rem; letter-spacing: .03em; color: #525252; }
+.react-shell .v12-period-group > header strong { font-size: .875rem; }
+@media (max-width: 1100px) {
+  .react-shell .v12-horizon-header { display: grid; grid-template-columns: minmax(0,1fr); }
+  .react-shell .v12-horizon-switch { width: 100%; }
+  .react-shell .v12-horizon-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 820px) {
+  .react-shell .occ-hero-actions { flex-wrap: wrap; }
+  .react-shell .occ-hero-actions button { flex: 1 1 auto; }
+  .react-shell .v12-horizon-board { padding: 14px; }
+}
+@media (max-width: 380px) {
+  .react-shell .v12-horizon-kpis { grid-template-columns: minmax(0,1fr); }
 }
