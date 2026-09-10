@@ -19,6 +19,7 @@ const normalize = value => String(value || '')
 
 const isIgnored = status => normalize(status) === 'nao se aplica'
 const isCompleted = status => isDone(status) || isIgnored(status)
+const linkEntityType = link => link?.entityType === 'linkedCompany' || link?.entidadeTipo === 'terceirizado' ? 'linkedCompany' : 'client'
 
 export function isObligationWaitingClient(status) {
   return normalize(status) === 'aguardando cliente'
@@ -40,22 +41,27 @@ export function obligationLinkMatchesDeadline(item = {}, scope = 'all', day) {
 }
 
 export function flattenObligationDeadlines(obligations = []) {
-  return (obligations || []).flatMap(obligation => (obligation.clientes || []).map(link => ({
-    key: `${obligation.id}|${link.clienteId}`,
-    obligationId: String(obligation.id || ''),
-    clientId: String(link.clienteId || ''),
-    nome: obligation.nome || 'Obrigação',
-    tipo: obligation.tipo || '',
-    competencia: obligation.competencia || '',
-    categoria: obligation.categoria || 'Outros',
-    terceirizado: Boolean(obligation.terceirizado),
-    terceiroNome: obligation.terceiroNome || '',
-    vencimento: link.vencimento || '',
-    status: link.status || 'Pendente',
-    concluidoEm: link.concluidoEm || '',
-    observacao: link.observacao || '',
-    recibo: link.recibo || '',
-  })))
+  return (obligations || []).flatMap(obligation => (obligation.clientes || []).map(link => {
+    const entityType = linkEntityType(link)
+    const entityId = String(link.clienteId || '')
+    return {
+      key: entityType === 'linkedCompany' ? `${obligation.id}|linked|${entityId}` : `${obligation.id}|${entityId}`,
+      obligationId: String(obligation.id || ''),
+      clientId: entityId,
+      entityType,
+      nome: obligation.nome || 'Obrigação',
+      tipo: obligation.tipo || '',
+      competencia: obligation.competencia || '',
+      categoria: obligation.categoria || 'Outros',
+      terceirizado: entityType === 'linkedCompany' || Boolean(obligation.terceirizado),
+      terceiroNome: obligation.terceiroNome || '',
+      vencimento: link.vencimento || '',
+      status: link.status || 'Pendente',
+      concluidoEm: link.concluidoEm || '',
+      observacao: link.observacao || '',
+      recibo: link.recibo || '',
+    }
+  }))
 }
 
 function matchesContext(item, { clientId = '', category = '' } = {}) {
