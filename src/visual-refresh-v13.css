@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "MED Inter";
+  src: url("/fonts/med-inter-latin.woff") format("woff");
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 /*
  * MED Visual Refresh V13
  * Direção: clareza contemporânea premium.
@@ -25,7 +33,11 @@
 .react-shell input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="hidden"]),
 .react-shell select,
 .react-shell textarea {
-  font-family: "Segoe UI", Arial, system-ui, sans-serif !important;
+  font-family: "MED Inter", Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: auto;
 }
 
 .react-shell {
@@ -64,7 +76,7 @@
 .react-shell .saas-brand-copy strong {
   color: #F8FAFF !important;
   font-size: .875rem !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .saas-brand-copy small {
@@ -186,7 +198,7 @@
   margin-top: 4px !important;
   color: var(--med-ink) !important;
   font-size: 14px !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .saas-topbar-search {
@@ -232,7 +244,7 @@
 
 .react-shell .saas-topbar-profile strong {
   font-size: .75rem !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .saas-topbar-profile small {
@@ -256,7 +268,7 @@
 
 .react-shell .react-module-topbar h1 {
   font-size: 30px !important;
-  font-weight: 820 !important;
+  font-weight: 600 !important;
   letter-spacing: -1px !important;
 }
 
@@ -397,7 +409,7 @@
 .react-shell .deadline-state,
 .react-shell .ui-badge {
   border-radius: 999px !important;
-  font-weight: 760 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .details-tabs,
@@ -473,7 +485,7 @@
 .react-shell .finance-modal-card h2,
 .react-shell .outsourced-modal-card h2 {
   font-size: 19px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   letter-spacing: -.5px !important;
 }
 
@@ -561,7 +573,7 @@
 .react-shell .dashboard-kpi > span {
   color: #7A889F !important;
   font-size: .75rem !important;
-  font-weight: 720 !important;
+  font-weight: 600 !important;
   letter-spacing: .4px !important;
 }
 
@@ -569,7 +581,7 @@
   margin-top: 7px !important;
   color: var(--med-ink) !important;
   font-size: 31px !important;
-  font-weight: 820 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .dashboard-kpi > small {
@@ -586,7 +598,7 @@
 .react-shell .dashboard-panel-head h2 {
   color: var(--med-ink) !important;
   font-size: 16px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
   letter-spacing: -.3px !important;
 }
 
@@ -654,7 +666,7 @@
 .react-shell .occ-hero h1 {
   color: var(--med-ink) !important;
   font-size: clamp(30px, 3vw, 43px) !important;
-  font-weight: 830 !important;
+  font-weight: 600 !important;
   letter-spacing: -1.4px !important;
 }
 
@@ -701,7 +713,7 @@
 .react-shell .occ-panel-head h2 {
   color: var(--med-ink) !important;
   font-size: 15px !important;
-  font-weight: 800 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .occ-panel-head p {
@@ -721,7 +733,7 @@
   border-radius: 9px !important;
   color: #74839B !important;
   font-size: .75rem !important;
-  font-weight: 720 !important;
+  font-weight: 600 !important;
 }
 
 .react-shell .occ-tabs button.active {
@@ -1004,7 +1016,6 @@
 .react-shell .v12-horizon-switch button small { font-size: .75rem; color: #525252; }
 .react-shell .v12-horizon-switch button.active small { color: #FFFFFF; }
 .react-shell .v12-horizon-kpis button { grid-template-columns: 36px minmax(0,1fr); gap: 6px 10px; padding: 14px; min-width: 0; }
-.react-shell .v12-horizon-kpis button::before { width: 34px; height: 34px; font-family: Arial, sans-serif; }
 .react-shell .v12-horizon-kpis button span { font-size: .875rem; letter-spacing: 0; line-height: 1.4; white-space: normal; }
 .react-shell .v12-horizon-kpis button small { font-size: .75rem; line-height: 1.4; color: #525252; white-space: normal; }
 .react-shell .v12-horizon-kpis button strong { font-size: 1.75rem; line-height: 1.2; font-variant-numeric: tabular-nums; }
@@ -1033,4 +1044,62 @@
 }
 @media (max-width: 380px) {
   .react-shell .v12-horizon-kpis { grid-template-columns: minmax(0,1fr); }
+}
+
+/* Text and metric icons: local font, real SVGs and moderate weights. */
+.react-shell .occ-shell { text-rendering: auto !important; }
+.react-shell .occ-hero h1 { font-weight: 700 !important; letter-spacing: -.025em !important; }
+.react-shell .v12-horizon-header h2 { font-weight: 600; letter-spacing: -.02em; }
+.react-shell .occ-hero-actions button,
+.react-shell .v12-horizon-switch button strong,
+.react-shell .v12-horizon-filters button,
+.react-shell .v12-open-record,
+.react-shell .v12-work-item .task-quick-actions button { font-weight: 600 !important; }
+.react-shell .v12-horizon-switch button small,
+.react-shell .v12-horizon-kpis button small,
+.react-shell .v12-work-copy > small,
+.react-shell .v12-work-copy > p,
+.react-shell .v12-work-item .task-quick-hint { font-weight: 400; }
+.react-shell .v12-horizon-kpis button::before { content: none !important; display: none !important; }
+.react-shell .v12-horizon-kpis button {
+  grid-template-columns: 40px minmax(0,1fr);
+  grid-template-rows: auto auto auto;
+  align-content: center;
+  column-gap: 12px;
+  row-gap: 4px;
+  min-height: 118px;
+}
+.react-shell .v12-horizon-kpis button > .v12-metric-icon {
+  grid-column: 1;
+  grid-row: 1 / 4;
+  display: grid;
+  place-items: center;
+  align-self: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #EEF3FF;
+  color: #2456E8;
+  box-shadow: none;
+}
+.react-shell .v12-horizon-kpis button:nth-child(2) > .v12-metric-icon { background: #FFF1F0; color: #C52424; }
+.react-shell .v12-horizon-kpis button:nth-child(3) > .v12-metric-icon { background: #FFF7E8; color: #A65B00; }
+.react-shell .v12-horizon-kpis button:nth-child(4) > .v12-metric-icon { background: #F2F4F7; color: #526171; }
+.react-shell .v12-metric-icon .saas-icon { display: block; width: 22px; height: 22px; flex-shrink: 0; }
+.react-shell .v12-horizon-kpis button > span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.react-shell .v12-horizon-kpis button > strong { font-weight: 600; letter-spacing: -.02em; }
+.react-shell .v12-horizon-filters button span { font-weight: 500; }
+.react-shell .v12-work-tags span,
+.react-shell .v12-work-tags b { font-weight: 600; text-transform: none; letter-spacing: 0; }
+.react-shell .v12-work-copy > strong,
+.react-shell .v12-period-group > header strong,
+.react-shell .v12-period-group > header b { font-weight: 600; }
+.react-shell .v12-period-group > header span { font-weight: 500; text-transform: none; letter-spacing: 0; }
+.react-shell .v12-horizon-empty > span { display: grid; place-items: center; }
+@media (max-width: 600px) {
+  .react-shell .v12-horizon-kpis button { grid-template-columns: minmax(0,1fr); padding: 14px; row-gap: 6px; }
+  .react-shell .v12-horizon-kpis button > .v12-metric-icon { grid-column: 1; grid-row: 1; }
+  .react-shell .v12-horizon-kpis button > span,
+  .react-shell .v12-horizon-kpis button > strong,
+  .react-shell .v12-horizon-kpis button > small { grid-column: 1; }
 }

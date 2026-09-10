@@ -3,6 +3,7 @@ import { today } from '../lib/storage.js'
 import { buildWorkHorizon, WORK_HORIZONS } from '../lib/workHorizons.js'
 import { undoTaskCompletion } from '../lib/taskExecution.js'
 import TaskQuickExecution from './TaskQuickExecution.jsx'
+import { Icon } from './ui/SaasUI.jsx'
 import '../work-horizon-v12.css'
 
 const HORIZON_KEY = 'med_v12_work_horizon'
@@ -107,10 +108,10 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
     </header>
 
     <div className="v12-horizon-kpis">
-      <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}><span>No radar</span><strong>{view.total}</strong><small>{view.scheduledTotal} no período + {view.overdue.length} atrasado(s)</small></button>
-      <button type="button" className={view.overdue.length ? 'danger' : ''} onClick={() => setFilter('all')}><span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small></button>
-      <button type="button" className={view.critical.length ? 'warning' : ''} onClick={() => setFilter('all')}><span>Críticos</span><strong>{view.critical.length}</strong><small>pedem atenção primeiro</small></button>
-      <button type="button" onClick={() => onNavigate?.('pendencias')}><span>Sem data</span><strong>{view.unscheduled.length}</strong><small>fora do planejamento temporal</small></button>
+      <button type="button" className={filter === 'all' ? 'active' : ''} onClick={() => setFilter('all')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="layers" size={22} /></i><span>No radar</span><strong>{view.total}</strong><small>{view.scheduledTotal} no período + {view.overdue.length} atrasado(s)</small></button>
+      <button type="button" className={view.overdue.length ? 'danger' : ''} onClick={() => setFilter('all')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="clock" size={22} /></i><span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small></button>
+      <button type="button" className={view.critical.length ? 'warning' : ''} onClick={() => setFilter('all')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="warning" size={22} /></i><span>Críticos</span><strong>{view.critical.length}</strong><small>pedem atenção primeiro</small></button>
+      <button type="button" onClick={() => onNavigate?.('pendencias')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="calendarOff" size={22} /></i><span>Sem data</span><strong>{view.unscheduled.length}</strong><small>fora do planejamento temporal</small></button>
     </div>
 
     <div className="v12-horizon-filters" aria-label="Filtrar tipo de trabalho">
@@ -131,7 +132,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
           <div className="v12-period-items">{group.items.slice(0, limit).map(item => <HorizonItem key={item.key} item={item} office={office} update={update} onOpenItem={onOpenItem} onNotice={setNotice} onCompleted={registerCompletion} day={day} />)}</div>
           {hidden ? <button type="button" className="v12-show-more" onClick={() => toggleGroup(group.key)}>Mostrar mais {hidden}</button> : horizon === 'month' && expandedGroups.has(group.key) && group.items.length > 8 ? <button type="button" className="v12-show-more" onClick={() => toggleGroup(group.key)}>Recolher semana</button> : null}
         </section>
-      }) : <div className="v12-horizon-empty"><span>✓</span><strong>Nada neste filtro para {view.label.toLowerCase()}.</strong><small>Você pode antecipar itens futuros ou revisar os registros sem data.</small></div>}
+      }) : <div className="v12-horizon-empty"><span><Icon name="check" size={24} /></span><strong>Nada neste filtro para {view.label.toLowerCase()}.</strong><small>Você pode antecipar itens futuros ou revisar os registros sem data.</small></div>}
     </div>
 
     {visibleUnscheduled.length ? <footer className="v12-unscheduled"><div><strong>{visibleUnscheduled.length} item(ns) sem prazo ou planejamento</strong><span>Eles não foram encaixados artificialmente no período.</span></div><button type="button" onClick={() => onNavigate?.('pendencias')}>Revisar pendências</button></footer> : null}
