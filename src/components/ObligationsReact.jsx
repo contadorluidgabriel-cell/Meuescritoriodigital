@@ -62,6 +62,7 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, focu
 export default function ObligationsReact({ office, update, sync, initialObligationId = '', initialClientId = '', openObligationRequest = 0 }) {
   const [query, setQuery] = useState(''), [category, setCategory] = useState('')
   const [editing, setEditing] = useState(null), [selectedClients, setSelectedClients] = useState(new Set()), [clientQuery, setClientQuery] = useState('')
+  const [includeAvulsos, setIncludeAvulsos] = useState(false)
   const [details, setDetails] = useState(null), [duplicate, setDuplicate] = useState(null)
   const [error, setError] = useState(''), [notice, setNotice] = useState('')
   const handledOpenRequest = useRef(0)
@@ -86,7 +87,8 @@ export default function ObligationsReact({ office, update, sync, initialObligati
       const id = String(entity.id)
       const selected = selectedClients.has(id)
       const allowed = entity.status !== 'Inativo' || selected
-      if (!allowed) return false
+      const relationshipAllowed = entity._entityType === 'linkedCompany' || selected || includeAvulsos || entity.relacionamento !== 'Avulso'
+      if (!allowed || !relationshipAllowed) return false
       if (!clientQuery) return true
       const responsible = entity._entityType === 'linkedCompany' ? clientsById.get(String(entity.clientId || '')) : null
       return normalize(`${clientName(entity)} ${entityDocument(entity)} ${responsible ? clientName(responsible) : ''}`).includes(normalize(clientQuery))
@@ -94,7 +96,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
       if (a._entityType !== b._entityType) return a._entityType === 'client' ? -1 : 1
       return clientName(a).localeCompare(clientName(b), 'pt-BR')
     })
-  }, [clientQuery, clientsById, office.clients, office.linkedCompanies, selectedClients])
+  }, [clientQuery, clientsById, includeAvulsos, office.clients, office.linkedCompanies, selectedClients])
   const openDetails = useCallback((obligation, focusClientId = '') => setDetails({ obligation, focusClientId }), [])
 
   useEffect(() => {
@@ -114,6 +116,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     setEditing({ id: '', tipo: '', competencia: '', nome: '', descricao: '', categoria: activeDepartments[0] || 'Outros', observacoes: '', terceirizado: false, terceiroCnpj: '', terceiroNome: '' })
     setSelectedClients(new Set())
     setClientQuery('')
+    setIncludeAvulsos(false)
     setError('')
   }
 
@@ -132,6 +135,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     })
     setSelectedClients(new Set((obligation.clientes?.map(link => link.clienteId) || obligation.clientesIds || []).map(String)))
     setClientQuery('')
+    setIncludeAvulsos(false)
     setError('')
   }
 
@@ -212,10 +216,11 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     {editing ? <Modal title={editing.id ? 'Editar obrigação' : 'Nova obrigação'} subtitle="Vincule clientes da carteira e CNPJs terceirizados sem misturar as duas bases." onClose={() => setEditing(null)} wide><form className="obligation-form" onSubmit={saveObligation}>
       <Field label="Tipo da obrigação"><input value={editing.tipo} onChange={event => setField('tipo', event.target.value)} placeholder="Ex.: DEFIS, DASN-SIMEI" /></Field><Field label="Competência / Ano"><input value={editing.competencia} onChange={event => setField('competencia', event.target.value)} placeholder="Ex.: 2026 ou 2026-08" /></Field><Field label="Nome *" full><input value={editing.nome} onChange={event => setField('nome', event.target.value)} placeholder="Ex.: DEFIS 2026" /></Field><Field label="Categoria"><select value={editing.categoria} onChange={event => setField('categoria', event.target.value)}>{categoryChoices.map(name => <option key={name}>{name}</option>)}</select></Field><Field label="Descrição"><input value={editing.descricao} onChange={event => setField('descricao', event.target.value)} /></Field>
       {editing.terceirizado ? <Field label="Referência terceirizada legada" full hint="Este vínculo veio do modelo antigo. Os novos CNPJs terceirizados devem ser selecionados diretamente na lista abaixo."><div className="third-party-toggle"><label><input type="checkbox" checked={Boolean(editing.terceirizado)} onChange={event => setEditing(current => ({ ...current, terceirizado: event.target.checked, terceiroCnpj: event.target.checked ? current.terceiroCnpj : '', terceiroNome: event.target.checked ? current.terceiroNome : '' }))} /> Manter referência antiga: {editing.terceiroNome || 'Sem nome'} · {formatCnpj(editing.terceiroCnpj)}</label></div></Field> : null}
+      <Field label="Clientes avulsos" full><div className="third-party-toggle"><label><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Incluir clientes avulsos nesta obrigação</label></div></Field>
       <Field label={`Vínculos * · ${selectedClients.size} selecionado(s)`} full hint="Clientes inativos aparecem apenas quando já estavam vinculados. CNPJs terceirizados continuam fora da sua carteira de clientes."><div className="obligation-picker-tools"><input value={clientQuery} onChange={event => setClientQuery(event.target.value)} placeholder="Buscar cliente, CNPJ terceirizado ou responsável" /><button type="button" onClick={toggleVisibleClients}>{visiblePickerSelected ? 'Desmarcar visíveis' : 'Selecionar visíveis'}</button></div><div className="obligation-client-picker">{pickerClients.map(entity => {
         const isLinked = entity._entityType === 'linkedCompany'
         const responsible = isLinked ? clientsById.get(String(entity.clientId || '')) : null
-        return <label key={`${entity._entityType}-${entity.id}`}><input type="checkbox" checked={selectedClients.has(String(entity.id))} onChange={() => toggleClient(String(entity.id))} /><span><b>{clientName(entity)}</b>{isLinked ? <em>Terceirizado</em> : entity.status === 'Inativo' ? <em>Inativo</em> : null}<small>{entityDocument(entity) || 'Sem documento'}{isLinked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></span></label>
+        return <label key={`${entity._entityType}-${entity.id}`}><input type="checkbox" checked={selectedClients.has(String(entity.id))} onChange={() => toggleClient(String(entity.id))} /><span><b>{clientName(entity)}</b>{isLinked ? <em>Terceirizado</em> : entity.status === 'Inativo' ? <em>Inativo</em> : entity.relacionamento === 'Avulso' ? <em>Avulso</em> : null}<small>{entityDocument(entity) || 'Sem documento'}{isLinked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></span></label>
       })}{!pickerClients.length ? <p>Nenhum cliente ou CNPJ terceirizado disponível.</p> : null}</div></Field>
       <Field label="Observações" full><textarea value={editing.observacoes} onChange={event => setField('observacoes', event.target.value)} /></Field>{error ? <p className="obligation-error">{error}</p> : null}<footer className="obligation-form-actions"><button type="button" onClick={() => setEditing(null)}>Cancelar</button><button className="primary">Salvar obrigação</button></footer>
     </form></Modal> : null}
