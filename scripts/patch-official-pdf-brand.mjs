@@ -8,6 +8,10 @@ function replaceRequired(source, from, to, label, path) {
 export function applyOfficialPdfBrandPatch(root) {
   const path = `${root}src/lib/financePdf.js`
   let source = readFileSync(path, 'utf8')
+
+  // A fatura premium já desenha diretamente o monograma oficial e o wordmark
+  // com alinhamento próprio. O patch abaixo é mantido apenas para builds legados.
+  if (source.includes('const PIX = {') && source.includes('function pixPaymentBlock')) return
   if (source.includes('const OFFICIAL_MAIN_LOGO = { width: 240, height: 64')) return
 
   const mainBase64 = readFileSync(`${root}src/assets/brand-main.jpg`).toString('base64')
