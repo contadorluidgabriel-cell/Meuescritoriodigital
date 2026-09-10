@@ -36,16 +36,22 @@ test('receipt PDF includes received charge without storing file data', () => {
   assert.match(pdf, /15\/08\/2026/)
 })
 
-test('invoice highlights the outstanding balance and payment deadline', () => {
+test('invoice follows the approved premium payment layout', () => {
   const bytes = buildFinanceDocumentBytes({
     type: 'invoice',
-    charge: { id: 'fin-balance', descricao: 'Honorários mensais', valor: 1250, vencimento: '2026-09-10', faturaEmitidaEm: '2026-09-01', pagamentos: [{ id: 'p1', data: '2026-09-02', valorRecebido: 250 }] },
+    charge: { id: 'fin-balance', descricao: 'Honorários mensais', valor: 1250, vencimento: '2026-09-10', competencia: '2026-09', faturaEmitidaEm: '2026-09-01', pagamentos: [{ id: 'p1', data: '2026-09-02', valorRecebido: 250 }] },
     client: { razao: 'Empresa Exemplo' }, office: {},
   })
   const pdf = Buffer.from(bytes).toString('latin1')
-  assert.match(pdf, /\((?:VALOR A PAGAR|TOTAL A PAGAR)\)/)
+  assert.match(pdf, /\(TOTAL\)/)
   assert.match(pdf, /\(R\$ 1\.000,00\)/)
   assert.match(pdf, /\(Vencimento\)/)
   assert.match(pdf, /\(10\/09\/2026\)/)
-  assert.match(pdf, /Esta fatura é um documento comercial de cobrança e não substitui nota fiscal\./)
+  assert.match(pdf, /\(PAGAMENTO\)/)
+  assert.match(pdf, /\(contadorluidgabriel@gmail\.com\)/)
+  assert.match(pdf, /\(Luid Lira\)/)
+  assert.match(pdf, /\(Cloudwalk IP \(Infinitepay\)\)/)
+  assert.match(pdf, /\(CONTABILIDADE\)/)
+  assert.match(pdf, /\(PARA UM FUTURO\)/)
+  assert.match(pdf, /\(MAIS FORTE\)/)
 })
