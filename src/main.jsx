@@ -18,6 +18,7 @@ import './client-mobile-fix.css'
 import './third-party-work.css'
 import './client-outsourcing.css'
 import './my-day-premium.css'
+import './visual-refresh-v13.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
