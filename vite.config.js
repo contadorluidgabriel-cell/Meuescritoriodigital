@@ -28,6 +28,7 @@ import { applyV12Patch } from './scripts/patch-v12.mjs'
 import { applyV121Patch } from './scripts/patch-v12-1.mjs'
 import { applyInviteLinksPatch } from './scripts/patch-invite-links.mjs'
 import { applyTaskDeadlinesPatch } from './scripts/patch-task-deadlines.mjs'
+import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadlines.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
@@ -91,6 +92,7 @@ applyV12Patch(root)
 applyV121Patch(root)
 applyInviteLinksPatch(root)
 applyTaskDeadlinesPatch(root)
+applyObligationDeadlinesPatch(root)
 applySharingStylesPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
