@@ -96,7 +96,7 @@ export default function TaskDeadlinesBoard({ office, update, onNavigate, onOpenT
         <h2>Prazos das tarefas</h2>
         <p>Veja o que está atrasado, vence hoje, amanhã ou entra nos próximos 7 e 30 dias. Os filtros usam o prazo oficial da tarefa; a data planejada continua sendo exibida separadamente.</p>
       </div>
-      <button type="button" className="task-deadline-calendar" onClick={() => onNavigate?.('calendario')}>Ver calendário</button>
+      {onNavigate ? <button type="button" className="task-deadline-calendar" onClick={() => onNavigate('calendario')}>Ver calendário</button> : null}
     </header>
 
     <nav className="task-deadline-scopes" aria-label="Filtrar tarefas por prazo">
