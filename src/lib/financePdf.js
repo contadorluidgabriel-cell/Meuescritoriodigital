@@ -5,10 +5,9 @@ const COLORS = {
   navy: '0.071 0.114 0.176', // #121D2D
   ink: '0.094 0.133 0.188', // #182230
   white: '1 1 1',
-  soft: '0.969 0.976 0.988', // #F7F9FC
-  table: '0.949 0.961 0.976', // #F2F5F9
-  line: '0.894 0.914 0.945', // #E4E9F1
-  muted: '0.400 0.439 0.522', // #667085
+  table: '0.949 0.961 0.976',
+  line: '0.894 0.914 0.945',
+  muted: '0.400 0.439 0.522',
   paleBlue: '0.933 0.953 1',
   amber: '0.635 0.361 0.027',
   paleAmber: '1 0.957 0.882',
@@ -16,6 +15,8 @@ const COLORS = {
   paleGreen: '0.922 0.976 0.945',
   danger: '0.706 0.137 0.094',
   paleRed: '0.996 0.925 0.918',
+  pixTeal: '0.000 0.690 0.650',
+  pixGray: '0.380 0.410 0.480',
 }
 
 const PIX = {
@@ -24,7 +25,6 @@ const PIX = {
   bank: 'Cloudwalk IP (Infinitepay)',
 }
 
-// Monograma LG aprovado, igual ao ícone oficial do aplicativo.
 const LG_PATH = 'M56 82.65V428.71H302.55L303.19 428.07 312.82 427.43 313.46 426.79 322.45 425.5 338.5 421.01 340.43 419.72 343.64 419.08 353.27 414.59 354.56 414.59 364.83 409.45 382.16 398.54 391.15 391.47 408.49 374.78 415.55 366.43 426.47 351.02 431.6 341.39 432.89 340.11 441.87 320.85 447.01 306.08 447.01 304.15 448.3 301.59 448.3 299.66 450.86 291.31 452.15 281.68 452.79 281.04 452.79 277.19 453.43 276.55 453.43 272.69 454.07 272.05 454.72 253.43 455.36 252.79V236.74L454.72 236.1H290.35L289.07 239.31 288.42 243.8 287.14 246.37V248.3L285.86 250.86V252.79L284.57 255.36 282.65 264.35 281.36 266.91V268.84L280.08 271.41 278.79 278.47 276.87 283.61H396.29L396.93 284.25 395 293.24 391.79 302.87 387.94 310.57V311.86L379.6 326.63 372.53 336.26 359.69 349.74 347.49 359.37 338.5 365.15 324.38 372.21 317.96 374.14 316.03 375.42H314.11L306.4 377.99 299.98 378.63 299.34 379.27H292.28L291.63 379.92H113.78L112.5 378.63 113.14 377.99 112.5 376.06 113.14 374.14 112.5 372.21V218.76L113.14 218.12 112.5 216.19V187.94L113.14 187.3 112.5 185.37V87.14L113.14 86.5 112.5 85.86V83.93L113.14 83.29 112.5 82.65H56ZM400.78 124.38 392.44 117.32 377.03 106.4 357.77 96.13H356.48L346.85 91.63 343 90.99 334.01 87.78H331.44L328.23 86.5 318.6 85.21 317.96 84.57H314.11L313.46 83.93H307.69L307.04 83.29H282.65L282 83.93H276.22L275.58 84.57 264.03 85.86 263.38 86.5H260.82L260.17 87.14 253.11 88.42 250.54 89.71H248.62L240.91 92.28 238.99 93.56 231.28 96.13 226.79 98.7H225.5L213.3 105.12 198.54 114.75 184.41 126.3 174.14 136.58 167.08 144.92 156.8 159.69 146.53 178.95V180.24L142.68 188.58 136.9 207.2V209.77L136.26 210.41 135.61 216.19 134.97 216.83V220.04L134.33 220.69V224.54L133.69 225.18V230.96L133.05 231.6V256.64L133.69 257.28V263.06L134.33 263.7 134.97 272.05 135.61 272.69 137.54 283.61 142.68 299.66 147.81 310.57V311.86L153.59 322.77 161.94 335.61 172.85 349.1 183.13 359.37H261.46L262.74 360.01V359.37L259.53 358.73 255.04 356.16 252.47 355.52 251.18 354.23 242.84 350.38 237.7 346.53 233.85 344.6 222.29 335.61 210.74 324.06 203.03 314.43 195.97 303.51 190.83 293.24 185.05 277.19V275.26L183.13 269.48V266.91L182.48 266.27V263.06L181.84 262.42 181.2 247.65 180.56 247.01 181.2 233.53 181.84 232.89V229.03L182.48 228.39 183.13 221.97 183.77 221.33 186.98 207.85 194.68 190.51 202.39 178.31 210.09 168.68 219.72 159.05 231.28 150.06 238.34 145.57 256.32 137.22 269.8 133.37H272.37L276.22 132.08H280.72L281.36 131.44H288.42L289.07 130.8 305.76 131.44 306.4 132.08H310.25L310.9 132.73 316.67 133.37 331.44 137.86 340.43 142.36 343 143 356.48 151.35 364.83 157.77 378.31 171.25 383.45 177.67 390.51 188.58 434.17 168.04 426.47 154.56 420.04 145.57 411.06 134.65Z'
 
 const money = value => Number(value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
@@ -116,6 +116,20 @@ function rectCommand({ x, y, width, height, fill = '', stroke = '', lineWidth = 
   return command
 }
 
+function roundedRectCommand({ x, y, width, height, radius = 5, fill = '', stroke = '', lineWidth = 1 }) {
+  const r = Math.min(radius, width / 2, height / 2)
+  const k = r * 0.5522847498
+  let command = ''
+  if (fill) command += `${fill} rg `
+  if (stroke) command += `${stroke} RG ${lineWidth} w `
+  command += `${x + r} ${y} m ${x + width - r} ${y} l `
+  command += `${x + width - r + k} ${y} ${x + width} ${y + r - k} ${x + width} ${y + r} c `
+  command += `${x + width} ${y + height - r} l ${x + width} ${y + height - r + k} ${x + width - r + k} ${y + height} ${x + width - r} ${y + height} c `
+  command += `${x + r} ${y + height} l ${x + r - k} ${y + height} ${x} ${y + height - r + k} ${x} ${y + height - r} c `
+  command += `${x} ${y + r} l ${x} ${y + r - k} ${x + r - k} ${y} ${x + r} ${y} c h ${fill && stroke ? 'B' : fill ? 'f' : 'S'}\n`
+  return command
+}
+
 function lineCommand({ x1, y1, x2, y2, color = COLORS.line, lineWidth = 1 }) {
   return `${color} RG ${lineWidth} w ${x1} ${y1} m ${x2} ${y2} l S\n`
 }
@@ -144,18 +158,14 @@ function parseLgPath({ x, y, size, color = COLORS.white }) {
       continue
     }
     if (mode === 'M' || mode === 'L') {
-      cursorX = Number(tokens[index])
-      cursorY = Number(tokens[index + 1])
-      index += 2
+      cursorX = Number(tokens[index]); cursorY = Number(tokens[index + 1]); index += 2
       command += `${tx(cursorX).toFixed(2)} ${ty(cursorY).toFixed(2)} ${mode === 'M' ? 'm' : 'l'}\n`
       mode = 'L'
     } else if (mode === 'H') {
-      cursorX = Number(tokens[index])
-      index += 1
+      cursorX = Number(tokens[index]); index += 1
       command += `${tx(cursorX).toFixed(2)} ${ty(cursorY).toFixed(2)} l\n`
     } else if (mode === 'V') {
-      cursorY = Number(tokens[index])
-      index += 1
+      cursorY = Number(tokens[index]); index += 1
       command += `${tx(cursorX).toFixed(2)} ${ty(cursorY).toFixed(2)} l\n`
     } else index += 1
   }
@@ -164,25 +174,20 @@ function parseLgPath({ x, y, size, color = COLORS.white }) {
 
 function brandHeader({ title, number, issuedAt, competence }) {
   let content = ''
-  content += rectCommand({ x: 0, y: 716, width: 595, height: 126, fill: COLORS.navy })
+  content += rectCommand({ x: 0, y: 727, width: 595, height: 115, fill: COLORS.navy })
+  content += parseLgPath({ x: 25, y: 754, size: 66, color: COLORS.white })
+  content += textCommand({ x: 96, y: 792, text: 'LUID', size: 17.5, bold: true, color: COLORS.white })
+  content += textCommand({ x: 141, y: 792, text: 'GABRIEL', size: 17.5, color: COLORS.white })
+  content += textCommand({ x: 96, y: 771, text: 'CONTADOR', size: 7.3, bold: true, color: COLORS.blue, tracking: 1.25 })
 
-  // Bloco de marca: monograma e wordmark tratados como uma única assinatura.
-  content += parseLgPath({ x: 40, y: 746, size: 66, color: COLORS.white })
-  content += textCommand({ x: 110, y: 792, text: 'LUID', size: 17.5, bold: true, color: COLORS.white })
-  content += textCommand({ x: 155, y: 792, text: 'GABRIEL', size: 17.5, color: COLORS.white })
-  content += textCommand({ x: 110, y: 771, text: 'CONTADOR', size: 7.3, bold: true, color: COLORS.blue, tracking: 1.25 })
-
-  content += textCommand({ x: 553, y: 797, text: title, size: 21.5, bold: true, color: COLORS.white, right: true })
-  content += textCommand({ x: 553, y: 776, text: number, size: 9, bold: true, color: COLORS.white, right: true })
-
-  content += textCommand({ x: 400, y: 749, text: 'EMISSÃO', size: 6.7, bold: true, color: COLORS.line })
-  content += textCommand({ x: 400, y: 733, text: dateBr(issuedAt), size: 9, color: COLORS.white })
-  content += lineCommand({ x1: 466, y1: 728, x2: 466, y2: 754, color: COLORS.muted, lineWidth: 0.55 })
-  content += textCommand({ x: 483, y: 749, text: 'COMPETÊNCIA', size: 6.7, bold: true, color: COLORS.line })
-  content += textCommand({ x: 483, y: 733, text: competenceBr(competence), size: 9, color: COLORS.white })
-
-  // Assinatura visual fina — evita a antiga faixa azul pesada.
-  content += rectCommand({ x: 0, y: 713, width: 595, height: 3, fill: COLORS.blue })
+  content += textCommand({ x: 531, y: 797, text: title, size: 21.5, bold: true, color: COLORS.white, right: true })
+  content += textCommand({ x: 547, y: 776, text: number, size: 9, bold: true, color: COLORS.white, right: true })
+  content += textCommand({ x: 389, y: 749, text: 'EMISSÃO', size: 6.7, bold: true, color: COLORS.line })
+  content += textCommand({ x: 389, y: 733, text: dateBr(issuedAt), size: 9, color: COLORS.white })
+  content += lineCommand({ x1: 464, y1: 728, x2: 464, y2: 754, color: COLORS.muted, lineWidth: 0.55 })
+  content += textCommand({ x: 484, y: 749, text: 'COMPETÊNCIA', size: 6.7, bold: true, color: COLORS.line })
+  content += textCommand({ x: 484, y: 733, text: competenceBr(competence), size: 9, color: COLORS.white })
+  content += rectCommand({ x: 0, y: 724, width: 595, height: 3, fill: COLORS.blue })
   return content
 }
 
@@ -198,16 +203,37 @@ function clientAddress(client = {}) {
   return [first, complement, second].filter(Boolean).join(' - ')
 }
 
-function clientBlock(client, receipt = false) {
+function documentLabel(document = '') {
+  const digits = String(document).replace(/\D/g, '')
+  return digits.length > 11 ? 'CNPJ' : digits.length ? 'CPF' : 'CPF/CNPJ'
+}
+
+function clientAndSummary({ client, charge, summary, receipt }) {
   const document = clientDocument(client)
   const address = clientAddress(client)
   const contact = client?.email || client?.telefone || client?.phone || ''
-  let content = textCommand({ x: 42, y: 682, text: receipt ? 'RECEBIDO DE' : 'COBRANÇA PARA', size: 7.3, bold: true, color: COLORS.blue, tracking: 0.7 })
-  content += textCommand({ x: 42, y: 657, text: clientName(client), size: 15.5, bold: true, color: COLORS.ink })
-  let y = 638
-  if (document) { content += textCommand({ x: 42, y, text: `CPF/CNPJ ${document}`, size: 8.8, color: COLORS.muted }); y -= 15 }
-  if (address) { content += textCommand({ x: 42, y, text: safeText(address).slice(0, 58), size: 8.8, color: COLORS.muted }); y -= 15 }
-  if (contact) content += textCommand({ x: 42, y, text: safeText(contact).slice(0, 58), size: 8.8, color: COLORS.muted })
+  const settled = summary.balance <= 0.009
+  const status = receipt || settled ? 'Recebido' : (charge.status || 'Pendente')
+  const style = statusStyle(status)
+
+  let content = textCommand({ x: 34, y: 696, text: receipt ? 'RECEBIDO DE' : 'COBRANÇA PARA', size: 7.4, bold: true, color: COLORS.blue, tracking: 0.9 })
+  content += textCommand({ x: 34, y: 671, text: clientName(client), size: 15.5, bold: true, color: COLORS.ink })
+  let y = 651
+  if (document) { content += textCommand({ x: 34, y, text: `${documentLabel(document)} ${document}`, size: 8.8, color: COLORS.muted }); y -= 18 }
+  if (address) { content += textCommand({ x: 34, y, text: safeText(address).slice(0, 56), size: 8.8, color: COLORS.muted }); y -= 18 }
+  if (contact) content += textCommand({ x: 34, y, text: safeText(contact).slice(0, 56), size: 8.8, color: COLORS.muted })
+
+  content += lineCommand({ x1: 301, y1: 602, x2: 301, y2: 700, color: COLORS.line, lineWidth: 0.8 })
+  content += textCommand({ x: 334, y: 696, text: receipt ? 'RESUMO DO RECIBO' : 'RESUMO DA FATURA', size: 7.4, bold: true, color: COLORS.blue, tracking: 0.9 })
+  content += textCommand({ x: 334, y: 663, text: 'Vencimento', size: 9.3, color: COLORS.ink })
+  content += textCommand({ x: 538, y: 663, text: dateBr(charge.vencimento), size: 10.8, bold: true, color: COLORS.ink, right: true })
+  content += textCommand({ x: 334, y: 635, text: 'Status', size: 9.3, color: COLORS.ink })
+  content += roundedRectCommand({ x: 467, y: 622, width: 77, height: 24, radius: 6, fill: style.fill })
+  content += circleCommand({ cx: 478, cy: 634, r: 3, fill: style.text })
+  content += textCommand({ x: 489, y: 630, text: status, size: 8.7, bold: false, color: style.text })
+  content += textCommand({ x: 334, y: 607, text: 'Competência', size: 9.3, color: COLORS.ink })
+  content += textCommand({ x: 538, y: 607, text: competenceBr(charge.competencia), size: 10.8, bold: true, color: COLORS.ink, right: true })
+  content += lineCommand({ x1: 34, y1: 577, x2: 544, y2: 577, color: COLORS.line, lineWidth: 0.8 })
   return content
 }
 
@@ -218,26 +244,9 @@ function statusStyle(status) {
   return { text: COLORS.amber, fill: COLORS.paleAmber }
 }
 
-function invoiceSummaryBlock({ charge, summary, receipt }) {
-  const settled = summary.balance <= 0.009
-  const status = receipt || settled ? 'Recebido' : (charge.status || 'Pendente')
-  const style = statusStyle(status)
-  let content = lineCommand({ x1: 321, y1: 598, x2: 321, y2: 684, color: COLORS.line, lineWidth: 0.8 })
-  content += textCommand({ x: 352, y: 682, text: receipt ? 'RESUMO DO RECIBO' : 'RESUMO DA FATURA', size: 7.3, bold: true, color: COLORS.blue, tracking: 0.7 })
-  content += textCommand({ x: 352, y: 651, text: 'Vencimento', size: 9, color: COLORS.ink })
-  content += textCommand({ x: 548, y: 651, text: dateBr(charge.vencimento), size: 10.5, bold: true, color: COLORS.ink, right: true })
-  content += textCommand({ x: 352, y: 624, text: 'Status', size: 9, color: COLORS.ink })
-  content += rectCommand({ x: 466, y: 612, width: 82, height: 22, fill: style.fill })
-  content += circleCommand({ cx: 477, cy: 623, r: 3, fill: style.text })
-  content += textCommand({ x: 487, y: 619, text: status, size: 8.6, bold: true, color: style.text })
-  content += textCommand({ x: 352, y: 597, text: 'Competência', size: 9, color: COLORS.ink })
-  content += textCommand({ x: 548, y: 597, text: competenceBr(charge.competencia), size: 10.5, bold: true, color: COLORS.ink, right: true })
-  return content
-}
-
 function normalizeItems(charge, summary) {
   if (Array.isArray(charge.items) && charge.items.length) {
-    return charge.items.slice(0, 4).map(item => ({
+    return charge.items.slice(0, 2).map(item => ({
       description: item.descricao || item.description || 'Serviço',
       quantity: Math.max(1, Number(item.quantidade ?? item.quantity ?? 1) || 1),
       value: Number(item.valor ?? item.value ?? 0) || 0,
@@ -252,107 +261,111 @@ function normalizeItems(charge, summary) {
 
 function servicesTable({ charge, summary }) {
   const items = normalizeItems(charge, summary)
-  let content = textCommand({ x: 42, y: 557, text: 'SERVIÇOS', size: 10.5, bold: true, color: COLORS.blue, tracking: 1.1 })
-  content += rectCommand({ x: 42, y: 514, width: 511, height: 29, fill: COLORS.table })
-  content += textCommand({ x: 55, y: 525, text: 'DESCRIÇÃO', size: 7.4, bold: true, color: COLORS.muted })
-  content += textCommand({ x: 424, y: 525, text: 'QTD.', size: 7.4, bold: true, color: COLORS.muted, right: true })
-  content += textCommand({ x: 541, y: 525, text: 'VALOR', size: 7.4, bold: true, color: COLORS.muted, right: true })
+  let content = textCommand({ x: 34, y: 545, text: 'SERVIÇOS', size: 10.8, bold: true, color: COLORS.blue, tracking: 1.25 })
+  content += roundedRectCommand({ x: 34, y: 496, width: 510, height: 34, radius: 3, fill: COLORS.table })
+  content += textCommand({ x: 47, y: 509, text: 'DESCRIÇÃO', size: 7.5, bold: true, color: COLORS.muted })
+  content += textCommand({ x: 411, y: 509, text: 'QTD.', size: 7.5, bold: true, color: COLORS.muted, right: true })
+  content += textCommand({ x: 533, y: 509, text: 'VALOR', size: 7.5, bold: true, color: COLORS.muted, right: true })
 
-  let y = 491
-  items.forEach(item => {
-    const lines = wrap(item.description, 58).slice(0, 2)
-    content += textCommand({ x: 55, y, text: lines[0], size: 9.6, color: COLORS.ink })
-    if (lines[1]) content += textCommand({ x: 55, y: y - 12, text: lines[1], size: 8.1, color: COLORS.muted })
-    content += textCommand({ x: 415, y, text: String(item.quantity), size: 9.3, color: COLORS.ink, right: true })
-    content += textCommand({ x: 541, y, text: money(item.value * item.quantity), size: 9.6, color: COLORS.ink, right: true })
-    content += lineCommand({ x1: 42, y1: y - 18, x2: 553, y2: y - 18, color: COLORS.line, lineWidth: 0.65 })
-    y -= lines[1] ? 41 : 34
+  const baselines = [468, 426]
+  const separators = [449, 407]
+  items.forEach((item, index) => {
+    const y = baselines[index]
+    const lines = wrap(item.description, 55).slice(0, 2)
+    content += textCommand({ x: 47, y, text: lines[0], size: 9.6, color: COLORS.ink })
+    if (lines[1]) content += textCommand({ x: 47, y: y - 12, text: lines[1], size: 8.1, color: COLORS.muted })
+    content += textCommand({ x: 408, y, text: String(item.quantity), size: 9.4, color: COLORS.ink, right: true })
+    content += textCommand({ x: 532, y, text: money(item.value * item.quantity), size: 9.6, color: COLORS.ink, right: true })
   })
-  return { content, nextY: y }
+  separators.forEach(y => { content += lineCommand({ x1: 34, y1: y, x2: 544, y2: y, color: COLORS.line, lineWidth: 0.65 }) })
+  return content
 }
 
-function totalsBlock({ summary, receipt, startY }) {
-  let content = ''
-  const rightX = 541
-  let y = Math.min(startY - 2, 420)
-  const rows = [['Subtotal', summary.total]]
-  if (summary.discounts > 0) rows.push(['Desconto', -summary.discounts])
-  else rows.push(['Desconto', 0])
-  if (summary.surcharges > 0) rows.push(['Acréscimo', summary.surcharges])
-  if (summary.receivedCash > 0 && !receipt) rows.push(['Recebido', -summary.receivedCash])
-
-  content += lineCommand({ x1: 318, y1: y + 14, x2: 553, y2: y + 14, color: COLORS.line, lineWidth: 0.8 })
-  rows.forEach(([label, value]) => {
-    content += textCommand({ x: 329, y, text: label, size: 8.7, color: COLORS.ink })
-    const formatted = value < 0 ? `- ${money(Math.abs(value))}` : money(value)
-    content += textCommand({ x: rightX, y, text: formatted, size: 8.8, color: COLORS.ink, right: true })
-    y -= 19
-  })
-
-  y -= 8
+function totalsBlock({ summary, receipt }) {
+  let content = lineCommand({ x1: 299, y1: 389, x2: 544, y2: 389, color: COLORS.line, lineWidth: 0.8 })
+  content += textCommand({ x: 310, y: 365, text: 'Subtotal', size: 9, color: COLORS.ink })
+  content += textCommand({ x: 532, y: 365, text: money(summary.total), size: 9, color: COLORS.ink, right: true })
+  content += textCommand({ x: 310, y: 343, text: 'Desconto', size: 9, color: COLORS.ink })
+  content += textCommand({ x: 532, y: 343, text: money(summary.discounts), size: 9, color: COLORS.ink, right: true })
+  if (summary.surcharges > 0) {
+    content += textCommand({ x: 310, y: 323, text: 'Acréscimo', size: 8.4, color: COLORS.ink })
+    content += textCommand({ x: 532, y: 323, text: money(summary.surcharges), size: 8.4, color: COLORS.ink, right: true })
+  }
   const total = receipt ? summary.receivedCash : summary.balance
-  const totalBoxY = y - 7
-  content += rectCommand({ x: 318, y: totalBoxY, width: 235, height: 32, fill: COLORS.paleBlue })
-  content += textCommand({ x: 329, y: totalBoxY + 10, text: receipt ? 'TOTAL RECEBIDO' : 'TOTAL A PAGAR', size: 10.2, bold: true, color: COLORS.blue })
-  content += textCommand({ x: rightX, y: totalBoxY + 8, text: money(total), size: 16, bold: true, color: COLORS.blue, right: true })
-  return { content, nextY: totalBoxY - 18 }
+  content += roundedRectCommand({ x: 298, y: 295, width: 246, height: 38, radius: 4, fill: COLORS.paleBlue })
+  content += textCommand({ x: 310, y: 308, text: receipt ? 'TOTAL RECEBIDO' : 'TOTAL', size: 11, bold: true, color: COLORS.blue })
+  content += textCommand({ x: 532, y: 306, text: money(total), size: 16.5, bold: true, color: COLORS.blue, right: true })
+  return content
 }
 
-function pixPaymentBlock(startY) {
-  const top = Math.min(startY - 20, 300)
-  const boxY = top - 112
-  let content = textCommand({ x: 42, y: top, text: 'PAGAMENTO', size: 10.5, bold: true, color: COLORS.blue, tracking: 1.1 })
-  content += rectCommand({ x: 42, y: boxY, width: 511, height: 94, fill: COLORS.white, stroke: COLORS.line, lineWidth: 0.8 })
+function pixLogoCommand({ cx = 76, cy = 187, size = 42 } = {}) {
+  const r = size / 2
+  const q = r * 0.34
+  let content = `${COLORS.pixTeal} rg `
+  content += `${cx} ${cy + r} m `
+  content += `${cx + q} ${cy + r} ${cx + r} ${cy + q} ${cx + r} ${cy} c `
+  content += `${cx + r} ${cy - q} ${cx + q} ${cy - r} ${cx} ${cy - r} c `
+  content += `${cx - q} ${cy - r} ${cx - r} ${cy - q} ${cx - r} ${cy} c `
+  content += `${cx - r} ${cy + q} ${cx - q} ${cy + r} ${cx} ${cy + r} c f\n`
+  content += `${COLORS.white} RG 2.2 w 1 J ${cx - 16} ${cy + 5} m ${cx - 8} ${cy + 5} ${cx - 7} ${cy - 5} ${cx} ${cy - 5} c ${cx + 7} ${cy - 5} ${cx + 8} ${cy + 5} ${cx + 16} ${cy + 5} c S\n`
+  content += `${COLORS.white} RG 2.2 w 1 J ${cx - 16} ${cy - 5} m ${cx - 8} ${cy - 5} ${cx - 7} ${cy + 5} ${cx} ${cy + 5} c ${cx + 7} ${cy + 5} ${cx + 8} ${cy - 5} ${cx + 16} ${cy - 5} c S\n`
+  return content
+}
 
-  content += textCommand({ x: 64, y: boxY + 56, text: 'PIX', size: 21, bold: true, color: COLORS.blue })
-  content += textCommand({ x: 64, y: boxY + 38, text: 'PAGAMENTO INSTANTÂNEO', size: 6.1, bold: true, color: COLORS.muted, tracking: 0.4 })
-  content += textCommand({ x: 64, y: boxY + 25, text: 'SEGURO E PRÁTICO', size: 6.1, color: COLORS.muted, tracking: 0.4 })
-  content += lineCommand({ x1: 186, y1: boxY + 16, x2: 186, y2: boxY + 78, color: COLORS.line, lineWidth: 0.8 })
+function pixPaymentBlock() {
+  let content = lineCommand({ x1: 34, y1: 278, x2: 544, y2: 278, color: COLORS.line, lineWidth: 0.8 })
+  content += textCommand({ x: 34, y: 252, text: 'PAGAMENTO', size: 10.8, bold: true, color: COLORS.blue, tracking: 1.25 })
+  content += roundedRectCommand({ x: 34, y: 137, width: 510, height: 102, radius: 6, fill: COLORS.white, stroke: COLORS.line, lineWidth: 0.8 })
 
-  const labelX = 210
-  const valueX = 307
+  content += pixLogoCommand({ cx: 74, cy: 184, size: 38 })
+  content += textCommand({ x: 101, y: 174, text: 'pix', size: 27, color: COLORS.pixGray })
+  content += textCommand({ x: 102, y: 157, text: 'PAGAMENTO INSTANTÂNEO', size: 4.7, bold: true, color: COLORS.muted, tracking: 0.2 })
+  content += textCommand({ x: 102, y: 148, text: 'SEGURO E PRÁTICO', size: 4.5, color: COLORS.muted, tracking: 0.2 })
+  content += lineCommand({ x1: 187, y1: 151, x2: 187, y2: 224, color: COLORS.line, lineWidth: 0.8 })
+
   const rows = [
-    ['Forma de pagamento', 'PIX'],
-    ['Chave Email', PIX.key],
-    ['Nome', PIX.name],
-    ['Banco', PIX.bank],
+    ['Forma de pagamento:', 'PIX'],
+    ['Chave Email:', PIX.key],
+    ['Nome:', PIX.name],
+    ['Banco:', PIX.bank],
   ]
-  let y = boxY + 68
+  const baselines = [211, 193, 175, 157]
   rows.forEach(([label, value], index) => {
-    content += textCommand({ x: labelX, y, text: `${label}:`, size: index === 1 ? 7.4 : 8, color: COLORS.muted })
-    content += textCommand({ x: valueX, y, text: value, size: index === 1 ? 7.4 : 8.2, bold: true, color: COLORS.ink })
-    y -= 17
+    content += textCommand({ x: 214, y: baselines[index], text: label, size: 8, color: COLORS.muted })
+    content += textCommand({ x: 310, y: baselines[index], text: value, size: index === 1 ? 7.4 : 8.2, bold: true, color: COLORS.ink })
   })
-  return { content, nextY: boxY - 12 }
+  return content
 }
 
-function receiptPaymentBlock({ summary, startY }) {
-  const top = Math.min(startY - 20, 300)
-  const boxY = Math.max(125, top - 112)
-  let content = textCommand({ x: 42, y: top, text: 'BAIXAS REGISTRADAS', size: 9.3, bold: true, color: COLORS.blue, tracking: 0.8 })
-  content += rectCommand({ x: 42, y: boxY, width: 511, height: 94, fill: COLORS.soft, stroke: COLORS.line, lineWidth: 0.7 })
-  let y = boxY + 68
+function receiptPaymentBlock(summary) {
+  let content = lineCommand({ x1: 34, y1: 278, x2: 544, y2: 278, color: COLORS.line, lineWidth: 0.8 })
+  content += textCommand({ x: 34, y: 252, text: 'RECEBIMENTOS', size: 10.8, bold: true, color: COLORS.blue, tracking: 1.25 })
+  content += roundedRectCommand({ x: 34, y: 137, width: 510, height: 102, radius: 6, fill: COLORS.white, stroke: COLORS.line, lineWidth: 0.8 })
+  let y = 211
   if (!summary.payments.length) {
-    content += textCommand({ x: 56, y, text: 'Nenhuma baixa detalhada disponível.', size: 8.2, color: COLORS.muted })
+    content += textCommand({ x: 52, y, text: 'Nenhuma baixa detalhada disponível.', size: 8.4, color: COLORS.muted })
   } else {
     summary.payments.slice(-4).forEach(payment => {
       const details = [`${dateBr(payment.data)}`, money(payment.valorRecebido)]
       if (payment.desconto) details.push(`desconto ${money(payment.desconto)}`)
       if (payment.acrescimo) details.push(`acréscimo ${money(payment.acrescimo)}`)
-      content += textCommand({ x: 56, y, text: details.join('  ·  '), size: 7.8, color: COLORS.ink })
-      y -= 17
+      content += textCommand({ x: 52, y, text: details.join(' - '), size: 8.2, color: COLORS.ink })
+      y -= 18
     })
   }
-  return { content, nextY: boxY - 12 }
+  return content
 }
 
-function footerBlock({ office, number, receipt }) {
-  let content = lineCommand({ x1: 42, y1: 86, x2: 553, y2: 86, color: COLORS.line, lineWidth: 0.8 })
-  content += textCommand({ x: 42, y: 66, text: 'Documento gerado eletronicamente. Em caso de dúvidas, entre em contato.', size: 7.1, color: COLORS.muted })
-  content += textCommand({ x: 42, y: 50, text: officeName(office), size: 8.3, bold: true, color: COLORS.ink })
-  content += textCommand({ x: 553, y: 50, text: number, size: 7.3, color: COLORS.muted, right: true })
-  if (!receipt) content += textCommand({ x: 42, y: 34, text: 'Esta fatura é um documento comercial de cobrança e não substitui nota fiscal.', size: 6.7, color: COLORS.muted })
-  else content += textCommand({ x: 42, y: 34, text: 'Recibo emitido pelo controle financeiro interno.', size: 6.7, color: COLORS.muted })
+function footerBlock({ office }) {
+  let content = lineCommand({ x1: 34, y1: 106, x2: 544, y2: 106, color: COLORS.line, lineWidth: 0.8 })
+  content += textCommand({ x: 34, y: 73, text: 'Documento gerado eletronicamente. Em caso de dúvidas, entre em contato.', size: 7.2, color: COLORS.muted })
+  content += textCommand({ x: 34, y: 56, text: officeName(office), size: 8.4, bold: true, color: COLORS.ink })
+
+  content += lineCommand({ x1: 433, y1: 33, x2: 433, y2: 88, color: COLORS.line, lineWidth: 0.8 })
+  content += lineCommand({ x1: 470, y1: 77, x2: 500, y2: 77, color: COLORS.blue, lineWidth: 2 })
+  content += textCommand({ x: 470, y: 63, text: 'CONTABILIDADE', size: 6.6, color: COLORS.muted, tracking: 1.25 })
+  content += textCommand({ x: 470, y: 50, text: 'PARA UM FUTURO', size: 6.6, color: COLORS.muted, tracking: 1.25 })
+  content += textCommand({ x: 470, y: 37, text: 'MAIS FORTE', size: 6.6, color: COLORS.muted, tracking: 1.25 })
   return content
 }
 
@@ -367,20 +380,11 @@ export function buildFinanceDocumentBytes({ type = 'invoice', charge = {}, clien
 
   let content = `${COLORS.white} rg 0 0 595 842 re f\n`
   content += brandHeader({ title, number, issuedAt, competence: charge.competencia })
-  content += clientBlock(client, receipt)
-  content += invoiceSummaryBlock({ charge, summary, receipt })
-  content += lineCommand({ x1: 42, y1: 580, x2: 553, y2: 580, color: COLORS.line, lineWidth: 0.75 })
-
-  const services = servicesTable({ charge, summary })
-  content += services.content
-  const totals = totalsBlock({ summary, receipt, startY: services.nextY })
-  content += totals.content
-
-  const payment = receipt
-    ? receiptPaymentBlock({ summary, startY: totals.nextY })
-    : pixPaymentBlock(totals.nextY)
-  content += payment.content
-  content += footerBlock({ office, number, receipt })
+  content += clientAndSummary({ client, charge, summary, receipt })
+  content += servicesTable({ charge, summary })
+  content += totalsBlock({ summary, receipt })
+  content += receipt ? receiptPaymentBlock(summary) : pixPaymentBlock()
+  content += footerBlock({ office })
 
   const stream = latin1Bytes(content)
   const objects = [
