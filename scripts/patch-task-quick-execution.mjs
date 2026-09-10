@@ -28,7 +28,7 @@ export function applyTaskQuickExecutionPatch(root) {
     <div className="occ-work-main">
       <div className="occ-work-tags"><LevelBadge level={item.level} /><span className={'occ-kind type-' + item.type}>{item.kindLabel || (item.type === 'finance' ? 'Financeiro' : item.type === 'partner' ? 'Parceiro' : 'Item')}</span>{item.priority && item.priority !== 'Normal' ? <span className="occ-priority">{item.priority}</span> : null}</div>
       <strong>{item.title}</strong>
-      <small>{item.client || 'Escritório'}{item.subtitle && !String(item.subtitle).startsWith(String(item.client || '')) ? ' · ' + item.subtitle : ''}</small>
+      <small>{workItemSummary(item)}</small>
       <p>{deadlineText(item, day)}</p>
       {task ? <TaskQuickExecution task={task} tasks={tasks} update={update} onOpen={() => onOpen(item)} onNotice={onNotice} onCompleted={onCompleted} compact={compact} /> : null}
     </div>

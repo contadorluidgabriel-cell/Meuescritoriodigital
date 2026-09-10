@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Icon } from './ui/SaasUI.jsx'
+import { workItemSummary } from '../lib/workBoardView.js'
 import { today } from '../lib/storage.js'
 import {
   addDays,
@@ -43,7 +44,7 @@ function WorkCard({ item, day, onOpen, onPlanTomorrow, onClearPlan, compact = fa
     <div className="occ-work-main">
       <div className="occ-work-tags"><LevelBadge level={item.level} /><span className={`occ-kind type-${item.type}`}>{item.kindLabel || (item.type === 'finance' ? 'Financeiro' : item.type === 'partner' ? 'Parceiro' : 'Item')}</span>{item.priority && item.priority !== 'Normal' ? <span className="occ-priority">{item.priority}</span> : null}</div>
       <strong>{item.title}</strong>
-      <small>{item.client || 'Escritório'}{item.subtitle && !String(item.subtitle).startsWith(String(item.client || '')) ? ` · ${item.subtitle}` : ''}</small>
+      <small>{workItemSummary(item)}</small>
       <p>{deadlineText(item, day)}</p>
     </div>
     <div className="occ-work-actions">
@@ -115,10 +116,10 @@ export default function OperationalCommandCenter({ office, update, onOpenItem, o
 
   return <div className="occ-shell">
     {notice ? <div className="occ-toast">{notice}</div> : null}
-    <header className="occ-hero">
+    {tab !== 'today' ? <header className="occ-hero">
       <div><span className="occ-eyebrow">Centro de comando</span><h1>Meu Dia</h1><p>{heroText}</p></div>
       <div className="occ-hero-actions"><button type="button" onClick={() => onNavigate('tarefas')}><Icon name="tasks" size={17} /> Nova/abrir tarefa</button><button type="button" className="secondary" onClick={() => onNavigate('calendario')}><Icon name="calendar" size={17} /> Calendário</button></div>
-    </header>
+    </header> : null}
 
     <section className="occ-kpis" aria-label="Resumo operacional">
       <button type="button" className={myDay.critical.length ? 'critical' : ''} onClick={() => { setTab('pending'); setPendingFilter('critical') }}><span>Críticos</span><strong>{myDay.critical.length}</strong><small>exigem ação</small></button>

@@ -250,8 +250,8 @@ function patchHorizonBoard(root) {
   )
   source = replaceRequired(
     source,
-    "<button type=\"button\" className={view.overdue.length ? 'danger' : ''} onClick={() => setFilter('all')}><span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small></button>",
-    "<button type=\"button\" className={view.overdue.length ? 'danger' : ''} onClick={() => setFilter('all')}><span>Em atraso</span><strong>{view.overdue.length}</strong><small>ação, etapa ou prazo vencido</small></button>",
+    "<span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small>",
+    "<span>Em atraso</span><strong>{view.overdue.length}</strong><small>ação, etapa ou prazo vencido</small>",
     'horizon overdue label',
     path,
   )

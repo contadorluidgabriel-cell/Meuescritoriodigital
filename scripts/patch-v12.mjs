@@ -19,7 +19,7 @@ function patchCommandCenter(root) {
     source = replaceOrFail(
       source,
       '    <section className="occ-kpis" aria-label="Resumo operacional">',
-      '    <WorkHorizonBoard office={office} update={update} onOpenItem={onOpenItem} onNavigate={onNavigate} day={day} />\n\n    <section className="occ-kpis" aria-label="Resumo operacional">',
+      '    {tab === \'today\' ? <WorkHorizonBoard office={office} update={update} onOpenItem={onOpenItem} onNavigate={onNavigate} day={day} /> : null}\n\n    <section className="occ-kpis" aria-label="Resumo operacional">',
       'work horizon board',
     )
   }

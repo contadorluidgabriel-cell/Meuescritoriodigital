@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { addTaskProgress, completeTask, taskExecutionState, toggleSubtask } from '../lib/taskExecution.js'
+import { Icon } from './ui/SaasUI.jsx'
 import './task-quick-execution.css'
 
 const taskTitle = task => task?.titulo || 'Tarefa'
@@ -53,7 +54,7 @@ export default function TaskQuickExecution({ task, tasks = [], clients = [], upd
 
     {state.hasSubtasks ? <div className="task-quick-subtasks">
       <button type="button" className="task-quick-expand" onClick={() => setExpanded(value => !value)} aria-expanded={expanded}>
-        <span>{expanded ? '▾' : '▸'} Etapas</span><strong>{state.subtaskDone}/{state.subtaskTotal}</strong>
+        <span><Icon name="chevronRight" size={14} className={expanded ? 'is-expanded' : ''} />Etapas</span><strong>{state.subtaskDone}/{state.subtaskTotal}</strong>
       </button>
       {expanded ? <div className="task-quick-checklist">
         {state.subtasks.map((subtask, index) => <label className={subtask.concluida ? 'done' : ''} key={`${task.id}-sub-${index}`}>
@@ -64,7 +65,7 @@ export default function TaskQuickExecution({ task, tasks = [], clients = [], upd
     </div> : null}
 
     <div className="task-quick-actions">
-      {!state.done ? <button type="button" className="task-quick-complete" onClick={finish} disabled={!state.canComplete} title={state.blocker || 'Concluir tarefa'}>✓ Concluir</button> : <span className="task-quick-done">✓ Concluída</span>}
+      {!state.done ? <button type="button" className="task-quick-complete" onClick={finish} disabled={!state.canComplete} title={state.blocker || 'Concluir tarefa'}><Icon name="check" size={15} />Concluir</button> : <span className="task-quick-done"><Icon name="check" size={15} />Concluída</span>}
       <button type="button" className="task-quick-open" onClick={() => onOpen?.(task)}>Abrir</button>
     </div>
     {!state.done && completionHint ? <small className="task-quick-hint">Para concluir: {completionHint}.</small> : null}
