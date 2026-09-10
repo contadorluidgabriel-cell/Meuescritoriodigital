@@ -4,6 +4,7 @@ const clientName = client => client?.razao || client?.nome || client?.fantasia |
 
 export function collectCalendarEvents(office) {
   const clients = new Map((office.clients || []).map(client => [String(client.id), clientName(client)]))
+  const linkedCompanies = new Map((office.linkedCompanies || []).map(company => [String(company.id), clientName(company)]))
   const events = []
 
   ;(office.tasks || []).forEach(task => {
@@ -39,14 +40,17 @@ export function collectCalendarEvents(office) {
   ;(office.obligations || []).forEach(obligation => {
     ;(obligation.clientes || []).forEach(link => {
       if (!link.vencimento) return
-      const linkClient = clients.get(String(link.clienteId)) || 'Cliente'
+      const id = String(link.clienteId || '')
+      const entityType = link.entityType === 'linkedCompany' || link.entidadeTipo === 'terceirizado' || (!clients.has(id) && linkedCompanies.has(id)) ? 'linkedCompany' : 'client'
+      const linkClient = entityType === 'linkedCompany' ? linkedCompanies.get(id) || 'CNPJ terceirizado' : clients.get(id) || 'Cliente'
       events.push({
-        key: `obligation|${obligation.id}|${link.clienteId}`,
+        key: `obligation|${obligation.id}|${id}`,
         date: link.vencimento,
         label: `Obrigação · ${obligation.nome || 'Sem nome'} · ${linkClient}`,
         type: 'obligation',
         id: String(obligation.id),
-        clientId: String(link.clienteId || ''),
+        clientId: id,
+        entityType,
         client: linkClient,
         done: isDone(link.status) || link.status === 'Não se aplica',
         status: link.status || 'Pendente',
