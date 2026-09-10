@@ -31,4 +31,20 @@ test('receipt PDF includes received charge without storing file data', () => {
   })
   assert.equal(String.fromCharCode(...bytes.slice(0, 5)), '%PDF-')
   assert.ok(bytes.length > 900)
+  const pdf = Buffer.from(bytes).toString('latin1')
+  assert.match(pdf, /\(RECEBIDO DE\)/)
+  assert.match(pdf, /\(Recebido em 15\/08\/2026\)/)
+})
+
+test('invoice highlights the outstanding balance and payment deadline', () => {
+  const bytes = buildFinanceDocumentBytes({
+    type: 'invoice',
+    charge: { id: 'fin-balance', descricao: 'Honorários mensais', valor: 1250, vencimento: '2026-09-10', faturaEmitidaEm: '2026-09-01', pagamentos: [{ id: 'p1', data: '2026-09-02', valorRecebido: 250 }] },
+    client: { razao: 'Empresa Exemplo' }, office: {},
+  })
+  const pdf = Buffer.from(bytes).toString('latin1')
+  assert.match(pdf, /\(VALOR A PAGAR\)/)
+  assert.match(pdf, /\(R\$ 1\.000,00\)/)
+  assert.match(pdf, /\(Vencimento 10\/09\/2026\)/)
+  assert.match(pdf, /\(INFORMAÇÃO IMPORTANTE\)/)
 })
