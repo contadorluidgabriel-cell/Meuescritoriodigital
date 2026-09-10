@@ -17,6 +17,7 @@ import './mobile-nav-fix.css'
 import './client-mobile-fix.css'
 import './third-party-work.css'
 import './client-outsourcing.css'
+import './my-day-premium.css'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
