@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { today, uid } from '../lib/storage.js'
 import { nextObligationCompetence, nextObligationDue, obligationProgress, obligationStatuses } from '../lib/obligationUtils.js'
 import { formatCnpj, thirdPartyError } from '../lib/thirdPartyWork.js'
+import { clientPartnerIds } from '../lib/sharedWork.js'
+import { workResponsibilityFields } from '../lib/sharedResponsibility.js'
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 const entityDocument = entity => entity?.documento || entity?.cnpj || ''
 const formatDate = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem vencimento'
 const linkType = link => link?.entityType === 'linkedCompany' || link?.entidadeTipo === 'terceirizado' ? 'linkedCompany' : 'client'
-const emptyLink = (entityId, entityType = 'client') => ({ clienteId: String(entityId), entityType, status: 'Pendente', vencimento: '', observacao: '', recibo: '', concluidoEm: '' })
+const emptyLink = (entityId, entityType = 'client') => ({ clienteId: String(entityId), entityType, status: 'Pendente', vencimento: '', observacao: '', recibo: '', concluidoEm: '', compartilhadoResponsavel: '', compartilhadoParceiroId: '' })
 
 function Modal({ title, subtitle, onClose, children, wide = false }) {
   return <div className="obligation-modal" role="dialog" aria-modal="true" aria-label={title} onMouseDown={event => { if (event.target === event.currentTarget) onClose() }}><div className={`obligation-modal-card ${wide ? 'wide' : ''}`}><header><div><h2>{title}</h2><p>{subtitle}</p></div><button type="button" onClick={onClose} aria-label="Fechar">×</button></header>{children}</div></div>
@@ -22,7 +24,7 @@ function Progress({ value }) {
   return <div className="obligation-progress"><div><i style={{ width: `${value}%` }} /></div><span>{value}%</span></div>
 }
 
-function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, focusClientId, onClose, onSave }) {
+function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, partners, focusClientId, onClose, onSave }) {
   const [rows, setRows] = useState(() => structuredClone(obligation.clientes || []))
   const originalByClient = useMemo(() => new Map((obligation.clientes || []).map(link => [String(link.clienteId), link])), [obligation.clientes])
 
@@ -46,6 +48,9 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, focu
     const isLinked = linkType(row) === 'linkedCompany' || (!clientsById.has(String(row.clienteId)) && linkedCompaniesById.has(String(row.clienteId)))
     const entity = isLinked ? linkedCompaniesById.get(String(row.clienteId)) : clientsById.get(String(row.clienteId))
     const responsible = isLinked ? clientsById.get(String(entity?.clientId || '')) : null
+    const sharedResponsibility = !isLinked ? workResponsibilityFields(row, entity, obligation.categoria) : { compartilhadoResponsavel: '', compartilhadoParceiroId: '' }
+    const sharedPartnerIds = !isLinked ? clientPartnerIds(entity) : []
+    const sharedPartners = sharedPartnerIds.map(id => (partners || []).find(partner => String(partner.id) === id)).filter(Boolean)
     return <article className={String(row.clienteId) === String(focusClientId) ? 'focused' : ''} key={`${isLinked ? 'linked' : 'client'}-${row.clienteId}`}>
       <header><div><b>{clientName(entity)}</b>{isLinked ? <em>Terceirizado</em> : entity?.status === 'Inativo' ? <em>Inativo</em> : null}<small>{entityDocument(entity) || 'Sem documento'}{isLinked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></div><span className={`obligation-status status-${normalize(row.status).replaceAll(' ', '-')}`}>{row.status}</span></header>
       <div className="obligation-client-fields">
@@ -53,6 +58,7 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, focu
         <Field label="Status"><select value={row.status || 'Pendente'} onChange={event => changeRow(row.clienteId, { status: event.target.value })}>{obligationStatuses.map(status => <option key={status}>{status}</option>)}</select></Field>
         <Field label="Recibo / protocolo"><input value={row.recibo || ''} onChange={event => changeRow(row.clienteId, { recibo: event.target.value })} placeholder="Número ou referência" /></Field>
         <Field label="Observação"><input value={row.observacao || ''} onChange={event => changeRow(row.clienteId, { observacao: event.target.value })} placeholder="Observação opcional" /></Field>
+        {!isLinked && entity?.perfilAtendimento === 'Compartilhado' ? <><Field label="Responsabilidade"><select value={sharedResponsibility.compartilhadoResponsavel || 'Escritorio'} onChange={event => { const responsavel = event.target.value; changeRow(row.clienteId, { compartilhadoResponsavel: responsavel, compartilhadoParceiroId: responsavel === 'Escritorio' ? '' : (sharedResponsibility.compartilhadoParceiroId || sharedPartnerIds[0] || '') }) }}><option value="Escritorio">Meu escritório</option><option value="Parceiro">Parceiro</option><option value="Ambos">Ambos</option></select></Field>{sharedResponsibility.compartilhadoResponsavel !== 'Escritorio' ? <Field label="Parceiro"><select value={sharedResponsibility.compartilhadoParceiroId || sharedPartnerIds[0] || ''} onChange={event => changeRow(row.clienteId, { compartilhadoParceiroId: event.target.value })}>{sharedPartners.map(partner => <option value={partner.id} key={partner.id}>{partner.nome || partner.razao || 'Parceiro'}{partner.status === 'Inativo' ? ' (inativo)' : ''}</option>)}</select></Field> : null}</> : null}
       </div>
       {row.concluidoEm ? <p>Concluída em {formatDate(row.concluidoEm)}</p> : null}
     </article>
@@ -156,7 +162,8 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     const links = ids.map(entityId => {
       const previousLink = previousLinks.get(entityId)
       const entityType = linkedCompaniesById.has(entityId) ? 'linkedCompany' : 'client'
-      return { ...structuredClone(previousLink || emptyLink(entityId, entityType)), clienteId: entityId, entityType }
+      const base = { ...structuredClone(previousLink || emptyLink(entityId, entityType)), clienteId: entityId, entityType }
+      return entityType === 'client' ? { ...base, ...workResponsibilityFields(base, clientsById.get(entityId), editing.categoria) } : base
     })
     const obligation = {
       id: editing.id || uid('obr'), tipo: editing.tipo.trim(), competencia: editing.competencia.trim(), nome: editing.nome.trim(),
@@ -196,7 +203,12 @@ export default function ObligationsReact({ office, update, sync, initialObligati
     const ids = sourceIds.map(String).filter(entityId => activeEntityIds.has(entityId))
     let baseName = source.tipo || source.nome || 'Obrigação'
     if (!source.tipo && source.competencia && baseName.endsWith(String(source.competencia))) baseName = baseName.slice(0, -String(source.competencia).length).trim()
-    const copy = { id: uid('obr'), tipo: source.tipo || '', competencia: competence, nome: `${baseName} ${competence}`.trim(), descricao: source.descricao || '', categoria: source.categoria || 'Fiscal', clientesIds: ids, clientes: ids.map(entityId => emptyLink(entityId, linkedCompaniesById.has(entityId) ? 'linkedCompany' : 'client')), observacoes: source.observacoes || '', terceirizado: Boolean(source.terceirizado), terceiroCnpj: source.terceiroCnpj || '', terceiroNome: source.terceiroNome || '' }
+    const copyLinks = ids.map(entityId => {
+      const entityType = linkedCompaniesById.has(entityId) ? 'linkedCompany' : 'client'
+      const link = emptyLink(entityId, entityType)
+      return entityType === 'client' ? { ...link, ...workResponsibilityFields(link, clientsById.get(entityId), source.categoria) } : link
+    })
+    const copy = { id: uid('obr'), tipo: source.tipo || '', competencia: competence, nome: `${baseName} ${competence}`.trim(), descricao: source.descricao || '', categoria: source.categoria || 'Fiscal', clientesIds: ids, clientes: copyLinks, observacoes: source.observacoes || '', terceirizado: Boolean(source.terceirizado), terceiroCnpj: source.terceiroCnpj || '', terceiroNome: source.terceiroNome || '' }
     update(draft => { draft.obligations = [...draft.obligations, copy] })
     setDuplicate(null)
     setNotice('Nova competência criada.')
@@ -225,7 +237,7 @@ export default function ObligationsReact({ office, update, sync, initialObligati
       <Field label="Observações" full><textarea value={editing.observacoes} onChange={event => setField('observacoes', event.target.value)} /></Field>{error ? <p className="obligation-error">{error}</p> : null}<footer className="obligation-form-actions"><button type="button" onClick={() => setEditing(null)}>Cancelar</button><button className="primary">Salvar obrigação</button></footer>
     </form></Modal> : null}
 
-    {details ? <ClientDetailsModal obligation={details.obligation} clientsById={clientsById} linkedCompaniesById={linkedCompaniesById} focusClientId={details.focusClientId} onClose={() => setDetails(null)} onSave={saveClientDetails} key={`${details.obligation.id}-${details.focusClientId}`} /> : null}
+    {details ? <ClientDetailsModal obligation={details.obligation} clientsById={clientsById} linkedCompaniesById={linkedCompaniesById} partners={office.partners || []} focusClientId={details.focusClientId} onClose={() => setDetails(null)} onSave={saveClientDetails} key={`${details.obligation.id}-${details.focusClientId}`} /> : null}
     {duplicate ? <Modal title="Criar nova competência" subtitle={`Duplicar ${duplicate.source.nome} sem copiar conclusões, vencimentos ou protocolos.`} onClose={() => setDuplicate(null)}><form className="obligation-form" onSubmit={saveDuplicate}><Field label="Nova competência / ano" full><input value={duplicate.competence} onChange={event => setDuplicate(current => ({ ...current, competence: event.target.value, error: '' }))} autoFocus /></Field><p className="obligation-duplicate-note">Somente clientes e CNPJs terceirizados ativos serão vinculados à nova competência.</p>{duplicate.error ? <p className="obligation-error">{duplicate.error}</p> : null}<footer className="obligation-form-actions"><button type="button" onClick={() => setDuplicate(null)}>Cancelar</button><button type="submit" className="primary">Criar competência</button></footer></form></Modal> : null}
     {notice ? <div className="obligation-notice" role="status">{notice}</div> : null}
   </div>
