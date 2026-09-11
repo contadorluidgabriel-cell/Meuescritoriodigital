@@ -17,12 +17,12 @@ export function applyMultiuserFinanceV2Patch(root) {
     )
   }
   if (!chrome.includes("role === 'pending'")) {
-    chrome = replaceOrFail(
-      chrome,
-      "  const role = membership.role || 'admin'\n  const permissions = membership.permissions || {}\n  if (role === 'partner') return [",
-      "  const role = membership.role || 'pending'\n  const permissions = membership.permissions || {}\n  if (role === 'pending') return [\n    { label: 'Visão geral', items: [common.myDay, common.calendar] },\n  ]\n  if (role === 'partner') return [",
-      'pending access navigation',
-    )
+    const compactAnchor = "  const role = membership.role || 'admin'\n  const permissions = membership.permissions || {}\n  if (role === 'partner') return ["
+    const spacedAnchor = "  const role = membership.role || 'admin'\n  const permissions = membership.permissions || {}\n\n  if (role === 'partner') return ["
+    const replacement = "  const role = membership.role || 'pending'\n  const permissions = membership.permissions || {}\n\n  if (role === 'pending') return [\n    { label: 'Visão geral', items: [common.myDay, common.calendar] },\n  ]\n\n  if (role === 'partner') return ["
+    if (chrome.includes(compactAnchor)) chrome = chrome.replace(compactAnchor, replacement)
+    else if (chrome.includes(spacedAnchor)) chrome = chrome.replace(spacedAnchor, replacement)
+    else throw new Error('Multiuser Finance V2 patch failed (pending access navigation)')
     chrome = chrome.replace("  const role = access?.membership?.role || 'admin'", "  const role = access?.membership?.role || 'pending'")
   }
   writeFileSync(chromePath, chrome)
