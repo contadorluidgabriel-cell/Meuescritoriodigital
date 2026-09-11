@@ -28,9 +28,10 @@ async function invokeInviteLinks(action, body = {}, authenticated = false) {
   return data
 }
 
-export const createWorkspaceInviteLink = (workspaceId, memberId) => invokeInviteLinks('create', {
+export const createWorkspaceInviteLink = (workspaceId, memberId, { replace = false } = {}) => invokeInviteLinks('create', {
   workspace_id: workspaceId,
   member_id: memberId,
+  replace: Boolean(replace),
 }, true)
 
 export const inspectWorkspaceInviteLink = token => invokeInviteLinks('inspect', { token })
