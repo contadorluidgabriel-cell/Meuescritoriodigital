@@ -38,6 +38,8 @@ export function applyFinanceCompleteIntelligencePatch(root) {
 
   const componentPath = `${root}src/components/OperationalCommandCenter.jsx`
   let component = readFileSync(componentPath, 'utf8')
+  if (component.includes('MED_INFORMATION_ARCHITECTURE_V12_2')) return
+
   if (!component.includes('metrics.financeOverdue + metrics.payableOverdue')) {
     component = replaceOrFail(
       component,

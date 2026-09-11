@@ -1,5 +1,5 @@
 const uniqueItems = items => [...new Map(items.map(item => [item.key, item])).values()]
-const matchesType = (item, type) => type === 'all' || (type === 'finance' ? ['finance', 'partner'].includes(item.type) : item.type === type)
+const matchesType = (item, type) => type === 'all' || (type === 'finance' ? ['finance', 'payable', 'partner'].includes(item.type) : item.type === type)
 
 /** Apply a status first, then a work type; keep each record in its first group. */
 export function selectWorkBoard(view, { scope = 'all', type = 'all' } = {}) {
