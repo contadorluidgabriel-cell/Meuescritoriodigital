@@ -24,12 +24,15 @@ test('Meu Dia possui somente Hoje, Pendencias e Proximos', () => {
 test('Painel do Escritorio e gerencial e nao executa conclusoes operacionais', () => {
   const source = read('src/components/Dashboard.jsx')
   assert.match(source, /MED_MANAGEMENT_DASHBOARD/)
+  assert.match(source, /buildManagementDashboard/)
+  assert.match(source, /O que merece sua atenção/)
+  assert.match(source, /Saúde por departamento/)
+  assert.match(source, /Visão gerencial/)
   assert.equal(source.includes('useGoogleTasks('), false)
   assert.equal(source.includes('function completeItems'), false)
+  assert.equal(source.includes('completeTask('), false)
   assert.equal(source.includes('appendNextRecurringTask'), false)
-  assert.match(source, /Saúde operacional/)
-  assert.match(source, /Honorários e recebimentos/)
-  assert.match(source, /Composição dos clientes/)
+  assert.equal(source.includes('TaskQuickExecution'), false)
 })
 
 test('horizonte operacional suporta modo hoje e proximos sem duplicar telas', () => {
