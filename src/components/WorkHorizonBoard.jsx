@@ -40,9 +40,18 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
   </article>
 }
 
-export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigate, day = today() }) {
+function allowedHorizonIds(mode) {
+  if (mode === 'today') return ['today']
+  if (mode === 'upcoming') return ['week', 'month']
+  return Object.keys(WORK_HORIZONS)
+}
+
+export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigate, onShowPending, day = today(), mode = 'all', embedded = false }) {
+  const allowedIds = useMemo(() => allowedHorizonIds(mode), [mode])
   const [horizon, setHorizon] = useState(() => {
     const saved = localStorage.getItem(HORIZON_KEY)
+    if (mode === 'today') return 'today'
+    if (mode === 'upcoming') return ['week', 'month'].includes(saved) ? saved : 'week'
     return WORK_HORIZONS[saved] ? saved : 'today'
   })
   const [filter, setFilter] = useState('all')
@@ -51,15 +60,18 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
   const [expandedGroups, setExpandedGroups] = useState(new Set())
   const [notice, setNotice] = useState('')
   const [undoState, setUndoState] = useState(null)
-  const view = useMemo(() => buildWorkHorizon(office, { day, horizon }), [office, day, horizon])
 
-  useEffect(() => { localStorage.setItem(HORIZON_KEY, horizon) }, [horizon])
+  useEffect(() => {
+    if (!allowedIds.includes(horizon)) setHorizon(allowedIds[0])
+  }, [allowedIds, horizon])
+  useEffect(() => { if (mode !== 'today') localStorage.setItem(HORIZON_KEY, horizon) }, [horizon, mode])
   useEffect(() => {
     if (!notice) return undefined
     const timer = setTimeout(() => { setNotice(''); setUndoState(null) }, undoState ? 6000 : 2800)
     return () => clearTimeout(timer)
   }, [notice, undoState])
 
+  const view = useMemo(() => buildWorkHorizon(office, { day, horizon }), [office, day, horizon])
   const selection = useMemo(() => selectWorkBoard(view, { scope, type: filter }), [view, scope, filter])
   const visibleGroups = selection.groups
 
@@ -70,6 +82,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
   }
 
   function chooseHorizon(value) {
+    if (!allowedIds.includes(value)) return
     setHorizon(value)
     setExpandedGroups(new Set())
   }
@@ -101,16 +114,18 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
       ? 'Planeje os próximos 7 dias e acompanhe os itens em atraso.'
       : 'Veja os próximos 30 dias e distribua melhor o trabalho.'
   const scopeLabel = { all: 'No radar', overdue: 'Em atraso', critical: 'Críticos', unscheduled: 'Sem data' }[scope]
+  const horizonOptions = allowedIds.map(id => WORK_HORIZONS[id]).filter(Boolean)
 
-  return <section className="v12-horizon-board" aria-label="Planejamento por período">
+  return <section className={`v12-horizon-board ${embedded ? 'is-embedded' : ''}`} aria-label="Planejamento por período">
     {notice ? <div className="v12-horizon-toast"><span>{notice}</span>{undoState ? <button type="button" onClick={undoCompletion}>Desfazer</button> : null}</div> : null}
-    <header className="v12-horizon-header">
-      <div className="v12-horizon-heading"><span>Central de trabalho · V12.1</span><h1>Meu Dia</h1><p>{horizonText}</p></div>
-      <nav className="v12-horizon-switch" aria-label="Período de planejamento">
-        {Object.values(WORK_HORIZONS).map(option => <button type="button" aria-pressed={horizon === option.id} aria-controls={resultsId} className={horizon === option.id ? 'active' : ''} onClick={() => chooseHorizon(option.id)} key={option.id}><strong>{option.shortLabel}</strong></button>)}
-      </nav>
-      <div className="v12-horizon-actions"><button type="button" onClick={() => onNavigate?.('tarefas')}><Icon name="tasks" size={18} />Tarefas</button><button type="button" className="secondary" onClick={() => onNavigate?.('calendario')}><Icon name="calendar" size={18} />Calendário</button></div>
-    </header>
+
+    {!embedded || horizonOptions.length > 1 ? <header className="v12-horizon-header">
+      {!embedded ? <div className="v12-horizon-heading"><span>Central de trabalho · V12.1</span><h1>{mode === 'upcoming' ? 'Próximos' : 'Meu Dia'}</h1><p>{horizonText}</p></div> : <div className="v12-horizon-heading"><span>Planejamento</span><h2>Próximos prazos</h2><p>{horizonText}</p></div>}
+      {horizonOptions.length > 1 ? <nav className="v12-horizon-switch" aria-label="Período de planejamento">
+        {horizonOptions.map(option => <button type="button" aria-pressed={horizon === option.id} aria-controls={resultsId} className={horizon === option.id ? 'active' : ''} onClick={() => chooseHorizon(option.id)} key={option.id}><strong>{option.shortLabel}</strong></button>)}
+      </nav> : null}
+      {!embedded ? <div className="v12-horizon-actions"><button type="button" onClick={() => onNavigate?.('tarefas')}><Icon name="tasks" size={18} />Tarefas</button><button type="button" className="secondary" onClick={() => onNavigate?.('calendario')}><Icon name="calendar" size={18} />Calendário</button></div> : null}
+    </header> : null}
 
     <div className="v12-horizon-kpis">
       <button type="button" aria-pressed={scope === 'all'} aria-controls={resultsId} className={scope === 'all' ? 'active' : ''} onClick={() => chooseScope('all')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="layers" size={22} /></i><span>No radar</span><strong>{view.total}</strong><small>No período e em atraso</small></button>
@@ -141,6 +156,6 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
       }) : <div className="v12-horizon-empty"><span><Icon name="check" size={24} /></span><strong>Nenhum item neste filtro.</strong><small>{scope === 'unscheduled' ? 'Os registros deste tipo estão com data definida.' : `Não há itens nessa seleção para ${view.label.toLowerCase()}.`}</small>{scope !== 'all' || filter !== 'all' ? <button type="button" onClick={() => chooseScope('all')}>Ver todos</button> : null}</div>}
     </div>
 
-    {scope === 'unscheduled' && selection.items.length ? <footer className="v12-unscheduled"><div><strong>Defina as próximas datas</strong><span>Abra um registro para planejar quando ele deve ser feito.</span></div><button type="button" onClick={() => onNavigate?.('pendencias')}>Revisar pendências</button></footer> : null}
+    {scope === 'unscheduled' && selection.items.length ? <footer className="v12-unscheduled"><div><strong>Defina as próximas datas</strong><span>Abra um registro para planejar quando ele deve ser feito.</span></div><button type="button" onClick={() => onShowPending ? onShowPending() : onNavigate?.('pendencias')}>Revisar pendências</button></footer> : null}
   </section>
 }
