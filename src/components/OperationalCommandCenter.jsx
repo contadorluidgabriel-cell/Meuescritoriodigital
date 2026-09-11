@@ -5,6 +5,7 @@ import { today } from '../lib/storage.js'
 import { addDays, collectCommandCenterItems, replanTask } from '../lib/operationalIntelligence.js'
 import WorkHorizonBoard from './WorkHorizonBoard.jsx'
 
+// MED_INFORMATION_ARCHITECTURE_V12_2
 const tabs = [
   ['today', 'Hoje'],
   ['pending', 'Pendências'],
@@ -29,9 +30,10 @@ function LevelBadge({ level }) {
 }
 
 function WorkCard({ item, day, onOpen, onPlanTomorrow, onClearPlan }) {
+  const kind = item.kindLabel || (item.type === 'finance' ? 'Financeiro' : item.type === 'payable' ? 'Conta a pagar' : item.type === 'partner' ? 'Parceiro' : 'Item')
   return <article className={`occ-work-card level-${item.level}`}>
     <div className="occ-work-main">
-      <div className="occ-work-tags"><LevelBadge level={item.level} /><span className={`occ-kind type-${item.type}`}>{item.kindLabel || (item.type === 'finance' ? 'Financeiro' : item.type === 'partner' ? 'Parceiro' : 'Item')}</span>{item.priority && item.priority !== 'Normal' ? <span className="occ-priority">{item.priority}</span> : null}</div>
+      <div className="occ-work-tags"><LevelBadge level={item.level} /><span className={`occ-kind type-${item.type}`}>{kind}</span>{item.priority && item.priority !== 'Normal' ? <span className="occ-priority">{item.priority}</span> : null}</div>
       <strong>{item.title}</strong>
       <small>{workItemSummary(item)}</small>
       <p>{deadlineText(item, day)}</p>
@@ -65,14 +67,14 @@ export default function OperationalCommandCenter({ office, update, onOpenItem, o
     critical: commandItems.filter(item => item.level === 'critical').length,
     overdue: commandItems.filter(item => item.due && item.due < day).length,
     waiting: commandItems.filter(item => String(item.status || '').toLowerCase().includes('aguardando')).length,
-    finance: commandItems.filter(item => item.type === 'finance' || item.type === 'partner').length,
+    finance: commandItems.filter(item => ['finance', 'payable', 'partner'].includes(item.type)).length,
   }), [commandItems, day])
 
   const filteredPending = useMemo(() => commandItems.filter(item => {
     if (pendingFilter === 'critical') return item.level === 'critical'
     if (pendingFilter === 'overdue') return Boolean(item.due && item.due < day)
     if (pendingFilter === 'waiting') return String(item.status || '').toLowerCase().includes('aguardando')
-    if (pendingFilter === 'finance') return item.type === 'finance' || item.type === 'partner'
+    if (pendingFilter === 'finance') return ['finance', 'payable', 'partner'].includes(item.type)
     return true
   }), [commandItems, day, pendingFilter])
 
@@ -113,7 +115,7 @@ export default function OperationalCommandCenter({ office, update, onOpenItem, o
         <button type="button" className={counts.critical ? 'critical' : ''} onClick={() => setPendingFilter('critical')}><span>Críticos</span><strong>{counts.critical}</strong><small>exigem ação</small></button>
         <button type="button" className={counts.overdue ? 'warning' : ''} onClick={() => setPendingFilter('overdue')}><span>Atrasados</span><strong>{counts.overdue}</strong><small>prazo vencido</small></button>
         <button type="button" onClick={() => setPendingFilter('waiting')}><span>Aguardando cliente</span><strong>{counts.waiting}</strong><small>dependem de retorno</small></button>
-        <button type="button" onClick={() => setPendingFilter('finance')}><span>Financeiro</span><strong>{counts.finance}</strong><small>itens em atenção</small></button>
+        <button type="button" onClick={() => setPendingFilter('finance')}><span>Financeiro</span><strong>{counts.finance}</strong><small>receber, pagar e parceiros</small></button>
       </div>
       <div className="occ-filter-row">
         {[['critical', 'Críticos'], ['overdue', 'Atrasados'], ['waiting', 'Aguardando cliente'], ['finance', 'Financeiro'], ['all', 'Todos']].map(([id, label]) => <button type="button" className={pendingFilter === id ? 'active' : ''} onClick={() => setPendingFilter(id)} key={id}>{label}</button>)}
