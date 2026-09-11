@@ -15,7 +15,7 @@ function replaceBlock(source, startMarker, endMarker, replacement, label) {
 export function applyTaskQuickExecutionPatch(root) {
   const commandPath = `${root}src/components/OperationalCommandCenter.jsx`
   let command = readFileSync(commandPath, 'utf8')
-  if (!command.includes("TaskQuickExecution from './TaskQuickExecution.jsx'")) {
+  if (!command.includes('MED_INFORMATION_ARCHITECTURE_V12_2') && !command.includes("TaskQuickExecution from './TaskQuickExecution.jsx'")) {
     command = replaceOrFail(command,
       "} from '../lib/operationalIntelligence.js'\n",
       "} from '../lib/operationalIntelligence.js'\nimport TaskQuickExecution from './TaskQuickExecution.jsx'\nimport { undoTaskCompletion } from '../lib/taskExecution.js'\n",
