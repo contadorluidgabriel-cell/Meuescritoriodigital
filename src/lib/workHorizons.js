@@ -90,7 +90,7 @@ export function buildWorkHorizon(office = {}, { day, horizon = 'today' } = {}) {
     task: items.filter(item => item.type === 'task').length,
     process: items.filter(item => item.type === 'process').length,
     obligation: items.filter(item => item.type === 'obligation').length,
-    finance: items.filter(item => item.type === 'finance' || item.type === 'partner').length,
+    finance: items.filter(item => ['finance', 'payable', 'partner'].includes(item.type)).length,
   }
   const groupCounts = periodGroups.map(group => group.items.length)
   const maxLoad = groupCounts.length ? Math.max(...groupCounts) : 0
