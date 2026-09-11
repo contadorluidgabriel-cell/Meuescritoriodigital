@@ -7,12 +7,13 @@ const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8'
 test('gerar outro link de equipe nao invalida convites anteriores por padrao', () => {
   const client = read('src/lib/inviteLinks.js')
   const edge = read('supabase/functions/office-invite-links/index.ts')
+  const destructiveDelete = "await service.from('office_invite_links').delete().eq('member_id', member.id).is('used_at', null)"
 
   assert.match(client, /\{ replace = false \}/)
   assert.match(client, /replace: Boolean\(replace\)/)
   assert.match(edge, /const replace = body\.replace === true/)
   assert.match(edge, /if \(replace\) await service\.from\('office_invite_links'\)\.delete\(\)\.eq\('member_id', member\.id\)\.is\('used_at', null\)/)
-  assert.doesNotMatch(edge, /await service\.from\('office_invite_links'\)\.delete\(\)\.eq\('member_id', member\.id\)\.is\('used_at', null\)\n\s*const token/)
+  assert.equal(edge.split(destructiveDelete).length - 1, 1)
 })
 
 test('equipe diferencia gerar outro link de substituir links', () => {
