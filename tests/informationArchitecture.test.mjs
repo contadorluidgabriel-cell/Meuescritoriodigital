@@ -35,6 +35,22 @@ test('Painel do Escritorio e gerencial e nao executa conclusoes operacionais', (
   assert.equal(source.includes('TaskQuickExecution'), false)
 })
 
+test('Painel executivo usa hierarquia visual sem multiplicar cards aninhados', () => {
+  const source = read('src/components/Dashboard.jsx')
+  const css = read('src/management-dashboard.css')
+  assert.match(source, /mgmt-focus-grid/)
+  assert.match(source, /mgmt-finance-result/)
+  assert.match(source, /mgmt-aging-track/)
+  assert.match(source, /mgmt-health-track/)
+  assert.match(source, /pontos vs\. mês anterior/)
+  assert.equal(source.includes('p.p.'), false)
+  assert.match(css, /\.mgmt-focus-grid/)
+  assert.match(css, /grid-template-columns:minmax\(0,1\.6fr\)/)
+  assert.match(css, /\.mgmt-finance-result/)
+  assert.match(css, /\.mgmt-aging-track/)
+  assert.match(css, /\.mgmt-health-track/)
+})
+
 test('horizonte operacional suporta modo hoje e proximos sem duplicar telas', () => {
   const source = read('src/components/WorkHorizonBoard.jsx')
   assert.match(source, /mode === 'today'/)
