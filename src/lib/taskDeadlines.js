@@ -1,5 +1,7 @@
 import { isDone } from './storage.js'
-import { addDays, daysBetween } from './operationalIntelligence.js'
+import { daysBetween } from './operationalIntelligence.js'
+import { deadlineMatchesScope } from './deadlineUtils.js'
+import { normalizeText } from './textUtils.js'
 
 export const TASK_DEADLINE_FILTERS = [
   ['all', 'Todas'],
@@ -11,32 +13,21 @@ export const TASK_DEADLINE_FILTERS = [
   ['waiting', 'Aguardando cliente'],
 ]
 
-const normalize = value => String(value || '')
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .trim()
-
 const dueDate = task => String(task?.prazo || '')
 const plannedDate = task => String(task?.planejadoPara || '')
 
 export function isWaitingClient(task = {}) {
-  return normalize(task.status) === 'aguardando cliente'
+  return normalizeText(task.status) === 'aguardando cliente'
 }
 
 export function taskMatchesDeadline(task = {}, scope = 'all', day) {
-  if (isDone(task.status)) return false
-  const due = dueDate(task)
-  if (scope === 'all') return true
-  if (scope === 'waiting') return isWaitingClient(task)
-  if (!due) return false
-
-  if (scope === 'overdue') return due < day
-  if (scope === 'today') return due === day
-  if (scope === 'tomorrow') return due === addDays(day, 1)
-  if (scope === 'week') return due >= day && due <= addDays(day, 6)
-  if (scope === 'month') return due >= day && due <= addDays(day, 29)
-  return true
+  return deadlineMatchesScope({
+    due: dueDate(task),
+    scope,
+    day,
+    waiting: isWaitingClient(task),
+    completed: isDone(task.status),
+  })
 }
 
 function matchesContext(task, { clientId = '', responsible = '', department = '' } = {}) {
@@ -47,7 +38,7 @@ function matchesContext(task, { clientId = '', responsible = '', department = ''
 }
 
 function priorityWeight(value) {
-  const priority = normalize(value)
+  const priority = normalizeText(value)
   if (priority === 'urgente') return 4
   if (priority === 'alta') return 3
   if (priority === 'media') return 2
