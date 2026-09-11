@@ -56,9 +56,13 @@ test('Meu Dia usa caixa de excecoes e financeiro permanece secundario', () => {
 
 test('Painel do Escritorio adiciona leitura executiva sem executar a operacao', () => {
   const dashboard = read('src/components/Dashboard.jsx')
-  const insights = read('src/components/ManagementInsights.jsx')
-  assert.match(dashboard, /ManagementInsights/)
-  assert.match(insights, /Taxa de recebimento/)
-  assert.match(insights, /mês anterior/)
+  const intelligence = read('src/lib/managementDashboard.js')
+  assert.match(dashboard, /buildManagementDashboard/)
+  assert.match(dashboard, /Taxa de recebimento/)
+  assert.match(dashboard, /O que merece sua atenção/)
+  assert.match(dashboard, /Faturado × recebido/)
+  assert.match(intelligence, /receivingDelta/)
+  assert.match(intelligence, /clientsAttention/)
   assert.equal(dashboard.includes('function completeItems'), false)
+  assert.equal(dashboard.includes('completeTask('), false)
 })
