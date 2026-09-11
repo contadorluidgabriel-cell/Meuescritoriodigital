@@ -39,4 +39,47 @@ export function applyObligationsV2Patch(root) {
     main = main.replace(anchor, `${anchor}\nimport './obligations-redesign.css'`)
     writeFileSync(mainPath, main)
   }
+
+  const workspacePath = `${root}src/components/ObligationsWorkspace.jsx`
+  let workspace = readFileSync(workspacePath, 'utf8')
+  if (!workspace.includes("function openNewModel() {\n    setModelsOpen(false)")) {
+    workspace = replaceRequired(
+      workspace,
+      "function openNewModel() {\n    setModelEditing(",
+      "function openNewModel() {\n    setModelsOpen(false)\n    setModelEditing(",
+      'new model modal flow',
+    )
+  }
+  if (!workspace.includes("function openEditModel(model) {\n    setModelsOpen(false)")) {
+    workspace = replaceRequired(
+      workspace,
+      "function openEditModel(model) {\n    const chosen = selectionFromModel(model)",
+      "function openEditModel(model) {\n    setModelsOpen(false)\n    const chosen = selectionFromModel(model)",
+      'edit model modal flow',
+    )
+  }
+  if (!workspace.includes("setModelEditing(null)\n    setModelsOpen(true)\n    setNotice('Modelo salvo.')")) {
+    workspace = replaceRequired(
+      workspace,
+      "setModelEditing(null)\n    setNotice('Modelo salvo.')",
+      "setModelEditing(null)\n    setModelsOpen(true)\n    setNotice('Modelo salvo.')",
+      'return to models after save',
+    )
+  }
+  const closeModelEditor = "onClose={() => { setModelEditing(null); setModelsOpen(true) }}"
+  if (!workspace.includes(closeModelEditor)) {
+    workspace = replaceRequired(
+      workspace,
+      "onClose={() => setModelEditing(null)} wide><form className=\"obligation-form obligation-v2-form\" onSubmit={saveModel}",
+      `${closeModelEditor} wide><form className=\"obligation-form obligation-v2-form\" onSubmit={saveModel}`,
+      'model editor close',
+    )
+    workspace = replaceRequired(
+      workspace,
+      '<button type="button" onClick={() => setModelEditing(null)}>Cancelar</button><button className="primary">Salvar modelo</button>',
+      '<button type="button" onClick={() => { setModelEditing(null); setModelsOpen(true) }}>Cancelar</button><button className="primary">Salvar modelo</button>',
+      'model editor cancel',
+    )
+  }
+  writeFileSync(workspacePath, workspace)
 }
