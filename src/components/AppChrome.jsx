@@ -5,7 +5,6 @@ import { Button, Icon } from './ui/SaasUI.jsx'
 const item = (id, label, icon) => [id, label, icon]
 const common = {
   myDay: item('meu-dia', 'Meu Dia', 'dashboard'),
-  pending: item('pendencias', 'Pendências', 'obligations'),
   calendar: item('calendario', 'Calendário', 'calendar'),
   clients: item('clientes', 'Clientes', 'clients'),
   tasks: item('tarefas', 'Tarefas', 'tasks'),
@@ -14,20 +13,22 @@ const common = {
 }
 
 export const pageNames = {
-  'meu-dia': 'Meu Dia', pendencias: 'Pendências', dashboard: 'Painel Principal', calendario: 'Calendário', clientes: 'Clientes', tarefas: 'Tarefas', processos: 'Processos', obrigacoes: 'Obrigações', honorarios: 'Financeiro', equipe: 'Equipe', 'financeiro-parceiro': 'Financeiro compartilhado', configuracoes: 'Configurações',
+  'meu-dia': 'Meu Dia', pendencias: 'Pendências', dashboard: 'Painel do Escritório', calendario: 'Calendário', clientes: 'Clientes', tarefas: 'Tarefas', processos: 'Processos', obrigacoes: 'Obrigações', honorarios: 'Financeiro', equipe: 'Equipe', 'financeiro-parceiro': 'Financeiro compartilhado', configuracoes: 'Configurações',
 }
 
 export function navigationGroupsForAccess(access = {}) {
   const membership = access?.membership || {}
   const role = membership.role || 'admin'
   const permissions = membership.permissions || {}
+
   if (role === 'partner') return [
     { label: 'Visão geral', items: [common.myDay, common.calendar] },
-    { label: 'Operação', items: [common.pending, common.clients, common.tasks, common.processes, common.obligations] },
+    { label: 'Operação', items: [common.clients, common.tasks, common.processes, common.obligations] },
     { label: 'Parceria', items: [item('financeiro-parceiro', 'Financeiro compartilhado', 'finance')] },
   ]
+
   if (role === 'collaborator') {
-    const operation = [common.pending]
+    const operation = []
     if (permissions.clients !== false) operation.push(common.clients)
     if (permissions.tasks !== false) operation.push(common.tasks)
     if (permissions.processes !== false) operation.push(common.processes)
@@ -36,14 +37,15 @@ export function navigationGroupsForAccess(access = {}) {
     if (permissions.finance) management.push(item('honorarios', 'Financeiro', 'finance'))
     return [
       { label: 'Visão geral', items: [common.myDay, common.calendar] },
-      { label: 'Operação', items: operation },
+      ...(operation.length ? [{ label: 'Operação', items: operation }] : []),
       ...(management.length ? [{ label: 'Gestão', items: management }] : []),
     ]
   }
+
   return [
-    { label: 'Visão geral', items: [common.myDay, item('dashboard', 'Painel Principal', 'dashboard'), common.calendar] },
-    { label: 'Operação', items: [common.pending, common.clients, common.tasks, common.processes, common.obligations] },
-    { label: 'Gestão', items: [item('honorarios', 'Financeiro', 'finance'), item('equipe', 'Equipe', 'clients')] },
+    { label: 'Visão geral', items: [common.myDay, common.calendar] },
+    { label: 'Operação', items: [common.clients, common.tasks, common.processes, common.obligations] },
+    { label: 'Gestão', items: [item('dashboard', 'Painel do Escritório', 'dashboard'), item('honorarios', 'Financeiro', 'finance'), item('equipe', 'Equipe', 'clients')] },
   ]
 }
 
@@ -77,7 +79,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
     <aside className="react-sidebar saas-sidebar app-sidebar-desktop">
       <header className="react-brand saas-brand">
         <span className="react-logo">{identity.initials || 'ED'}</span>
-        <div className="saas-brand-copy"><strong>{access?.workspace?.name || identity.office}</strong><small>{identity.system} · V11.1</small></div>
+        <div className="saas-brand-copy"><strong>{access?.workspace?.name || identity.office}</strong><small>{identity.system} · V12.1</small></div>
         <Button variant="ghost-inverse" size="sm" icon={collapsed ? 'chevronRight' : 'chevronLeft'} iconOnly className="collapse-button" onClick={onToggle}>{collapsed ? 'Expandir menu' : 'Recolher menu'}</Button>
       </header>
 
@@ -106,7 +108,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
       <section className="saas-mobile-more-sheet app-mobile-more-panel" aria-label="Mais módulos">
         <header><div><strong>Mais áreas</strong><small>{access?.workspace?.name || 'Gestão do escritório'}</small></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Fechar"><Icon name="close" size={18} /></button></header>
         <div className="saas-mobile-more-grid">
-          {mobile.more.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'pendencias' ? 'Tudo que exige atenção' : id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' || id === 'financeiro-parceiro' ? 'Honorários e recebimentos' : id === 'equipe' ? 'Usuários e responsabilidades' : id === 'dashboard' ? 'Visão gerencial tradicional' : 'Sistema e preferências'}</small></div></button>)}
+          {mobile.more.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' || id === 'financeiro-parceiro' ? 'Honorários e recebimentos' : id === 'equipe' ? 'Usuários e responsabilidades' : id === 'dashboard' ? 'Saúde e indicadores do escritório' : 'Sistema e preferências'}</small></div></button>)}
         </div>
         <footer><div><span>{String(displayName || 'ME').slice(0, 2).toUpperCase()}</span><div><strong>{displayName}</strong><small>{displayRole} · {sync}</small></div></div><Button variant="secondary" size="sm" icon="logout" onClick={onSignOut}>Sair</Button></footer>
       </section>
