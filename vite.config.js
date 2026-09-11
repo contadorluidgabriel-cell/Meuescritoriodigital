@@ -29,6 +29,7 @@ import { applyV121Patch } from './scripts/patch-v12-1.mjs'
 import { applyInviteLinksPatch } from './scripts/patch-invite-links.mjs'
 import { applyTaskDeadlinesPatch } from './scripts/patch-task-deadlines.mjs'
 import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadlines.mjs'
+import { applyObligationsV2Patch } from './scripts/patch-obligations-v2.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.mjs'
 
@@ -94,6 +95,7 @@ applyV121Patch(root)
 applyInviteLinksPatch(root)
 applyTaskDeadlinesPatch(root)
 applyObligationDeadlinesPatch(root)
+applyObligationsV2Patch(root)
 applySharingStylesPatch(root)
 applyFinancePdfPolishV2(root)
 
