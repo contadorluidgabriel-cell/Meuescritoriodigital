@@ -50,7 +50,7 @@ test('invoice follows the approved premium payment layout', () => {
   assert.match(pdf, /\(PAGAMENTO\)/)
   assert.match(pdf, /\(contadorluidgabriel@gmail\.com\)/)
   assert.match(pdf, /\(Luid Lira\)/)
-  assert.match(pdf, /\(Cloudwalk IP \(Infinitepay\)\)/)
+  assert.match(pdf, /\(Cloudwalk IP \\\(Infinitepay\\\)\)/)
   assert.match(pdf, /\(CONTABILIDADE\)/)
   assert.match(pdf, /\(PARA UM FUTURO\)/)
   assert.match(pdf, /\(MAIS FORTE\)/)
