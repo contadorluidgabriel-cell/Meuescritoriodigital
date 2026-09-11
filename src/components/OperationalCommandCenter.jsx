@@ -6,6 +6,7 @@ import WorkHorizonBoard from './WorkHorizonBoard.jsx'
 import PendingInbox from './PendingInbox.jsx'
 import '../operational-v12-3.css'
 
+// MED_INFORMATION_ARCHITECTURE_V12_2 - compatibility marker for legacy build patches
 // MED_INFORMATION_ARCHITECTURE_V12_3
 const tabs = [
   ['today', 'Hoje'],
