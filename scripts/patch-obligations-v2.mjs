@@ -42,6 +42,14 @@ export function applyObligationsV2Patch(root) {
 
   const workspacePath = `${root}src/components/ObligationsWorkspace.jsx`
   let workspace = readFileSync(workspacePath, 'utf8')
+  if (!workspace.includes("import ObligationAccordionList from './ObligationAccordionList.jsx'")) {
+    workspace = replaceRequired(
+      workspace,
+      "import ObligationDeadlinesBoard from './ObligationDeadlinesBoard.jsx'",
+      "import ObligationDeadlinesBoard from './ObligationDeadlinesBoard.jsx'\nimport ObligationAccordionList from './ObligationAccordionList.jsx'",
+      'accordion import',
+    )
+  }
   if (!workspace.includes("function openNewModel() {\n    setModelsOpen(false)")) {
     workspace = replaceRequired(
       workspace,
@@ -79,6 +87,14 @@ export function applyObligationsV2Patch(root) {
       '<button type="button" onClick={() => setModelEditing(null)}>Cancelar</button><button className="primary">Salvar modelo</button>',
       '<button type="button" onClick={() => { setModelEditing(null); setModelsOpen(true) }}>Cancelar</button><button className="primary">Salvar modelo</button>',
       'model editor cancel',
+    )
+  }
+  if (!workspace.includes('<ObligationAccordionList rows={rows}')) {
+    workspace = replaceRequired(
+      workspace,
+      '      <div className="obligation-table obligation-v2-table">',
+      '      <ObligationAccordionList rows={rows} office={office} tab={tab} onOpenDetails={openDetails} onEdit={openEdit} />\n      <div className="obligation-table obligation-v2-table">',
+      'accordion render',
     )
   }
   writeFileSync(workspacePath, workspace)
