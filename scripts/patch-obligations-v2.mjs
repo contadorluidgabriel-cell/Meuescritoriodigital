@@ -15,12 +15,14 @@ export function applyObligationsV2Patch(root) {
     "import ObligationsReact from './components/ObligationsWorkspaceEntry.jsx'",
     'workspace import',
   )
-  app = replaceRequired(
-    app,
-    'const { office, update, ready, sync } = useOfficeData(session)',
-    'const { office, update, ready, sync, access } = useOfficeData(session)',
-    'workspace access',
-  )
+  if (!app.includes('const { office, update, ready, sync, access')) {
+    app = replaceRequired(
+      app,
+      'const { office, update, ready, sync } = useOfficeData(session)',
+      'const { office, update, ready, sync, access } = useOfficeData(session)',
+      'workspace access',
+    )
+  }
   if (!app.includes('openObligationRequest={obligationTarget.request} access={access}')) {
     const from = 'openObligationRequest={obligationTarget.request} />'
     const to = 'openObligationRequest={obligationTarget.request} access={access} />'
