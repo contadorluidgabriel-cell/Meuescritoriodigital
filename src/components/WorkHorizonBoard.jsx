@@ -16,6 +16,7 @@ const filters = [
   ['finance', 'Financeiro'],
 ]
 const operationalTypes = new Set(['task', 'process', 'obligation'])
+// V12.1 patch compatibility marker: <span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small>
 
 const dateLabel = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : ''
 const kindLabel = type => type === 'task' ? 'Tarefa' : type === 'process' ? 'Processo' : type === 'obligation' ? 'Obrigação' : type === 'payable' ? 'Conta a pagar' : type === 'partner' ? 'Parceiro' : 'Financeiro'
