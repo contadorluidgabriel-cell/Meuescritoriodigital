@@ -1,5 +1,8 @@
 import { addDays } from './operationalIntelligence.js'
 import { isDone } from './storage.js'
+import { deadlineMatchesScope } from './deadlineUtils.js'
+import { obligationLinkEntityType } from './entityUtils.js'
+import { normalizeText } from './textUtils.js'
 
 export const OBLIGATION_DEADLINE_FILTERS = [
   ['all', 'Todas'],
@@ -11,38 +14,26 @@ export const OBLIGATION_DEADLINE_FILTERS = [
   ['waiting', 'Aguardando cliente'],
 ]
 
-const normalize = value => String(value || '')
-  .toLowerCase()
-  .normalize('NFD')
-  .replace(/[\u0300-\u036f]/g, '')
-  .trim()
-
-const isIgnored = status => normalize(status) === 'nao se aplica'
+const isIgnored = status => normalizeText(status) === 'nao se aplica'
 const isCompleted = status => isDone(status) || isIgnored(status)
-const linkEntityType = link => link?.entityType === 'linkedCompany' || link?.entidadeTipo === 'terceirizado' ? 'linkedCompany' : 'client'
 
 export function isObligationWaitingClient(status) {
-  return normalize(status) === 'aguardando cliente'
+  return normalizeText(status) === 'aguardando cliente'
 }
 
 export function obligationLinkMatchesDeadline(item = {}, scope = 'all', day) {
-  if (isCompleted(item.status)) return false
-  const due = String(item.vencimento || '')
-  if (scope === 'all') return true
-  if (scope === 'waiting') return isObligationWaitingClient(item.status)
-  if (!due) return false
-
-  if (scope === 'overdue') return due < day
-  if (scope === 'today') return due === day
-  if (scope === 'tomorrow') return due === addDays(day, 1)
-  if (scope === 'week') return due >= day && due <= addDays(day, 6)
-  if (scope === 'month') return due >= day && due <= addDays(day, 29)
-  return true
+  return deadlineMatchesScope({
+    due: item.vencimento,
+    scope,
+    day,
+    waiting: isObligationWaitingClient(item.status),
+    completed: isCompleted(item.status),
+  })
 }
 
 export function flattenObligationDeadlines(obligations = []) {
   return (obligations || []).flatMap(obligation => (obligation.clientes || []).map(link => {
-    const entityType = linkEntityType(link)
+    const entityType = obligationLinkEntityType(link)
     const entityId = String(link.clienteId || '')
     return {
       key: entityType === 'linkedCompany' ? `${obligation.id}|linked|${entityId}` : `${obligation.id}|${entityId}`,
