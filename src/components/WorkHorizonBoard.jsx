@@ -9,15 +9,17 @@ import '../work-horizon-v12.css'
 
 const HORIZON_KEY = 'med_v12_work_horizon'
 const filters = [
-  ['all', 'Tudo'],
+  ['operation', 'Operação'],
   ['task', 'Tarefas'],
   ['process', 'Processos'],
   ['obligation', 'Obrigações'],
   ['finance', 'Financeiro'],
 ]
+const operationalTypes = new Set(['task', 'process', 'obligation'])
+// V12.1 patch compatibility marker: <span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small>
 
 const dateLabel = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : ''
-const kindLabel = type => type === 'task' ? 'Tarefa' : type === 'process' ? 'Processo' : type === 'obligation' ? 'Obrigação' : type === 'partner' ? 'Parceiro' : 'Financeiro'
+const kindLabel = type => type === 'task' ? 'Tarefa' : type === 'process' ? 'Processo' : type === 'obligation' ? 'Obrigação' : type === 'payable' ? 'Conta a pagar' : type === 'partner' ? 'Parceiro' : 'Financeiro'
 
 function deadline(item, day) {
   if (item.planned && item.planned !== item.due) return `Planejado ${dateLabel(item.planned)} · prazo ${dateLabel(item.due) || 'não definido'}`
@@ -54,7 +56,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
     if (mode === 'upcoming') return ['week', 'month'].includes(saved) ? saved : 'week'
     return WORK_HORIZONS[saved] ? saved : 'today'
   })
-  const [filter, setFilter] = useState('all')
+  const [filter, setFilter] = useState('operation')
   const [scope, setScope] = useState('all')
   const resultsId = useId()
   const [expandedGroups, setExpandedGroups] = useState(new Set())
@@ -74,10 +76,16 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
   const view = useMemo(() => buildWorkHorizon(office, { day, horizon }), [office, day, horizon])
   const selection = useMemo(() => selectWorkBoard(view, { scope, type: filter }), [view, scope, filter])
   const visibleGroups = selection.groups
+  const operationalScopeCounts = useMemo(() => ({
+    all: (view.items || []).filter(item => operationalTypes.has(item.type)).length,
+    overdue: (view.overdue || []).filter(item => operationalTypes.has(item.type)).length,
+    critical: (view.critical || []).filter(item => operationalTypes.has(item.type)).length,
+    unscheduled: (view.unscheduled || []).filter(item => operationalTypes.has(item.type)).length,
+  }), [view])
 
   function chooseScope(value) {
     setScope(value)
-    setFilter('all')
+    setFilter('operation')
     setExpandedGroups(new Set())
   }
 
@@ -109,41 +117,51 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
   }
 
   const horizonText = horizon === 'today'
-    ? 'Organize as prioridades de hoje e os itens em atraso.'
+    ? 'Priorize tarefas, processos e obrigações que precisam de ação hoje.'
     : horizon === 'week'
-      ? 'Planeje os próximos 7 dias e acompanhe os itens em atraso.'
-      : 'Veja os próximos 30 dias e distribua melhor o trabalho.'
-  const scopeLabel = { all: 'No radar', overdue: 'Em atraso', critical: 'Críticos', unscheduled: 'Sem data' }[scope]
+      ? 'Planeje tarefas, processos e obrigações dos próximos 7 dias.'
+      : 'Distribua tarefas, processos e obrigações dos próximos 30 dias.'
+  const scopeLabel = { all: 'Operação no radar', overdue: 'Operação em atraso', critical: 'Operação crítica', unscheduled: 'Operação sem data' }[scope]
   const horizonOptions = allowedIds.map(id => WORK_HORIZONS[id]).filter(Boolean)
 
   return <section className={`v12-horizon-board ${embedded ? 'is-embedded' : ''}`} aria-label="Planejamento por período">
     {notice ? <div className="v12-horizon-toast"><span>{notice}</span>{undoState ? <button type="button" onClick={undoCompletion}>Desfazer</button> : null}</div> : null}
 
     {!embedded || horizonOptions.length > 1 ? <header className="v12-horizon-header">
-      {!embedded ? <div className="v12-horizon-heading"><span>Central de trabalho · V12.1</span><h1>{mode === 'upcoming' ? 'Próximos' : 'Meu Dia'}</h1><p>{horizonText}</p></div> : <div className="v12-horizon-heading"><span>Planejamento</span><h2>Próximos prazos</h2><p>{horizonText}</p></div>}
+      {!embedded ? <div className="v12-horizon-heading"><span>Central operacional · V12.1</span><h1>{mode === 'upcoming' ? 'Próximos' : 'Meu Dia'}</h1><p>{horizonText}</p></div> : <div className="v12-horizon-heading"><span>Planejamento operacional</span><h2>Próximos prazos</h2><p>{horizonText}</p></div>}
       {horizonOptions.length > 1 ? <nav className="v12-horizon-switch" aria-label="Período de planejamento">
         {horizonOptions.map(option => <button type="button" aria-pressed={horizon === option.id} aria-controls={resultsId} className={horizon === option.id ? 'active' : ''} onClick={() => chooseHorizon(option.id)} key={option.id}><strong>{option.shortLabel}</strong></button>)}
       </nav> : null}
       {!embedded ? <div className="v12-horizon-actions"><button type="button" onClick={() => onNavigate?.('tarefas')}><Icon name="tasks" size={18} />Tarefas</button><button type="button" className="secondary" onClick={() => onNavigate?.('calendario')}><Icon name="calendar" size={18} />Calendário</button></div> : null}
     </header> : null}
 
-    <div className="v12-horizon-kpis">
-      <button type="button" aria-pressed={scope === 'all'} aria-controls={resultsId} className={scope === 'all' ? 'active' : ''} onClick={() => chooseScope('all')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="layers" size={22} /></i><span>No radar</span><strong>{view.total}</strong><small>No período e em atraso</small></button>
-      <button type="button" aria-pressed={scope === 'overdue'} aria-controls={resultsId} className={`danger ${scope === 'overdue' ? 'active' : ''}`} onClick={() => chooseScope('overdue')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="clock" size={22} /></i><span>Atrasados</span><strong>{view.overdue.length}</strong><small>prazo oficial vencido</small></button>
-      <button type="button" aria-pressed={scope === 'critical'} aria-controls={resultsId} className={`warning ${scope === 'critical' ? 'active' : ''}`} onClick={() => chooseScope('critical')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="warning" size={22} /></i><span>Críticos</span><strong>{view.critical.length}</strong><small>Pedem atenção primeiro</small></button>
-      <button type="button" aria-pressed={scope === 'unscheduled'} aria-controls={resultsId} className={scope === 'unscheduled' ? 'active' : ''} onClick={() => chooseScope('unscheduled')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="calendarOff" size={22} /></i><span>Sem data</span><strong>{view.unscheduled.length}</strong><small>Aguardam planejamento</small></button>
+    <div className="v12-horizon-kpis operational">
+      <button type="button" aria-pressed={filter === 'task'} aria-controls={resultsId} className={filter === 'task' ? 'active' : ''} onClick={() => setFilter(filter === 'task' ? 'operation' : 'task')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="tasks" size={22} /></i><span>Tarefas</span><strong>{selection.counts.task || 0}</strong><small>trabalho para executar</small></button>
+      <button type="button" aria-pressed={filter === 'process'} aria-controls={resultsId} className={filter === 'process' ? 'active' : ''} onClick={() => setFilter(filter === 'process' ? 'operation' : 'process')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="processes" size={22} /></i><span>Processos</span><strong>{selection.counts.process || 0}</strong><small>fluxos em andamento</small></button>
+      <button type="button" aria-pressed={filter === 'obligation'} aria-controls={resultsId} className={filter === 'obligation' ? 'active' : ''} onClick={() => setFilter(filter === 'obligation' ? 'operation' : 'obligation')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="obligations" size={22} /></i><span>Obrigações</span><strong>{selection.counts.obligation || 0}</strong><small>entregas e compromissos</small></button>
+      <button type="button" aria-pressed={scope === 'overdue'} aria-controls={resultsId} className={`danger ${scope === 'overdue' ? 'active' : ''}`} onClick={() => chooseScope(scope === 'overdue' ? 'all' : 'overdue')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="clock" size={22} /></i><span>Atrasados</span><strong>{operationalScopeCounts.overdue}</strong><small>operação com prazo vencido</small></button>
+    </div>
+
+    <div className="v12-scope-filters" aria-label="Situação operacional">
+      <span>Situação</span>
+      {[
+        ['all', 'No radar', operationalScopeCounts.all],
+        ['overdue', 'Atrasados', operationalScopeCounts.overdue],
+        ['critical', 'Críticos', operationalScopeCounts.critical],
+        ['unscheduled', 'Sem data', operationalScopeCounts.unscheduled],
+      ].map(([id, label, count]) => <button type="button" aria-pressed={scope === id} aria-controls={resultsId} className={scope === id ? 'active' : ''} onClick={() => chooseScope(id)} key={id}>{label}<b>{count}</b></button>)}
     </div>
 
     <div className="v12-horizon-filters" aria-label="Filtrar tipo de trabalho">
       {filters.map(([id, label]) => {
         const count = selection.counts[id] || 0
-        return <button type="button" aria-pressed={filter === id} aria-controls={resultsId} className={filter === id ? 'active' : ''} onClick={() => setFilter(id)} key={id}>{label}<span>{count}</span></button>
+        return <button type="button" aria-pressed={filter === id} aria-controls={resultsId} className={`${filter === id ? 'active' : ''} ${id === 'finance' ? 'finance-option' : ''}`} onClick={() => setFilter(id)} key={id}>{label}<span>{count}</span></button>
       })}
     </div>
 
-    {scope === 'all' && view.overloaded && view.peak ? <div className="v12-load-alert"><div><strong>Concentração de trabalho detectada</strong><span>{view.peak.label} concentra {view.peak.items.length} itens do período.</span></div><button type="button" onClick={() => onNavigate?.('calendario')}>Ver calendário</button></div> : null}
+    {scope === 'all' && filter !== 'finance' && view.overloaded && view.peak ? <div className="v12-load-alert"><div><strong>Concentração de trabalho detectada</strong><span>{view.peak.label} concentra {view.peak.items.length} itens do período.</span></div><button type="button" onClick={() => onNavigate?.('calendario')}>Ver calendário</button></div> : null}
 
-    <p className="v12-result-summary" role="status">{scopeLabel} · {selection.items.length} {selection.items.length === 1 ? 'item' : 'itens'}{filter !== 'all' ? ` · ${filters.find(([id]) => id === filter)?.[1]}` : ''}</p>
+    <p className="v12-result-summary" role="status">{filter === 'finance' ? 'Financeiro de apoio' : scopeLabel} · {selection.items.length} {selection.items.length === 1 ? 'item' : 'itens'}{!['operation', 'finance'].includes(filter) ? ` · ${filters.find(([id]) => id === filter)?.[1]}` : ''}</p>
     <div className="v12-horizon-groups" id={resultsId}>
       {visibleGroups.length ? visibleGroups.map(group => {
         const limit = horizon === 'month' && !expandedGroups.has(group.key) ? 8 : group.items.length
@@ -153,7 +171,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
           <div className="v12-period-items">{group.items.slice(0, limit).map(item => <HorizonItem key={item.key} item={item} office={office} update={update} onOpenItem={onOpenItem} onNotice={setNotice} onCompleted={registerCompletion} day={day} />)}</div>
           {hidden ? <button type="button" className="v12-show-more" onClick={() => toggleGroup(group.key)}>Mostrar mais {hidden}</button> : horizon === 'month' && expandedGroups.has(group.key) && group.items.length > 8 ? <button type="button" className="v12-show-more" onClick={() => toggleGroup(group.key)}>Recolher semana</button> : null}
         </section>
-      }) : <div className="v12-horizon-empty"><span><Icon name="check" size={24} /></span><strong>Nenhum item neste filtro.</strong><small>{scope === 'unscheduled' ? 'Os registros deste tipo estão com data definida.' : `Não há itens nessa seleção para ${view.label.toLowerCase()}.`}</small>{scope !== 'all' || filter !== 'all' ? <button type="button" onClick={() => chooseScope('all')}>Ver todos</button> : null}</div>}
+      }) : <div className="v12-horizon-empty"><span><Icon name="check" size={24} /></span><strong>Nenhum item neste filtro.</strong><small>{filter === 'finance' ? 'Não há alertas financeiros nessa seleção.' : scope === 'unscheduled' ? 'Tarefas, processos e obrigações deste tipo estão com data definida.' : `Não há trabalho operacional nessa seleção para ${view.label.toLowerCase()}.`}</small>{scope !== 'all' || filter !== 'operation' ? <button type="button" onClick={() => chooseScope('all')}>Voltar à operação</button> : null}</div>}
     </div>
 
     {scope === 'unscheduled' && selection.items.length ? <footer className="v12-unscheduled"><div><strong>Defina as próximas datas</strong><span>Abra um registro para planejar quando ele deve ser feito.</span></div><button type="button" onClick={() => onShowPending ? onShowPending() : onNavigate?.('pendencias')}>Revisar pendências</button></footer> : null}
