@@ -82,4 +82,14 @@ export function applyObligationsV2Patch(root) {
     )
   }
   writeFileSync(workspacePath, workspace)
+
+  const intelligencePath = `${root}src/lib/operationalIntelligence.js`
+  let intelligence = readFileSync(intelligencePath, 'utf8')
+  const statusGuard = "const operationalStatus = normalize(link.status || 'Pendente')\n      if (!includeDone && !['pendente', 'em andamento'].includes(operationalStatus)) return"
+  if (!intelligence.includes(statusGuard)) {
+    const anchor = "const done = obligationDone(link)\n      if (!includeDone && done) return"
+    if (!intelligence.includes(anchor)) throw new Error('Obligations v2 patch failed (Meu Dia status guard)')
+    intelligence = intelligence.replace(anchor, `const done = obligationDone(link)\n      ${statusGuard}\n      if (!includeDone && done) return`)
+    writeFileSync(intelligencePath, intelligence)
+  }
 }
