@@ -1,12 +1,14 @@
 const uniqueItems = items => [...new Map(items.map(item => [item.key, item])).values()]
-const matchesType = (item, type) => type === 'all' || (type === 'finance' ? ['finance', 'payable', 'partner'].includes(item.type) : item.type === type)
+const operationalTypes = ['task', 'process', 'obligation']
+const matchesType = (item, type) => type === 'all'
+  || (type === 'operation' ? operationalTypes.includes(item.type) : type === 'finance' ? ['finance', 'payable', 'partner'].includes(item.type) : item.type === type)
 
 /** Apply a status first, then a work type; keep each record in its first group. */
 export function selectWorkBoard(view, { scope = 'all', type = 'all' } = {}) {
   const sources = { all: view.items, overdue: view.overdue, critical: view.critical, unscheduled: view.unscheduled }
   const scoped = uniqueItems(sources[scope] || view.items || [])
   const counts = { all: scoped.length }
-  for (const kind of ['task', 'process', 'obligation', 'finance']) {
+  for (const kind of ['operation', 'task', 'process', 'obligation', 'finance']) {
     counts[kind] = scoped.filter(item => matchesType(item, kind)).length
   }
   const items = scoped.filter(item => matchesType(item, type))
