@@ -1,9 +1,10 @@
-const uniqueItems = items => [...new Map(items.map(item => [item.key, item])).values()]
+const itemIdentity = item => item?.type === 'obligation' ? `obligation:${String(item.id || '')}` : String(item?.key || '')
+const uniqueItems = items => [...new Map((items || []).map(item => [itemIdentity(item), item])).values()]
 const operationalTypes = ['task', 'process', 'obligation']
 const matchesType = (item, type) => type === 'all'
   || (type === 'operation' ? operationalTypes.includes(item.type) : type === 'finance' ? ['finance', 'payable', 'partner'].includes(item.type) : item.type === type)
 
-/** Apply a status first, then a work type; keep each record in its first group. */
+/** Apply a status first, then a work type; obligations are one operational delivery, not one card per CNPJ. */
 export function selectWorkBoard(view, { scope = 'all', type = 'all' } = {}) {
   const sources = { all: view.items, overdue: view.overdue, critical: view.critical, unscheduled: view.unscheduled }
   const scoped = uniqueItems(sources[scope] || view.items || [])
@@ -12,7 +13,7 @@ export function selectWorkBoard(view, { scope = 'all', type = 'all' } = {}) {
     counts[kind] = scoped.filter(item => matchesType(item, kind)).length
   }
   const items = scoped.filter(item => matchesType(item, type))
-  const selected = new Set(items.map(item => item.key))
+  const selected = new Set(items.map(itemIdentity))
   const seen = new Set()
   const sourceGroups = scope === 'unscheduled'
     ? [{ key: 'unscheduled', label: 'Sem data', items: scoped }]
@@ -20,8 +21,9 @@ export function selectWorkBoard(view, { scope = 'all', type = 'all' } = {}) {
   const groups = sourceGroups.map(group => ({
     ...group,
     items: group.items.filter(item => {
-      if (!selected.has(item.key) || seen.has(item.key)) return false
-      seen.add(item.key)
+      const key = itemIdentity(item)
+      if (!selected.has(key) || seen.has(key)) return false
+      seen.add(key)
       return true
     }),
   })).filter(group => group.items.length)

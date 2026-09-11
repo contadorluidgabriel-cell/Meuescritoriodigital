@@ -2,6 +2,7 @@ import { useEffect, useId, useMemo, useState } from 'react'
 import { today } from '../lib/storage.js'
 import { buildWorkHorizon, WORK_HORIZONS } from '../lib/workHorizons.js'
 import { selectWorkBoard, workItemSummary } from '../lib/workBoardView.js'
+import { obligationProgress, operationalResponsible } from '../lib/operationalPresentation.js'
 import { undoTaskCompletion } from '../lib/taskExecution.js'
 import TaskQuickExecution from './TaskQuickExecution.jsx'
 import { Icon } from './ui/SaasUI.jsx'
@@ -31,14 +32,24 @@ function deadline(item, day) {
 
 function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, day }) {
   const task = item.type === 'task' ? (office.tasks || []).find(row => String(row.id) === String(item.id)) : null
-  return <article className={`v12-work-item level-${item.level || 'info'}`}>
+  const progress = item.type === 'obligation' ? obligationProgress(office, item.id) : null
+  const responsible = operationalResponsible(office, item)
+  const openTarget = progress?.firstPendingClientId ? { ...item, clientId: progress.firstPendingClientId } : item
+  const actionLabel = item.type === 'process' ? 'Abrir próxima ação' : item.type === 'obligation' ? 'Ver pendentes' : 'Abrir registro'
+  const detail = item.type === 'obligation' && progress
+    ? `${progress.done} de ${progress.total} CNPJ${progress.total === 1 ? '' : 's'} concluído${progress.done === 1 ? '' : 's'} · ${progress.open} pendente${progress.open === 1 ? '' : 's'}`
+    : workItemSummary(item)
+
+  return <article className={`v12-work-item level-${item.level || 'info'} type-${item.type}`}>
     <div className="v12-work-copy">
       <div className="v12-work-tags"><span className={`type-${item.type}`}>{kindLabel(item.type)}</span>{item.level === 'critical' ? <b>Crítico</b> : item.level === 'attention' ? <b className="attention">Atenção</b> : null}</div>
       <strong>{item.title}</strong>
-      <small>{workItemSummary(item)}</small>
+      <small className="v12-work-context"><b>{item.client || 'Escritório'}</b>{responsible ? <span>Responsável: {responsible}</span> : null}</small>
+      <small>{detail}</small>
+      {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>
-    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(item)}>Abrir registro</button>}
+    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
   </article>
 }
 
@@ -76,12 +87,15 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
   const view = useMemo(() => buildWorkHorizon(office, { day, horizon }), [office, day, horizon])
   const selection = useMemo(() => selectWorkBoard(view, { scope, type: filter }), [view, scope, filter])
   const visibleGroups = selection.groups
-  const operationalScopeCounts = useMemo(() => ({
-    all: (view.items || []).filter(item => operationalTypes.has(item.type)).length,
-    overdue: (view.overdue || []).filter(item => operationalTypes.has(item.type)).length,
-    critical: (view.critical || []).filter(item => operationalTypes.has(item.type)).length,
-    unscheduled: (view.unscheduled || []).filter(item => operationalTypes.has(item.type)).length,
-  }), [view])
+  const operationalScopeCounts = useMemo(() => {
+    const unique = rows => new Set((rows || []).filter(item => operationalTypes.has(item.type)).map(item => item.type === 'obligation' ? `obligation:${item.id}` : item.key)).size
+    return {
+      all: unique(view.items),
+      overdue: unique(view.overdue),
+      critical: unique(view.critical),
+      unscheduled: unique(view.unscheduled),
+    }
+  }, [view])
 
   function chooseScope(value) {
     setScope(value)
@@ -117,7 +131,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
   }
 
   const horizonText = horizon === 'today'
-    ? 'Priorize tarefas, processos e obrigações que precisam de ação hoje.'
+    ? 'Primeiro os atrasados; depois, o que realmente precisa ser executado hoje.'
     : horizon === 'week'
       ? 'Planeje tarefas, processos e obrigações dos próximos 7 dias.'
       : 'Distribua tarefas, processos e obrigações dos próximos 30 dias.'
@@ -128,7 +142,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
     {notice ? <div className="v12-horizon-toast"><span>{notice}</span>{undoState ? <button type="button" onClick={undoCompletion}>Desfazer</button> : null}</div> : null}
 
     {!embedded || horizonOptions.length > 1 ? <header className="v12-horizon-header">
-      {!embedded ? <div className="v12-horizon-heading"><span>Central operacional · V12.1</span><h1>{mode === 'upcoming' ? 'Próximos' : 'Meu Dia'}</h1><p>{horizonText}</p></div> : <div className="v12-horizon-heading"><span>Planejamento operacional</span><h2>Próximos prazos</h2><p>{horizonText}</p></div>}
+      {!embedded ? <div className="v12-horizon-heading"><span>Central operacional · V12.1</span><h1>{mode === 'upcoming' ? 'Próximos' : 'Meu Dia'}</h1><p>{horizonText}</p></div> : <div className="v12-horizon-heading"><span>{mode === 'today' ? 'Execução' : 'Planejamento operacional'}</span><h2>{mode === 'today' ? 'Prioridades do expediente' : 'Próximos prazos'}</h2><p>{horizonText}</p></div>}
       {horizonOptions.length > 1 ? <nav className="v12-horizon-switch" aria-label="Período de planejamento">
         {horizonOptions.map(option => <button type="button" aria-pressed={horizon === option.id} aria-controls={resultsId} className={horizon === option.id ? 'active' : ''} onClick={() => chooseHorizon(option.id)} key={option.id}><strong>{option.shortLabel}</strong></button>)}
       </nav> : null}
@@ -137,9 +151,9 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
 
     <div className="v12-horizon-kpis operational">
       <button type="button" aria-pressed={filter === 'task'} aria-controls={resultsId} className={filter === 'task' ? 'active' : ''} onClick={() => setFilter(filter === 'task' ? 'operation' : 'task')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="tasks" size={22} /></i><span>Tarefas</span><strong>{selection.counts.task || 0}</strong><small>trabalho para executar</small></button>
-      <button type="button" aria-pressed={filter === 'process'} aria-controls={resultsId} className={filter === 'process' ? 'active' : ''} onClick={() => setFilter(filter === 'process' ? 'operation' : 'process')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="processes" size={22} /></i><span>Processos</span><strong>{selection.counts.process || 0}</strong><small>fluxos em andamento</small></button>
-      <button type="button" aria-pressed={filter === 'obligation'} aria-controls={resultsId} className={filter === 'obligation' ? 'active' : ''} onClick={() => setFilter(filter === 'obligation' ? 'operation' : 'obligation')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="obligations" size={22} /></i><span>Obrigações</span><strong>{selection.counts.obligation || 0}</strong><small>entregas e compromissos</small></button>
-      <button type="button" aria-pressed={scope === 'overdue'} aria-controls={resultsId} className={`danger ${scope === 'overdue' ? 'active' : ''}`} onClick={() => chooseScope(scope === 'overdue' ? 'all' : 'overdue')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="clock" size={22} /></i><span>Atrasados</span><strong>{operationalScopeCounts.overdue}</strong><small>operação com prazo vencido</small></button>
+      <button type="button" aria-pressed={filter === 'process'} aria-controls={resultsId} className={filter === 'process' ? 'active' : ''} onClick={() => setFilter(filter === 'process' ? 'operation' : 'process')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="processes" size={22} /></i><span>Processos</span><strong>{selection.counts.process || 0}</strong><small>próximas ações</small></button>
+      <button type="button" aria-pressed={filter === 'obligation'} aria-controls={resultsId} className={filter === 'obligation' ? 'active' : ''} onClick={() => setFilter(filter === 'obligation' ? 'operation' : 'obligation')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="obligations" size={22} /></i><span>Obrigações</span><strong>{selection.counts.obligation || 0}</strong><small>entregas por competência</small></button>
+      <button type="button" aria-pressed={scope === 'overdue'} aria-controls={resultsId} className={`danger ${scope === 'overdue' ? 'active' : ''}`} onClick={() => chooseScope(scope === 'overdue' ? 'all' : 'overdue')}><i className="v12-metric-icon" aria-hidden="true"><Icon name="clock" size={22} /></i><span>Atrasados</span><strong>{operationalScopeCounts.overdue}</strong><small>agir antes do restante</small></button>
     </div>
 
     <div className="v12-scope-filters" aria-label="Situação operacional">
@@ -155,7 +169,7 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
     <div className="v12-horizon-filters" aria-label="Filtrar tipo de trabalho">
       {filters.map(([id, label]) => {
         const count = selection.counts[id] || 0
-        return <button type="button" aria-pressed={filter === id} aria-controls={resultsId} className={`${filter === id ? 'active' : ''} ${id === 'finance' ? 'finance-option' : ''}`} onClick={() => setFilter(id)} key={id}>{label}<span>{count}</span></button>
+        return <button type="button" aria-pressed={filter === id} aria-controls={resultsId} className={`${filter === id ? 'active' : ''} ${id === 'finance' ? 'finance-option' : ''}`} onClick={() => setFilter(id)} key={id}>{id === 'finance' ? 'Apoio financeiro' : label}<span>{count}</span></button>
       })}
     </div>
 
@@ -166,8 +180,8 @@ export default function WorkHorizonBoard({ office, update, onOpenItem, onNavigat
       {visibleGroups.length ? visibleGroups.map(group => {
         const limit = horizon === 'month' && !expandedGroups.has(group.key) ? 8 : group.items.length
         const hidden = Math.max(0, group.items.length - limit)
-        return <section className={`v12-period-group ${group.overdue ? 'overdue' : ''}`} key={group.key}>
-          <header><div><span>{group.overdue ? 'Prioridade' : scope === 'unscheduled' ? 'Planejamento pendente' : horizon === 'month' ? 'Bloco semanal' : 'Agenda'}</span><strong>{group.label}</strong></div><b>{group.items.length}</b></header>
+        return <section className={`v12-period-group ${group.overdue ? 'overdue' : ''} ${group.key === day ? 'today' : ''}`} key={group.key}>
+          <header><div><span>{group.overdue ? 'Faça primeiro' : group.key === day ? 'Expediente de hoje' : scope === 'unscheduled' ? 'Planejamento pendente' : horizon === 'month' ? 'Bloco semanal' : 'Agenda'}</span><strong>{group.label}</strong></div><b>{group.items.length}</b></header>
           <div className="v12-period-items">{group.items.slice(0, limit).map(item => <HorizonItem key={item.key} item={item} office={office} update={update} onOpenItem={onOpenItem} onNotice={setNotice} onCompleted={registerCompletion} day={day} />)}</div>
           {hidden ? <button type="button" className="v12-show-more" onClick={() => toggleGroup(group.key)}>Mostrar mais {hidden}</button> : horizon === 'month' && expandedGroups.has(group.key) && group.items.length > 8 ? <button type="button" className="v12-show-more" onClick={() => toggleGroup(group.key)}>Recolher semana</button> : null}
         </section>

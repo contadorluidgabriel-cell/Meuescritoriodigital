@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { buildOperationalMetrics, collectOperationalWork } from '../lib/operationalIntelligence.js'
 import { isDone, today } from '../lib/storage.js'
 import { normalizeText } from '../lib/textUtils.js'
+import ManagementInsights from './ManagementInsights.jsx'
 import { Icon } from './ui/SaasUI.jsx'
 import '../management-dashboard.css'
 
@@ -75,7 +76,7 @@ export default function Dashboard({ office, sync, onNavigate }) {
   const workTypes = useMemo(() => ({
     tasks: work.filter(item => item.type === 'task').length,
     processes: work.filter(item => item.type === 'process').length,
-    obligations: work.filter(item => item.type === 'obligation').length,
+    obligations: new Set(work.filter(item => item.type === 'obligation').map(item => String(item.id))).size,
   }), [work])
 
   const maxDepartment = Math.max(1, ...departmentLoad.map(row => row.value))
@@ -93,6 +94,8 @@ export default function Dashboard({ office, sync, onNavigate }) {
       <Metric label="Pendências no prazo" value={percent(metrics.pendingOnTimePercent)} detail={`${metrics.overdueWork} item(ns) atrasado(s)`} tone={metrics.overdueWork ? 'warning' : 'ok'} icon="clock" />
       <Metric label="Financeiro vencido" value={money(metrics.financeOverdue)} detail={`${money(metrics.financeOpen)} em aberto`} tone={metrics.financeOverdue ? 'danger' : 'ok'} icon="warning" />
     </section>
+
+    <ManagementInsights office={office} metrics={metrics} day={day} />
 
     <div className="mgmt-grid two">
       <Section eyebrow="Operação" title="Saúde operacional" action={<button type="button" onClick={() => onNavigate?.('meu-dia')}>Meu Dia</button>}>
