@@ -206,7 +206,9 @@ export function toggleProcessStep(process = {}, stepId, baseDate = today()) {
   if (!target) return { process: clone(process) || {}, changed: false, error: 'Etapa não encontrada.' }
   const reopening = processStepSettled(target)
   const result = setProcessStepStatus(process, stepId, reopening ? 'Pendente' : 'Concluída', { baseDate })
-  return reopening ? { ...result, reopened: true } : result
+  if (!reopening) return result
+  const activated = setCurrentProcessStep(result.process, stepId, baseDate)
+  return { ...activated, reopened: true }
 }
 
 export function continueProcessWaiting(process = {}, baseDate = today()) {
