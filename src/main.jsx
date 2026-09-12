@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import App from './App.jsx'
+import { initPwaRuntime } from './lib/pwa.js'
 import './styles.css'
 import './legacy-host.css'
 import './migration-shell.css'
@@ -18,6 +19,9 @@ import './client-mobile-fix.css'
 import './third-party-work.css'
 import './client-outsourcing.css'
 import './visual-refresh-v13.css'
+import './pwa-install.css'
+
+initPwaRuntime()
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
