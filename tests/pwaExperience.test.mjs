@@ -28,14 +28,16 @@ test('runtime registra o mesmo service worker usado pelo push e oferece instala�
   assert.match(runtime, /document\.getElementById\('med-pwa-install'\)/)
 })
 
-test('PWA abre Meu Dia e atalhos de push continuam roteando para módulos', () => {
+test('PWA e navegador abrem Meu Dia e atalhos continuam roteando para módulos', () => {
   const patch = read('scripts/patch-push-notifications.mjs')
+  const operational = read('scripts/patch-operational-intelligence.mjs')
 
   assert.match(patch, /'meu-dia': 'meu-dia'/)
   assert.match(patch, /pendencias: 'pendencias'/)
-  assert.match(patch, /launchParams\.get\('app'\) === '1' \? 'meu-dia' : 'dashboard'/)
+  assert.match(patch, /const initialPushView = pushViewMap\[requestedPushView\] \|\| 'meu-dia'/)
   assert.match(patch, /tarefas: 'tarefas'/)
   assert.match(patch, /calendario: 'calendario'/)
+  assert.match(operational, /const pushViewMap = \{ 'meu-dia': 'meu-dia'/)
 })
 
 test('service worker preserva notificações e abertura do Meu Dia', () => {
