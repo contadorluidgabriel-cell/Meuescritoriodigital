@@ -10,6 +10,8 @@ export const WORK_HORIZONS = {
 const uniqueByKey = items => [...new Map((items || []).map(item => [item.key, item])).values()]
 const itemDate = item => String(item?.effectiveDate || item?.planned || item?.due || '')
 const officialDue = item => String(item?.due || '')
+const normalizeStatus = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+const isActiveProcess = item => item?.type === 'process' && !/(conclu|cancel)/.test(normalizeStatus(item?.status))
 
 function dateLabel(value, options = {}) {
   if (!value) return ''
@@ -82,16 +84,24 @@ export function buildWorkHorizon(office = {}, { day, horizon = 'today' } = {}) {
   const all = collectCommandCenterItems(office, { day, daysBefore: 60 })
   const tasksById = taskSourceMap(office)
   const overdue = all.filter(item => {
+    if (item.type === 'process' && !isActiveProcess(item)) return false
     const due = officialDue(item)
     return due && due < day
   })
   const inPeriod = all.filter(item => {
+    if (item.type === 'process') {
+      if (!isActiveProcess(item)) return false
+      if (config.id === 'today') {
+        const due = officialDue(item)
+        return !due || due >= day
+      }
+    }
     const date = itemDate(item)
     if (date && date >= day && date <= end) return true
     return config.id === 'today' && isVisibleTodayByAdvance(item, tasksById, day)
   })
   const items = uniqueByKey([...overdue, ...inPeriod])
-  const unscheduled = all.filter(item => !itemDate(item) && ['task', 'process', 'obligation'].includes(item.type))
+  const unscheduled = all.filter(item => !itemDate(item) && ['task', 'process', 'obligation'].includes(item.type) && (item.type !== 'process' || isActiveProcess(item)))
   const periodGroups = config.id === 'today'
     ? (inPeriod.length ? [{ key: day, start: day, end: day, label: 'Hoje', items: uniqueByKey(inPeriod) }] : [])
     : config.id === 'month'
