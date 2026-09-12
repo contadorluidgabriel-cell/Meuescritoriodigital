@@ -211,7 +211,6 @@ export function initPwaRuntime() {
 
   if (isStandaloneMode()) {
     document.documentElement.dataset.pwa = 'standalone'
-    window.setTimeout(showStartupGuide, 1400)
   }
 
   window.addEventListener('beforeinstallprompt', event => {
