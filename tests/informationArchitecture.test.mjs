@@ -72,7 +72,7 @@ test('Meu Dia usa cinco cards grandes como filtro de tipo', () => {
   assert.match(board, /v12-type-cards/)
   assert.equal(board.includes('v12-horizon-filters'), false)
   assert.match(board, /function chooseScope\(value\)[\s\S]*setScope\(value\)[\s\S]*setExpandedGroups/)
-  assert.doesNotMatch(board, /function chooseScope\(value\)[\s\S]{0,120}setFilter/)
+  assert.doesNotMatch(board, /function chooseScope\(value\)\s*\{[^}]*setFilter/)
   assert.match(board, /situationCounts/)
   assert.match(css, /repeat\(5,minmax\(0,1fr\)\)/)
   assert.match(view, /operationalTypes = \['task', 'process', 'obligation'\]/)
