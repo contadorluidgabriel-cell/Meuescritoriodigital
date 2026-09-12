@@ -1,8 +1,8 @@
 const INSTALL_DISMISS_KEY = 'med_pwa_install_dismissed_until'
 const STARTUP_CONFIRMED_KEY = 'med_pwa_startup_confirmed'
+const STARTUP_SEEN_KEY = 'med_pwa_startup_seen'
 const STARTUP_DISMISS_KEY = 'med_pwa_startup_dismissed_until'
 const DISMISS_FOR_MS = 7 * 24 * 60 * 60 * 1000
-const STARTUP_DISMISS_FOR_MS = 24 * 60 * 60 * 1000
 let deferredInstallPrompt = null
 let initialized = false
 
@@ -64,8 +64,8 @@ function canOfferInstall() {
 function canOfferStartupGuide() {
   if (!isStandaloneMode() || !isWindowsDevice()) return false
   if (localStorage.getItem(STARTUP_CONFIRMED_KEY) === '1') return false
-  const dismissedUntil = Number(localStorage.getItem(STARTUP_DISMISS_KEY) || 0)
-  return !dismissedUntil || dismissedUntil <= Date.now()
+  if (localStorage.getItem(STARTUP_SEEN_KEY) === '1') return false
+  return true
 }
 
 function removeInstallBanner() {
@@ -82,12 +82,14 @@ function dismissInstallBanner() {
 }
 
 function dismissStartupGuide() {
-  localStorage.setItem(STARTUP_DISMISS_KEY, String(Date.now() + STARTUP_DISMISS_FOR_MS))
+  localStorage.setItem(STARTUP_SEEN_KEY, '1')
+  localStorage.removeItem(STARTUP_DISMISS_KEY)
   removeStartupGuide()
 }
 
 function confirmStartupGuide() {
   localStorage.setItem(STARTUP_CONFIRMED_KEY, '1')
+  localStorage.setItem(STARTUP_SEEN_KEY, '1')
   localStorage.removeItem(STARTUP_DISMISS_KEY)
   removeStartupGuide()
 }
@@ -157,8 +159,11 @@ async function copyStartupSteps(button) {
   }
 }
 
-function showStartupGuide() {
-  if (!canOfferStartupGuide() || document.getElementById('med-pwa-startup')) return
+function showStartupGuide({ force = false } = {}) {
+  if (!isStandaloneMode() || !isWindowsDevice()) return
+  if ((!force && !canOfferStartupGuide()) || document.getElementById('med-pwa-startup')) return
+
+  localStorage.setItem(STARTUP_SEEN_KEY, '1')
   const guide = startupGuide()
   const banner = document.createElement('aside')
   banner.id = 'med-pwa-startup'
@@ -175,13 +180,17 @@ function showStartupGuide() {
     <div class="med-pwa-startup__actions">
       <button type="button" data-pwa-startup-copy>Copiar passos</button>
       <button type="button" class="secondary" data-pwa-startup-done>Já ativei</button>
-      <button type="button" class="tertiary" data-pwa-startup-later>Depois</button>
+      <button type="button" class="tertiary" data-pwa-startup-later>Fechar</button>
     </div>
   `
   banner.querySelector('[data-pwa-startup-copy]')?.addEventListener('click', event => copyStartupSteps(event.currentTarget))
   banner.querySelector('[data-pwa-startup-done]')?.addEventListener('click', confirmStartupGuide)
   banner.querySelector('[data-pwa-startup-later]')?.addEventListener('click', dismissStartupGuide)
   document.body.appendChild(banner)
+}
+
+export function openStartupGuide() {
+  showStartupGuide({ force: true })
 }
 
 async function registerAppWorker() {
@@ -198,6 +207,8 @@ export function initPwaRuntime() {
   if (initialized || typeof window === 'undefined' || typeof document === 'undefined') return
   initialized = true
 
+  window.medOpenStartupGuide = openStartupGuide
+
   if (isStandaloneMode()) {
     document.documentElement.dataset.pwa = 'standalone'
     window.setTimeout(showStartupGuide, 1400)
@@ -212,6 +223,7 @@ export function initPwaRuntime() {
   window.addEventListener('appinstalled', () => {
     deferredInstallPrompt = null
     localStorage.removeItem(INSTALL_DISMISS_KEY)
+    localStorage.removeItem(STARTUP_SEEN_KEY)
     localStorage.removeItem(STARTUP_DISMISS_KEY)
     document.documentElement.dataset.pwa = 'standalone'
     removeInstallBanner()

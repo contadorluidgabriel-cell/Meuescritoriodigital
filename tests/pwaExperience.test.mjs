@@ -33,16 +33,29 @@ test('PWA instalada no Windows orienta ativação do início automático sem fin
   const css = read('src/pwa-install.css')
 
   assert.match(runtime, /STARTUP_CONFIRMED_KEY/)
+  assert.match(runtime, /STARTUP_SEEN_KEY/)
   assert.match(runtime, /isStandaloneMode\(\) \|\| !isWindowsDevice\(\)/)
   assert.match(runtime, /edge:\/\/apps/)
   assert.match(runtime, /chrome:\/\/apps/)
   assert.match(runtime, /Iniciar automaticamente ao entrar no dispositivo/)
   assert.match(runtime, /Iniciar app quando você fizer login/)
   assert.match(runtime, /data-pwa-startup-done>Já ativei/)
+  assert.match(runtime, /data-pwa-startup-later>Fechar/)
   assert.match(runtime, /window\.setTimeout\(showStartupGuide, 1400\)/)
   assert.doesNotMatch(runtime, /--app-run-on-os-login-mode/)
   assert.match(css, /html\[data-pwa="standalone"\] #med-pwa-install/)
   assert.match(css, /\.med-pwa-startup/)
+})
+
+test('guia de início automático aparece uma vez por perfil e pode ser reaberto manualmente', () => {
+  const runtime = read('src/lib/pwa.js')
+
+  assert.match(runtime, /localStorage\.getItem\(STARTUP_SEEN_KEY\) === '1'/)
+  assert.match(runtime, /localStorage\.setItem\(STARTUP_SEEN_KEY, '1'\)/)
+  assert.match(runtime, /export function openStartupGuide\(\)/)
+  assert.match(runtime, /showStartupGuide\(\{ force: true \}\)/)
+  assert.match(runtime, /window\.medOpenStartupGuide = openStartupGuide/)
+  assert.doesNotMatch(runtime, /STARTUP_DISMISS_FOR_MS/)
 })
 
 test('PWA e navegador abrem Meu Dia e atalhos continuam roteando para módulos', () => {
