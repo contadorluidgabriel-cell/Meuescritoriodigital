@@ -8,7 +8,7 @@ function replaceOrFail(source, from, to, label) {
 export function applyInviteLinksPatch(root) {
   const teamPath = `${root}src/components/TeamManagement.jsx`
   let team = readFileSync(teamPath, 'utf8')
-  if (!team.includes("createWorkspaceInviteLink from '../lib/inviteLinks.js'")) {
+  if (!team.includes('MED_USER_ACCESS_V2') && !team.includes("from '../lib/inviteLinks.js'")) {
     team = replaceOrFail(team,
       "import { inviteWorkspaceMember, listWorkspaceMembers, loadWorkspaceAudit, removeWorkspaceMember, roleLabel, updateWorkspaceMember } from '../lib/workspaceSync.js'",
       "import { inviteWorkspaceMember, listWorkspaceMembers, loadWorkspaceAudit, removeWorkspaceMember, roleLabel, updateWorkspaceMember } from '../lib/workspaceSync.js'\nimport { createWorkspaceInviteLink } from '../lib/inviteLinks.js'",

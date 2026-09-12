@@ -5,21 +5,25 @@ import {
   ROLE_COLLABORATOR,
   ROLE_PARTNER,
   applyOfficePatch,
+  defaultInternalV2Permissions,
   filterPayloadForMembership,
+  isInternalV2Membership,
   memberCanSeeTeam,
   permissionsFor,
 } from './access.js'
 
 const APP_URL = 'https://meu-escritorio-digital.vercel.app'
-const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), {
-  status,
-  headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' },
-})
+const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' } })
 const cleanEmail = (value = '') => String(value || '').trim().toLowerCase()
 const cleanRole = (value = '') => [ROLE_ADMIN, ROLE_COLLABORATOR, ROLE_PARTNER].includes(value) ? value : ROLE_COLLABORATOR
 const displayFromUser = (user: any) => String(user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Usuário').trim()
+const internalRole = (role = '') => role === ROLE_ADMIN || role === ROLE_COLLABORATOR
+const roleName = (role = '') => role === ROLE_ADMIN ? 'Administrador' : role === ROLE_PARTNER ? 'Parceiro' : 'Colaborador'
+const permissionKeys = ['clients', 'manage_clients', 'tasks', 'processes', 'obligations', 'finance_receivables', 'finance_payables', 'finance_cash', 'finance_reports']
+const uniqueIds = (values: any[] = []) => [...new Set(values.map(value => String(value || '').trim()).filter(Boolean))]
 
 function memberView(member: any, workspace: any = null) {
+  const scoped = workspace ? { ...member, workspace } : member
   return {
     id: member.id,
     workspace_id: member.workspace_id,
@@ -29,7 +33,7 @@ function memberView(member: any, workspace: any = null) {
     role: member.role,
     partner_id: member.partner_id || '',
     status: member.status,
-    permissions: permissionsFor(member),
+    permissions: permissionsFor(scoped),
     joined_at: member.joined_at,
     invited_at: member.invited_at,
     workspace: workspace ? { id: workspace.id, name: workspace.name, owner_user_id: workspace.owner_user_id } : undefined,
@@ -41,93 +45,44 @@ async function authenticatedUser(service: any, req: Request) {
   const token = authorization.replace(/^Bearer\s+/i, '').trim()
   if (!token) return null
   const { data, error } = await service.auth.getUser(token)
-  if (error || !data?.user) return null
-  return data.user
+  return error || !data?.user ? null : data.user
 }
 
 async function claimInvites(service: any, user: any) {
   const email = cleanEmail(user.email)
   if (!email) return
-  const { data: invited } = await service
-    .from('office_members')
-    .select('id,workspace_id,user_id,email,status')
-    .eq('email', email)
-    .eq('status', 'invited')
+  const { data: invited } = await service.from('office_members').select('id,workspace_id,user_id,email,status').eq('email', email).eq('status', 'invited')
   for (const row of invited || []) {
     if (row.user_id && String(row.user_id) !== String(user.id)) continue
-    await service.from('office_members').update({
-      user_id: user.id,
-      status: 'active',
-      joined_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }).eq('id', row.id)
+    await service.from('office_members').update({ user_id: user.id, status: 'active', joined_at: new Date().toISOString(), updated_at: new Date().toISOString() }).eq('id', row.id)
   }
 }
 
 async function provisionWorkspace(service: any, user: any) {
   const { data: existing } = await service.from('office_workspaces').select('*').eq('owner_user_id', user.id).maybeSingle()
   if (existing) {
-    await service.from('office_members').upsert({
-      workspace_id: existing.id,
-      user_id: user.id,
-      email: cleanEmail(user.email) || `${user.id}@local.invalid`,
-      display_name: displayFromUser(user),
-      role: ROLE_ADMIN,
-      status: 'active',
-      permissions: DEFAULT_PERMISSIONS.admin,
-      joined_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }, { onConflict: 'workspace_id,user_id' })
+    await service.from('office_members').upsert({ workspace_id: existing.id, user_id: user.id, email: cleanEmail(user.email) || `${user.id}@local.invalid`, display_name: displayFromUser(user), role: ROLE_ADMIN, status: 'active', permissions: DEFAULT_PERMISSIONS.admin, joined_at: new Date().toISOString(), updated_at: new Date().toISOString() }, { onConflict: 'workspace_id,user_id' })
     return existing
   }
 
   const { data: legacy } = await service.from('office_snapshots').select('payload,app_version,created_at,updated_at').eq('user_id', user.id).maybeSingle()
   const configured = legacy?.payload?.med_configuracoes || {}
   const workspaceName = String(configured.office || user.user_metadata?.office || 'Meu Escritório').trim() || 'Meu Escritório'
-  const { data: workspace, error: workspaceError } = await service.from('office_workspaces').insert({
-    name: workspaceName,
-    owner_user_id: user.id,
-  }).select('*').single()
+  const { data: workspace, error: workspaceError } = await service.from('office_workspaces').insert({ name: workspaceName, owner_user_id: user.id }).select('*').single()
   if (workspaceError) throw workspaceError
-
-  await service.from('office_members').insert({
-    workspace_id: workspace.id,
-    user_id: user.id,
-    email: cleanEmail(user.email) || `${user.id}@local.invalid`,
-    display_name: displayFromUser(user),
-    role: ROLE_ADMIN,
-    status: 'active',
-    permissions: DEFAULT_PERMISSIONS.admin,
-    joined_at: new Date().toISOString(),
-  })
-  await service.from('office_workspace_snapshots').insert({
-    workspace_id: workspace.id,
-    payload: legacy?.payload || {},
-    app_version: legacy?.app_version || '11.1',
-    version: 1,
-    updated_by: user.id,
-    created_at: legacy?.created_at || new Date().toISOString(),
-    updated_at: legacy?.updated_at || new Date().toISOString(),
-  })
+  await service.from('office_members').insert({ workspace_id: workspace.id, user_id: user.id, email: cleanEmail(user.email) || `${user.id}@local.invalid`, display_name: displayFromUser(user), role: ROLE_ADMIN, status: 'active', permissions: DEFAULT_PERMISSIONS.admin, joined_at: new Date().toISOString() })
+  await service.from('office_workspace_snapshots').insert({ workspace_id: workspace.id, payload: legacy?.payload || {}, app_version: legacy?.app_version || '11.1', version: 1, updated_by: user.id, created_at: legacy?.created_at || new Date().toISOString(), updated_at: legacy?.updated_at || new Date().toISOString() })
   await service.from('office_user_workspace_preferences').upsert({ user_id: user.id, active_workspace_id: workspace.id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   return workspace
 }
 
 async function activeMemberships(service: any, user: any) {
   await claimInvites(service, user)
-  let { data, error } = await service
-    .from('office_members')
-    .select('*,office_workspaces(id,name,owner_user_id,created_at,updated_at)')
-    .eq('user_id', user.id)
-    .eq('status', 'active')
+  let { data, error } = await service.from('office_members').select('*,office_workspaces(id,name,owner_user_id,created_at,updated_at)').eq('user_id', user.id).eq('status', 'active')
   if (error) throw error
   if (!data?.length) {
     await provisionWorkspace(service, user)
-    const retry = await service
-      .from('office_members')
-      .select('*,office_workspaces(id,name,owner_user_id,created_at,updated_at)')
-      .eq('user_id', user.id)
-      .eq('status', 'active')
+    const retry = await service.from('office_members').select('*,office_workspaces(id,name,owner_user_id,created_at,updated_at)').eq('user_id', user.id).eq('status', 'active')
     if (retry.error) throw retry.error
     data = retry.data || []
   }
@@ -142,11 +97,7 @@ async function chooseMembership(service: any, user: any, memberships: any[], req
   }
   if (!selected) selected = memberships.find(item => item.role === ROLE_ADMIN) || memberships[0]
   if (!selected) throw new Error('Nenhum escritório disponível para este usuário.')
-  await service.from('office_user_workspace_preferences').upsert({
-    user_id: user.id,
-    active_workspace_id: selected.workspace_id,
-    updated_at: new Date().toISOString(),
-  }, { onConflict: 'user_id' })
+  await service.from('office_user_workspace_preferences').upsert({ user_id: user.id, active_workspace_id: selected.workspace_id, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   return selected
 }
 
@@ -159,27 +110,13 @@ async function reconcileLegacyOwnerSnapshot(service: any, user: any, membership:
   ])
   if (!legacy?.payload || !shared || Number(shared.version || 1) > 1) return
   if (Date.parse(legacy.updated_at || '') <= Date.parse(shared.updated_at || '')) return
-  await service.from('office_workspace_snapshots').update({
-    payload: legacy.payload,
-    app_version: legacy.app_version || '11.1',
-    updated_by: user.id,
-    updated_at: legacy.updated_at || new Date().toISOString(),
-  }).eq('workspace_id', membership.workspace_id).eq('version', shared.version)
+  await service.from('office_workspace_snapshots').update({ payload: legacy.payload, app_version: legacy.app_version || '11.1', updated_by: user.id, updated_at: legacy.updated_at || new Date().toISOString() }).eq('workspace_id', membership.workspace_id).eq('version', shared.version)
 }
 
 async function contextFor(service: any, user: any, requestedWorkspaceId = '') {
   const memberships = await activeMemberships(service, user)
   const selected = await chooseMembership(service, user, memberships, requestedWorkspaceId)
-  return {
-    selected,
-    memberships,
-    workspaces: memberships.map(item => ({
-      id: item.workspace_id,
-      name: item.office_workspaces?.name || 'Meu Escritório',
-      role: item.role,
-      partner_id: item.partner_id || '',
-    })),
-  }
+  return { selected, memberships, workspaces: memberships.map(item => ({ id: item.workspace_id, name: item.office_workspaces?.name || 'Meu Escritório', role: item.role, partner_id: item.partner_id || '' })) }
 }
 
 async function loadWorkspace(service: any, user: any, requestedWorkspaceId = '') {
@@ -188,83 +125,32 @@ async function loadWorkspace(service: any, user: any, requestedWorkspaceId = '')
   let { data: snapshot, error } = await service.from('office_workspace_snapshots').select('*').eq('workspace_id', context.selected.workspace_id).maybeSingle()
   if (error) throw error
   if (!snapshot) {
-    const created = await service.from('office_workspace_snapshots').insert({
-      workspace_id: context.selected.workspace_id,
-      payload: {},
-      app_version: '11.1',
-      version: 1,
-      updated_by: user.id,
-    }).select('*').single()
+    const created = await service.from('office_workspace_snapshots').insert({ workspace_id: context.selected.workspace_id, payload: {}, app_version: '11.1', version: 1, updated_by: user.id }).select('*').single()
     if (created.error) throw created.error
     snapshot = created.data
   }
-  return {
-    workspace: context.selected.office_workspaces,
-    membership: memberView(context.selected, context.selected.office_workspaces),
-    workspaces: context.workspaces,
-    payload: filterPayloadForMembership(snapshot.payload || {}, context.selected),
-    version: Number(snapshot.version || 1),
-    updated_at: snapshot.updated_at,
-  }
+  return { workspace: context.selected.office_workspaces, membership: memberView(context.selected, context.selected.office_workspaces), workspaces: context.workspaces, payload: filterPayloadForMembership(snapshot.payload || {}, context.selected), version: Number(snapshot.version || 1), updated_at: snapshot.updated_at }
 }
 
 async function writeAudit(service: any, workspaceId: string, user: any, membership: any, entries: any[]) {
   if (!entries.length) return
-  const rows = entries.slice(0, 100).map(entry => ({
-    workspace_id: workspaceId,
-    actor_user_id: user.id,
-    actor_name: membership.display_name || displayFromUser(user),
-    actor_role: membership.role || '',
-    action: entry.action || 'update',
-    entity_type: entry.entity_type || '',
-    entity_id: entry.entity_id || '',
-    summary: entry.summary || 'Registro atualizado',
-    details: entry.details || {},
-  }))
-  await service.from('office_audit_log').insert(rows)
+  await service.from('office_audit_log').insert(entries.slice(0, 100).map(entry => ({ workspace_id: workspaceId, actor_user_id: user.id, actor_name: membership.display_name || displayFromUser(user), actor_role: membership.role || '', action: entry.action || 'update', entity_type: entry.entity_type || '', entity_id: entry.entity_id || '', summary: entry.summary || 'Registro atualizado', details: entry.details || {} })))
 }
 
 async function saveWorkspace(service: any, user: any, body: any) {
   const context = await contextFor(service, user, String(body.workspace_id || ''))
   const membership = context.selected
   const patch = body.patch && typeof body.patch === 'object' ? body.patch : {}
-
   for (let attempt = 0; attempt < 3; attempt += 1) {
-    const { data: current, error: currentError } = await service
-      .from('office_workspace_snapshots')
-      .select('payload,version,updated_at')
-      .eq('workspace_id', membership.workspace_id)
-      .single()
+    const { data: current, error: currentError } = await service.from('office_workspace_snapshots').select('payload,version,updated_at').eq('workspace_id', membership.workspace_id).single()
     if (currentError) throw currentError
-
     const applied = applyOfficePatch(current.payload || {}, patch, membership)
     const nextVersion = Number(current.version || 1) + 1
-    const { data: saved, error: saveError } = await service
-      .from('office_workspace_snapshots')
-      .update({
-        payload: applied.payload,
-        app_version: '11.1',
-        version: nextVersion,
-        updated_by: user.id,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('workspace_id', membership.workspace_id)
-      .eq('version', current.version)
-      .select('payload,version,updated_at')
-      .maybeSingle()
+    const { data: saved, error: saveError } = await service.from('office_workspace_snapshots').update({ payload: applied.payload, app_version: '11.1', version: nextVersion, updated_by: user.id, updated_at: new Date().toISOString() }).eq('workspace_id', membership.workspace_id).eq('version', current.version).select('payload,version,updated_at').maybeSingle()
     if (saveError) throw saveError
     if (!saved) continue
-
     await writeAudit(service, membership.workspace_id, user, membership, applied.audit)
-    return {
-      ok: true,
-      workspace: membership.office_workspaces,
-      membership: memberView(membership, membership.office_workspaces),
-      workspaces: context.workspaces,
-      payload: filterPayloadForMembership(saved.payload || {}, membership),
-      version: Number(saved.version || nextVersion),
-      updated_at: saved.updated_at,
-    }
+    return { ok: true, workspace: membership.office_workspaces, membership: memberView(membership, membership.office_workspaces), workspaces: context.workspaces, payload: filterPayloadForMembership(saved.payload || {}, membership), version: Number(saved.version || nextVersion), updated_at: saved.updated_at }
   }
   throw new Error('O escritório foi alterado simultaneamente. Tente novamente.')
 }
@@ -279,7 +165,58 @@ async function listMembers(service: any, user: any, workspaceId = '') {
   const context = await requireAdminContext(service, user, workspaceId)
   const { data, error } = await service.from('office_members').select('*').eq('workspace_id', context.selected.workspace_id).order('invited_at', { ascending: true })
   if (error) throw error
-  return { workspace: context.selected.office_workspaces, members: (data || []).map(item => memberView(item)) }
+  return { workspace: context.selected.office_workspaces, members: (data || []).map(item => memberView(item, context.selected.office_workspaces)) }
+}
+
+function invitePermissions(role: string, bodyPermissions: any) {
+  if (internalRole(role)) return defaultInternalV2Permissions(role)
+  return { ...DEFAULT_PERMISSIONS[role], ...(bodyPermissions && typeof bodyPermissions === 'object' ? bodyPermissions : {}) }
+}
+
+function updatePermissions(member: any, role: string, body: any) {
+  const supplied = body.permissions && typeof body.permissions === 'object'
+  if (internalRole(role)) {
+    const previous = member.permissions?.access_v2 === true ? { ...defaultInternalV2Permissions(role), ...member.permissions } : null
+    const permissions = supplied
+      ? { ...defaultInternalV2Permissions(role), ...(previous || {}), ...body.permissions }
+      : previous || defaultInternalV2Permissions(role)
+    return { ...permissions, access_v2: true, team: role === ROLE_ADMIN, delete_records: role === ROLE_ADMIN }
+  }
+  if (supplied) return { ...DEFAULT_PERMISSIONS[role], ...body.permissions }
+  return member.role === role ? member.permissions || DEFAULT_PERMISSIONS[role] : DEFAULT_PERMISSIONS[role]
+}
+
+function constrainInternalPermissions(actor: any, member: any, role: string, proposed: any) {
+  if (!isInternalV2Membership(actor) || !internalRole(role)) return proposed
+  const actorPermissions = permissionsFor(actor)
+  const previous = member.permissions?.access_v2 === true
+    ? { ...defaultInternalV2Permissions(member.role), ...member.permissions }
+    : defaultInternalV2Permissions(role)
+  const next = { ...proposed, access_v2: true }
+
+  const actorClientIds = new Set(uniqueIds(actorPermissions.client_ids || []))
+  const previousClientIds = uniqueIds(previous.client_ids || [])
+  const requestedClientIds = uniqueIds(Array.isArray(next.client_ids) ? next.client_ids : previousClientIds)
+  const hiddenExisting = previousClientIds.filter(id => !actorClientIds.has(id))
+  const requestedVisible = requestedClientIds.filter(id => actorClientIds.has(id))
+  next.client_ids = uniqueIds([...hiddenExisting, ...requestedVisible])
+
+  for (const key of permissionKeys) {
+    if (!actorPermissions[key]) next[key] = Boolean(previous[key])
+  }
+  if (actorPermissions.work_visibility !== 'all_allowed') next.work_visibility = previous.work_visibility === 'all_allowed' ? 'all_allowed' : 'mine_and_unassigned'
+  if (!next.clients) next.manage_clients = false
+  next.finance = Boolean(next.finance_receivables)
+  next.finance_edit = Boolean(next.finance_receivables || next.finance_payables || next.finance_cash)
+  next.team = role === ROLE_ADMIN
+  next.delete_records = role === ROLE_ADMIN
+  return next
+}
+
+function scopedAdminCannotManageTarget(actor: any, member: any) {
+  if (!isInternalV2Membership(actor)) return false
+  if (member.role === ROLE_PARTNER) return true
+  return member.role === ROLE_ADMIN && member.permissions?.access_v2 !== true
 }
 
 async function inviteMember(service: any, user: any, body: any) {
@@ -288,7 +225,7 @@ async function inviteMember(service: any, user: any, body: any) {
   const displayName = String(body.display_name || '').trim()
   const role = cleanRole(body.role)
   if (!email || !email.includes('@')) throw new Error('Informe um e-mail válido.')
-  if (role === ROLE_ADMIN) throw new Error('Novos convites devem ser Colaborador ou Parceiro.')
+  if (isInternalV2Membership(context.selected) && role === ROLE_PARTNER) throw new Error('Administradores com acesso limitado não podem criar acessos de parceiros.')
 
   const partnerId = role === ROLE_PARTNER ? String(body.partner_id || '') : ''
   if (role === ROLE_PARTNER) {
@@ -297,25 +234,11 @@ async function inviteMember(service: any, user: any, body: any) {
     if (!partnerId || !partners.some((partner: any) => String(partner.id) === partnerId)) throw new Error('Vincule o acesso a um parceiro cadastrado no escritório.')
   }
 
-  const permissions = {
-    ...DEFAULT_PERMISSIONS[role],
-    ...(body.permissions && typeof body.permissions === 'object' ? body.permissions : {}),
-  }
+  const permissions = invitePermissions(role, body.permissions)
   const { data: existing } = await service.from('office_members').select('*').eq('workspace_id', context.selected.workspace_id).eq('email', email).maybeSingle()
   if (existing?.status === 'active') throw new Error('Este e-mail já faz parte do escritório.')
 
-  const memberPayload = {
-    workspace_id: context.selected.workspace_id,
-    email,
-    display_name: displayName || email.split('@')[0],
-    role,
-    partner_id: partnerId || null,
-    status: 'invited',
-    permissions,
-    invited_by: user.id,
-    invited_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  }
+  const memberPayload = { workspace_id: context.selected.workspace_id, email, display_name: displayName || email.split('@')[0], role, partner_id: partnerId || null, status: 'invited', permissions, invited_by: user.id, invited_at: new Date().toISOString(), updated_at: new Date().toISOString() }
   let member
   if (existing) {
     const updated = await service.from('office_members').update(memberPayload).eq('id', existing.id).select('*').single()
@@ -330,10 +253,7 @@ async function inviteMember(service: any, user: any, body: any) {
   let emailSent = false
   let emailNote = ''
   try {
-    const invited = await service.auth.admin.inviteUserByEmail(email, {
-      redirectTo: `${APP_URL}/?invite=1`,
-      data: { office_workspace_id: context.selected.workspace_id, office_role: role },
-    })
+    const invited = await service.auth.admin.inviteUserByEmail(email, { redirectTo: `${APP_URL}/?invite=1`, data: { office_workspace_id: context.selected.workspace_id, office_role: role } })
     if (invited.data?.user?.id) {
       await service.from('office_members').update({ user_id: invited.data.user.id, updated_at: new Date().toISOString() }).eq('id', member.id)
       member.user_id = invited.data.user.id
@@ -344,10 +264,8 @@ async function inviteMember(service: any, user: any, body: any) {
     emailNote = (error as Error)?.message || 'Convite cadastrado, mas o e-mail não pôde ser enviado.'
   }
 
-  await writeAudit(service, context.selected.workspace_id, user, context.selected, [{
-    action: 'invite', entity_type: 'member', entity_id: member.id, summary: `${role === ROLE_PARTNER ? 'Parceiro' : 'Colaborador'} convidado: ${email}`,
-  }])
-  return { member: memberView(member), email_sent: emailSent, note: emailNote }
+  await writeAudit(service, context.selected.workspace_id, user, context.selected, [{ action: 'invite', entity_type: 'member', entity_id: member.id, summary: `${roleName(role)} convidado: ${email}` }])
+  return { member: memberView(member, context.selected.office_workspaces), email_sent: emailSent, note: emailNote }
 }
 
 async function updateMember(service: any, user: any, body: any) {
@@ -356,25 +274,20 @@ async function updateMember(service: any, user: any, body: any) {
   const { data: member, error } = await service.from('office_members').select('*').eq('workspace_id', context.selected.workspace_id).eq('id', memberId).single()
   if (error || !member) throw new Error('Membro não encontrado.')
   if (String(member.user_id || '') === String(context.selected.office_workspaces?.owner_user_id || '')) throw new Error('O administrador proprietário não pode ser rebaixado ou desativado.')
+  if (scopedAdminCannotManageTarget(context.selected, member)) throw new Error('Este acesso só pode ser alterado pelo proprietário ou por um administrador com acesso integral.')
 
   const role = cleanRole(body.role || member.role)
-  if (role === ROLE_ADMIN) throw new Error('A promoção para Administrador não está disponível nesta primeira versão.')
-  const partnerId = role === ROLE_PARTNER ? String(body.partner_id || member.partner_id || '') : ''
+  if (isInternalV2Membership(context.selected) && role === ROLE_PARTNER) throw new Error('Administradores com acesso limitado não podem configurar acessos de parceiros.')
+  const partnerId = role === ROLE_PARTNER ? String(body.partner_id ?? member.partner_id ?? '') : ''
   if (role === ROLE_PARTNER && !partnerId) throw new Error('Selecione o parceiro vinculado.')
-  const permissions = { ...DEFAULT_PERMISSIONS[role], ...(body.permissions || {}) }
+  let permissions = updatePermissions(member, role, body)
+  permissions = constrainInternalPermissions(context.selected, member, role, permissions)
   const status = ['invited', 'active', 'disabled'].includes(body.status) ? body.status : member.status
 
-  const { data: saved, error: saveError } = await service.from('office_members').update({
-    display_name: String(body.display_name ?? member.display_name ?? '').trim(),
-    role,
-    partner_id: partnerId || null,
-    status,
-    permissions,
-    updated_at: new Date().toISOString(),
-  }).eq('id', member.id).select('*').single()
+  const { data: saved, error: saveError } = await service.from('office_members').update({ display_name: String(body.display_name ?? member.display_name ?? '').trim(), role, partner_id: partnerId || null, status, permissions, updated_at: new Date().toISOString() }).eq('id', member.id).select('*').single()
   if (saveError) throw saveError
   await writeAudit(service, context.selected.workspace_id, user, context.selected, [{ action: 'update', entity_type: 'member', entity_id: member.id, summary: `Acesso de ${saved.email} atualizado` }])
-  return { member: memberView(saved) }
+  return { member: memberView(saved, context.selected.office_workspaces) }
 }
 
 async function removeMember(service: any, user: any, body: any) {
@@ -383,6 +296,7 @@ async function removeMember(service: any, user: any, body: any) {
   const { data: member } = await service.from('office_members').select('*').eq('workspace_id', context.selected.workspace_id).eq('id', memberId).maybeSingle()
   if (!member) return { ok: true }
   if (String(member.user_id || '') === String(context.selected.office_workspaces?.owner_user_id || '')) throw new Error('O administrador proprietário não pode ser removido.')
+  if (scopedAdminCannotManageTarget(context.selected, member)) throw new Error('Este acesso só pode ser removido pelo proprietário ou por um administrador com acesso integral.')
   const { error } = await service.from('office_members').delete().eq('id', member.id)
   if (error) throw error
   await writeAudit(service, context.selected.workspace_id, user, context.selected, [{ action: 'delete', entity_type: 'member', entity_id: member.id, summary: `Acesso removido: ${member.email}` }])
@@ -391,11 +305,13 @@ async function removeMember(service: any, user: any, body: any) {
 
 async function listAudit(service: any, user: any, body: any) {
   const context = await contextFor(service, user, String(body.workspace_id || ''))
-  const isAdmin = context.selected.role === ROLE_ADMIN
+  const scopedAdmin = isInternalV2Membership(context.selected)
+  const isFullAdmin = context.selected.role === ROLE_ADMIN && !scopedAdmin
   let query = service.from('office_audit_log').select('*').eq('workspace_id', context.selected.workspace_id).order('created_at', { ascending: false }).limit(120)
-  if (!isAdmin) query = query.eq('actor_user_id', user.id)
+  if (!isFullAdmin && !scopedAdmin) query = query.eq('actor_user_id', user.id)
   const { data, error } = await query
   if (error) throw error
+  if (scopedAdmin) return { audit: (data || []).filter(entry => entry.entity_type === 'member' || String(entry.actor_user_id || '') === String(user.id)) }
   return { audit: data || [] }
 }
 
@@ -414,11 +330,7 @@ Deno.serve(async (req: Request) => {
   try {
     if (action === 'context') {
       const context = await contextFor(service, user, String(body.workspace_id || ''))
-      return json({
-        workspace: context.selected.office_workspaces,
-        membership: memberView(context.selected, context.selected.office_workspaces),
-        workspaces: context.workspaces,
-      })
+      return json({ workspace: context.selected.office_workspaces, membership: memberView(context.selected, context.selected.office_workspaces), workspaces: context.workspaces })
     }
     if (action === 'load') return json(await loadWorkspace(service, user, String(body.workspace_id || '')))
     if (action === 'save') return json(await saveWorkspace(service, user, body))

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { roleLabel } from '../lib/workspaceSync.js'
+import { hasAnyFinanceAccess, roleLabel } from '../lib/workspaceSync.js'
 import { Button, Icon } from './ui/SaasUI.jsx'
 
 const item = (id, label, icon) => [id, label, icon]
@@ -13,13 +13,19 @@ const common = {
 }
 
 export const pageNames = {
-  'meu-dia': 'Meu Dia', pendencias: 'Pendências', dashboard: 'Painel do Escritório', calendario: 'Calendário', clientes: 'Clientes', tarefas: 'Tarefas', processos: 'Processos', obrigacoes: 'Obrigações', honorarios: 'Financeiro', equipe: 'Equipe', 'financeiro-parceiro': 'Financeiro compartilhado', configuracoes: 'Configurações',
+  'meu-dia': 'Meu Dia', pendencias: 'Pendências', dashboard: 'Painel do Escritório', calendario: 'Calendário', clientes: 'Clientes', tarefas: 'Tarefas', processos: 'Processos', obrigacoes: 'Obrigações', honorarios: 'Financeiro', equipe: 'Usuários', 'financeiro-parceiro': 'Financeiro compartilhado', configuracoes: 'Configurações',
 }
 
 export function navigationGroupsForAccess(access = {}) {
   const membership = access?.membership || {}
-  const role = membership.role || 'admin'
+  const role = membership.role || 'pending'
   const permissions = membership.permissions || {}
+  const owner = role === 'admin' && Boolean(membership.user_id) && String(membership.user_id) === String(access?.workspace?.owner_user_id || '')
+  const scopedAdmin = role === 'admin' && permissions.access_v2 === true && !owner
+
+  if (role === 'pending') return [
+    { label: 'Visão geral', items: [common.myDay, common.calendar] },
+  ]
 
   if (role === 'partner') return [
     { label: 'Visão geral', items: [common.myDay, common.calendar] },
@@ -27,14 +33,18 @@ export function navigationGroupsForAccess(access = {}) {
     { label: 'Parceria', items: [item('financeiro-parceiro', 'Financeiro compartilhado', 'finance')] },
   ]
 
-  if (role === 'collaborator') {
+  if (role === 'collaborator' || scopedAdmin) {
+    const v2 = permissions.access_v2 === true
+    const allowed = key => v2 ? permissions[key] === true : permissions[key] !== false
     const operation = []
-    if (permissions.clients !== false) operation.push(common.clients)
-    if (permissions.tasks !== false) operation.push(common.tasks)
-    if (permissions.processes !== false) operation.push(common.processes)
-    if (permissions.obligations !== false) operation.push(common.obligations)
+    if (allowed('clients')) operation.push(common.clients)
+    if (allowed('tasks')) operation.push(common.tasks)
+    if (allowed('processes')) operation.push(common.processes)
+    if (allowed('obligations')) operation.push(common.obligations)
     const management = []
-    if (permissions.finance) management.push(item('honorarios', 'Financeiro', 'finance'))
+    if (scopedAdmin) management.push(item('dashboard', 'Painel do Escritório', 'dashboard'))
+    if (permissions.finance_receivables || permissions.finance_payables || permissions.finance_cash || permissions.finance_reports || hasAnyFinanceAccess(access)) management.push(item('honorarios', 'Financeiro', 'finance'))
+    if (scopedAdmin) management.push(item('equipe', 'Usuários', 'clients'))
     return [
       { label: 'Visão geral', items: [common.myDay, common.calendar] },
       ...(operation.length ? [{ label: 'Operação', items: operation }] : []),
@@ -45,14 +55,14 @@ export function navigationGroupsForAccess(access = {}) {
   return [
     { label: 'Visão geral', items: [common.myDay, common.calendar] },
     { label: 'Operação', items: [common.clients, common.tasks, common.processes, common.obligations] },
-    { label: 'Gestão', items: [item('dashboard', 'Painel do Escritório', 'dashboard'), item('honorarios', 'Financeiro', 'finance'), item('equipe', 'Equipe', 'clients')] },
+    { label: 'Gestão', items: [item('dashboard', 'Painel do Escritório', 'dashboard'), item('honorarios', 'Financeiro', 'finance'), item('equipe', 'Usuários', 'clients')] },
   ]
 }
 
 function mobileItems(access = {}) {
   const groups = navigationGroupsForAccess(access)
   const all = groups.flatMap(group => group.items)
-  const role = access?.membership?.role || 'admin'
+  const role = access?.membership?.role || 'pending'
   const preferredIds = role === 'partner'
     ? ['meu-dia', 'tarefas', 'clientes', 'calendario']
     : ['meu-dia', 'tarefas', 'clientes', 'calendario']
@@ -108,7 +118,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
       <section className="saas-mobile-more-sheet app-mobile-more-panel" aria-label="Mais módulos">
         <header><div><strong>Mais áreas</strong><small>{access?.workspace?.name || 'Gestão do escritório'}</small></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Fechar"><Icon name="close" size={18} /></button></header>
         <div className="saas-mobile-more-grid">
-          {mobile.more.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' || id === 'financeiro-parceiro' ? 'Honorários e recebimentos' : id === 'equipe' ? 'Usuários e responsabilidades' : id === 'dashboard' ? 'Saúde e indicadores do escritório' : 'Sistema e preferências'}</small></div></button>)}
+          {mobile.more.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' || id === 'financeiro-parceiro' ? 'Honorários e recebimentos' : id === 'equipe' ? 'Usuários e acessos' : id === 'dashboard' ? 'Saúde e indicadores do escritório' : 'Sistema e preferências'}</small></div></button>)}
         </div>
         <footer><div><span>{String(displayName || 'ME').slice(0, 2).toUpperCase()}</span><div><strong>{displayName}</strong><small>{displayRole} · {sync}</small></div></div><Button variant="secondary" size="sm" icon="logout" onClick={onSignOut}>Sair</Button></footer>
       </section>

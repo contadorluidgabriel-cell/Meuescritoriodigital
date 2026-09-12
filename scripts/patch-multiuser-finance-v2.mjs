@@ -29,11 +29,11 @@ export function applyMultiuserFinanceV2Patch(root) {
 
   const appPath = `${root}src/App.jsx`
   let app = readFileSync(appPath, 'utf8')
-  if (!app.includes('finance_receivables || access?.membership?.permissions?.finance_payables')) {
+  if (!app.includes('const scopedFinanceAdmin =')) {
     app = replaceOrFail(
       app,
       "    if (access?.membership?.role === 'collaborator' && !access?.membership?.permissions?.finance) return",
-      "    if (access?.membership?.role === 'collaborator' && !(access?.membership?.permissions?.finance_receivables || access?.membership?.permissions?.finance_payables || access?.membership?.permissions?.finance_cash || access?.membership?.permissions?.finance_reports || access?.membership?.permissions?.finance)) return",
+      "    const scopedFinanceAdmin = access?.membership?.role === 'admin' && access?.membership?.permissions?.access_v2 === true && String(access?.membership?.user_id || '') !== String(access?.workspace?.owner_user_id || '')\n    if ((access?.membership?.role === 'collaborator' || scopedFinanceAdmin) && !(access?.membership?.permissions?.finance_receivables || access?.membership?.permissions?.finance_payables || access?.membership?.permissions?.finance_cash || access?.membership?.permissions?.finance_reports || access?.membership?.permissions?.finance)) return",
       'finance route scope',
     )
     app = replaceOrFail(
@@ -47,11 +47,11 @@ export function applyMultiuserFinanceV2Patch(root) {
 
   const financePath = `${root}src/components/FinanceCompleteReact.jsx`
   let finance = readFileSync(financePath, 'utf8')
-  if (!finance.includes('const canReceive = isAdmin')) {
+  if (!finance.includes('const fullFinanceAdmin =')) {
     finance = replaceOrFail(
       finance,
       "export default function FinanceCompleteReact({ office, update, sync, initialClientId = '', openClientRequest = 0, openNewRequest = 0 }) {\n  const day = today()\n  const [tab, setTab] = useState('overview')",
-      "export default function FinanceCompleteReact({ office, update, sync, access = {}, initialClientId = '', openClientRequest = 0, openNewRequest = 0 }) {\n  const day = today()\n  const role = access?.membership?.role || 'admin'\n  const permissions = access?.membership?.permissions || {}\n  const isAdmin = role === 'admin'\n  const canReceive = isAdmin || Boolean(permissions.finance_receivables ?? permissions.finance)\n  const canPay = isAdmin || Boolean(permissions.finance_payables)\n  const canCash = isAdmin || Boolean(permissions.finance_cash)\n  const canReports = isAdmin || Boolean(permissions.finance_reports)\n  const canOverview = isAdmin || canCash\n  const visibleTabs = useMemo(() => tabs.filter(([id]) => isAdmin || (id === 'receber' && canReceive) || (id === 'pagar' && canPay) || ((id === 'overview' || id === 'movimentos' || id === 'fluxo') && canCash) || (id === 'relatorios' && canReports)), [isAdmin, canReceive, canPay, canCash, canReports])\n  const firstTab = visibleTabs[0]?.[0] || 'receber'\n  const [tab, setTab] = useState(() => firstTab)",
+      "export default function FinanceCompleteReact({ office, update, sync, access = {}, initialClientId = '', openClientRequest = 0, openNewRequest = 0 }) {\n  const day = today()\n  const role = access?.membership?.role || 'admin'\n  const permissions = access?.membership?.permissions || {}\n  const ownerUserId = String(access?.workspace?.owner_user_id || '')\n  const memberUserId = String(access?.membership?.user_id || '')\n  const scopedAdmin = role === 'admin' && permissions.access_v2 === true && Boolean(memberUserId) && memberUserId !== ownerUserId\n  const fullFinanceAdmin = role === 'admin' && !scopedAdmin\n  const canReceive = fullFinanceAdmin || Boolean(permissions.finance_receivables ?? permissions.finance)\n  const canPay = fullFinanceAdmin || Boolean(permissions.finance_payables)\n  const canCash = fullFinanceAdmin || Boolean(permissions.finance_cash)\n  const canReports = fullFinanceAdmin || Boolean(permissions.finance_reports)\n  const canOverview = fullFinanceAdmin || canCash\n  const visibleTabs = useMemo(() => tabs.filter(([id]) => fullFinanceAdmin || (id === 'receber' && canReceive) || (id === 'pagar' && canPay) || ((id === 'overview' || id === 'movimentos' || id === 'fluxo') && canCash) || (id === 'relatorios' && canReports)), [fullFinanceAdmin, canReceive, canPay, canCash, canReports])\n  const firstTab = visibleTabs[0]?.[0] || 'receber'\n  const [tab, setTab] = useState(() => firstTab)",
       'finance access signature',
     )
     finance = replaceOrFail(
@@ -66,9 +66,9 @@ export function applyMultiuserFinanceV2Patch(root) {
     finance = finance.replace("{tab === 'pagar' ?", "{canPay && tab === 'pagar' ?")
     finance = finance.replace("{tab === 'movimentos' ?", "{canCash && tab === 'movimentos' ?")
     finance = finance.replace("{tab === 'fluxo' ?", "{canCash && tab === 'fluxo' ?")
-    finance = finance.replace("{tab === 'parceiros' ?", "{isAdmin && tab === 'parceiros' ?")
+    finance = finance.replace("{tab === 'parceiros' ?", "{fullFinanceAdmin && tab === 'parceiros' ?")
     finance = finance.replace("{tab === 'relatorios' ?", "{canReports && tab === 'relatorios' ?")
-    finance = finance.replace("{tab === 'config' ?", "{isAdmin && tab === 'config' ?")
+    finance = finance.replace("{tab === 'config' ?", "{fullFinanceAdmin && tab === 'config' ?")
     finance = replaceOrFail(
       finance,
       '<button type="button" onClick={() => setCreatingMovement(true)}>+ Movimentação</button>',
