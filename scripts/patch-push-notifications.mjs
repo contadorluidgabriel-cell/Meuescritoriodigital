@@ -20,8 +20,8 @@ export function applyPushNotificationsPatch(root) {
   source = replaceOrFail(
     source,
     "  const [view, setView] = useState(localPreview ? 'clientes' : 'dashboard')",
-    "  const requestedPushView = new URLSearchParams(window.location.search).get('push')\n  const initialPushView = ['tarefas', 'calendario', 'honorarios'].includes(requestedPushView) ? requestedPushView : 'dashboard'\n  const [view, setView] = useState(localPreview ? 'clientes' : initialPushView)",
-    'notification deep link',
+    "  const launchParams = new URLSearchParams(window.location.search)\n  const requestedPushView = launchParams.get('push')\n  const pushViewMap = { 'meu-dia': 'meu-dia', pendencias: 'pendencias', tarefas: 'tarefas', calendario: 'calendario', honorarios: 'honorarios' }\n  const initialPushView = pushViewMap[requestedPushView] || (launchParams.get('app') === '1' ? 'meu-dia' : 'dashboard')\n  const [view, setView] = useState(localPreview ? 'clientes' : initialPushView)",
+    'notification and pwa deep link',
   )
 
   source = replaceOrFail(
