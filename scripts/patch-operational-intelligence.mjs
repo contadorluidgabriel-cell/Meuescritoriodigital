@@ -17,12 +17,14 @@ export function applyOperationalIntelligencePatch(root) {
     'imports',
   )
 
-  source = replaceOrFail(
-    source,
-    "  const initialPushView = ['tarefas', 'calendario', 'honorarios'].includes(requestedPushView) ? requestedPushView : 'dashboard'",
-    "  const initialPushView = ['meu-dia', 'pendencias', 'tarefas', 'calendario', 'honorarios'].includes(requestedPushView) ? requestedPushView : 'meu-dia'",
-    'default command center view',
-  )
+  if (!source.includes("const pushViewMap = { 'meu-dia': 'meu-dia'")) {
+    source = replaceOrFail(
+      source,
+      "  const initialPushView = ['tarefas', 'calendario', 'honorarios'].includes(requestedPushView) ? requestedPushView : 'dashboard'",
+      "  const initialPushView = ['meu-dia', 'pendencias', 'tarefas', 'calendario', 'honorarios'].includes(requestedPushView) ? requestedPushView : 'meu-dia'",
+      'default command center view',
+    )
+  }
 
   source = replaceOrFail(
     source,
