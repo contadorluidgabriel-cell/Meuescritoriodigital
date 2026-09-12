@@ -4,6 +4,7 @@ import { buildWorkHorizon, WORK_HORIZONS } from '../lib/workHorizons.js'
 import { selectWorkBoard, workItemSummary } from '../lib/workBoardView.js'
 import { obligationProgress, operationalResponsible } from '../lib/operationalPresentation.js'
 import { undoTaskCompletion } from '../lib/taskExecution.js'
+import ProcessStepQuickStatus from './ProcessStepQuickStatus.jsx'
 import TaskQuickExecution from './TaskQuickExecution.jsx'
 import { Icon } from './ui/SaasUI.jsx'
 import '../work-horizon-v12.css'
@@ -32,6 +33,7 @@ function deadline(item, day) {
 
 function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, day }) {
   const task = item.type === 'task' ? (office.tasks || []).find(row => String(row.id) === String(item.id)) : null
+  const process = item.type === 'process' ? (office.processes || []).find(row => String(row.id) === String(item.id)) : null
   const progress = item.type === 'obligation' ? obligationProgress(office, item.id) : null
   const responsible = operationalResponsible(office, item)
   const openTarget = progress?.firstPendingClientId ? { ...item, clientId: progress.firstPendingClientId } : item
@@ -39,6 +41,13 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
   const detail = item.type === 'obligation' && progress
     ? `${progress.done} de ${progress.total} CNPJ${progress.total === 1 ? '' : 's'} concluído${progress.done === 1 ? '' : 's'} · ${progress.open} pendente${progress.open === 1 ? '' : 's'}`
     : workItemSummary(item)
+
+  function updateProcess(nextProcess) {
+    update(draft => {
+      draft.processes = (draft.processes || []).map(row => String(row.id) === String(nextProcess.id) ? nextProcess : row)
+    })
+    onNotice?.('Andamento do processo atualizado.')
+  }
 
   return <article className={`v12-work-item level-${item.level || 'info'} type-${item.type}`}>
     <div className="v12-work-copy">
@@ -49,7 +58,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>
-    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
+    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : process ? <div className="v12-process-actions"><ProcessStepQuickStatus process={process} onChangeProcess={updateProcess} compact /><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
   </article>
 }
 

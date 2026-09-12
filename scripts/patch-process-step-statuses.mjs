@@ -13,7 +13,7 @@ export function applyProcessStepStatusesPatch(root) {
   source = replaceRequired(
     source,
     "import { PROCESS_DEPENDENCIES, continueProcessWaiting, initializeProcessPlanning, processActionState, setCurrentProcessStep, toggleProcessStep } from '../lib/processPlanning.js'",
-    "import { PROCESS_DEPENDENCIES, PROCESS_STEP_STATUSES, continueProcessWaiting, initializeProcessPlanning, processActionState, processStepStatusLabel, setCurrentProcessStep, toggleProcessStep } from '../lib/processPlanning.js'",
+    "import { PROCESS_DEPENDENCIES, PROCESS_STEP_STATUSES, continueProcessWaiting, initializeProcessPlanning, processActionState, processStepStatusLabel, setCurrentProcessStep, toggleProcessStep } from '../lib/processPlanning.js'\nimport ProcessStepQuickStatus from './ProcessStepQuickStatus.jsx'",
     'process planning status imports',
     path,
   )
@@ -47,6 +47,14 @@ export function applyProcessStepStatusesPatch(root) {
     "<small>{step.status || 'Pendente'} · {PROCESS_DEPENDENCIES[step.responsavelTipo || 'interno']?.label || 'Escritório'}",
     "<small>{processStepStatusLabel(step)} · {PROCESS_DEPENDENCIES[step.responsavelTipo || 'interno']?.label || 'Escritório'}",
     'step detail status label',
+    path,
+  )
+
+  source = replaceRequired(
+    source,
+    "<div><b>{step.nome}</b>{step.opcional ? <em>Opcional</em> : null}<small>{processStepStatusLabel(step)} · {PROCESS_DEPENDENCIES[step.responsavelTipo || 'interno']?.label || 'Escritório'}{step.prazoEtapa ? ` · prazo ${formatDate(step.prazoEtapa)}` : ''}{step.proximaRevisao ? ` · conferir ${formatDate(step.proximaRevisao)}` : ''}{step.aguardandoDesde ? ` · aguardando desde ${formatDate(step.aguardandoDesde)}` : ''}</small></div>",
+    "<div className=\"process-step-copy\"><b>{step.nome}</b>{step.opcional ? <em>Opcional</em> : null}<small>{processStepStatusLabel(step)} · {PROCESS_DEPENDENCIES[step.responsavelTipo || 'interno']?.label || 'Escritório'}{step.prazoEtapa ? ` · prazo ${formatDate(step.prazoEtapa)}` : ''}{step.proximaRevisao ? ` · conferir ${formatDate(step.proximaRevisao)}` : ''}{step.aguardandoDesde ? ` · aguardando desde ${formatDate(step.aguardandoDesde)}` : ''}</small><ProcessStepQuickStatus process={process} stepId={step.id} onChangeProcess={next => mutate(item => Object.assign(item, next))} compact /></div>",
+    'step detail quick status',
     path,
   )
 
