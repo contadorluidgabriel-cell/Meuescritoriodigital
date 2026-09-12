@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { today } from '../lib/storage.js'
 import { TASK_DEADLINE_FILTERS, buildTaskDeadlineView, taskDeadlineMeta } from '../lib/taskDeadlines.js'
+import { TASK_ADVANCE_OPTIONS, taskAdvanceMeta } from '../lib/taskAdvance.js'
 import { undoTaskCompletion } from '../lib/taskExecution.js'
 import TaskQuickExecution from './TaskQuickExecution.jsx'
 import '../task-deadlines.css'
@@ -14,13 +15,28 @@ function uniqueValues(tasks, field) {
 
 function DeadlineCard({ task, clientsById, tasks, update, onOpenTask, onNotice, onCompleted, day }) {
   const meta = taskDeadlineMeta(task, day)
+  const advance = taskAdvanceMeta(task, day)
   const client = task.clientId ? clientLabel(clientsById.get(String(task.clientId))) : 'Tarefa interna'
+
+  function changeAdvance(event) {
+    const value = Math.max(0, Math.min(90, Number(event.target.value) || 0))
+    update(draft => {
+      const current = (draft.tasks || []).find(row => String(row.id || '') === String(task.id || ''))
+      if (!current) return
+      current.antecedenciaDias = value
+    })
+    onNotice?.(value
+      ? `Antecedência definida em ${value} ${value === 1 ? 'dia' : 'dias'}.`
+      : 'Antecedência removida; a tarefa entra no Meu Dia no próprio prazo.')
+  }
+
   return <article className={`task-deadline-card tone-${meta.tone}`}>
     <div className="task-deadline-copy">
       <div className="task-deadline-tags">
         <span>Tarefa</span>
         {task.status ? <b className={String(task.status).toLowerCase().includes('aguardando') ? 'waiting' : ''}>{task.status}</b> : null}
         {task.prioridade ? <b>{task.prioridade}</b> : null}
+        {advance.active && advance.days ? <b className="advance-active">No Meu Dia</b> : null}
       </div>
       <strong>{task.titulo || 'Tarefa sem título'}</strong>
       <small>{client}{task.departamento ? ` · ${task.departamento}` : ''}{task.responsavel ? ` · ${task.responsavel}` : ''}</small>
@@ -28,7 +44,15 @@ function DeadlineCard({ task, clientsById, tasks, update, onOpenTask, onNotice, 
         <span className={`deadline-${meta.tone}`}>{meta.label}</span>
         {meta.due ? <small>Prazo {dateLabel(meta.due)}</small> : null}
         {meta.planned && meta.planned !== meta.due ? <small>Planejada {dateLabel(meta.planned)}</small> : null}
+        {advance.days && advance.start ? <small>Entra no Meu Dia em {dateLabel(advance.start)}</small> : null}
       </div>
+      <label className={`task-advance-control ${!meta.due ? 'is-disabled' : ''}`}>
+        <span>Antecedência no Meu Dia</span>
+        <select value={advance.days} onChange={changeAdvance} disabled={!meta.due} aria-label={`Antecedência da tarefa ${task.titulo || ''}`}>
+          {TASK_ADVANCE_OPTIONS.map(value => <option value={value} key={value}>{value === 0 ? 'No dia do prazo' : `${value} ${value === 1 ? 'dia antes' : 'dias antes'}`}</option>)}
+        </select>
+        {!meta.due ? <small>Defina um prazo para usar antecedência.</small> : <small>Do início dessa janela até concluir, a tarefa aparece no Hoje.</small>}
+      </label>
     </div>
     <TaskQuickExecution
       task={task}
@@ -94,7 +118,7 @@ export default function TaskDeadlinesBoard({ office, update, onNavigate, onOpenT
       <div>
         <span>Controle operacional</span>
         <h2>Prazos das tarefas</h2>
-        <p>Veja o que está atrasado, vence hoje, amanhã ou entra nos próximos 7 e 30 dias. Os filtros usam o prazo oficial da tarefa; a data planejada continua sendo exibida separadamente.</p>
+        <p>Defina o prazo e, quando precisar começar antes, escolha a antecedência. Durante essa janela a tarefa passa a aparecer no Meu Dia até ser concluída.</p>
       </div>
       {onNavigate ? <button type="button" className="task-deadline-calendar" onClick={() => onNavigate('calendario')}>Ver calendário</button> : null}
     </header>
