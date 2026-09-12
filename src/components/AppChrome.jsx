@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { roleLabel } from '../lib/workspaceSync.js'
+import { hasAnyFinanceAccess, roleLabel } from '../lib/workspaceSync.js'
 import { Button, Icon } from './ui/SaasUI.jsx'
 
 const item = (id, label, icon) => [id, label, icon]
@@ -18,8 +18,14 @@ export const pageNames = {
 
 export function navigationGroupsForAccess(access = {}) {
   const membership = access?.membership || {}
-  const role = membership.role || 'admin'
+  const role = membership.role || 'pending'
   const permissions = membership.permissions || {}
+  const owner = role === 'admin' && Boolean(membership.user_id) && String(membership.user_id) === String(access?.workspace?.owner_user_id || '')
+  const scopedAdmin = role === 'admin' && permissions.access_v2 === true && !owner
+
+  if (role === 'pending') return [
+    { label: 'Visão geral', items: [common.myDay, common.calendar] },
+  ]
 
   if (role === 'partner') return [
     { label: 'Visão geral', items: [common.myDay, common.calendar] },
@@ -27,14 +33,18 @@ export function navigationGroupsForAccess(access = {}) {
     { label: 'Parceria', items: [item('financeiro-parceiro', 'Financeiro compartilhado', 'finance')] },
   ]
 
-  if (role === 'collaborator') {
+  if (role === 'collaborator' || scopedAdmin) {
+    const v2 = permissions.access_v2 === true
+    const allowed = key => v2 ? permissions[key] === true : permissions[key] !== false
     const operation = []
-    if (permissions.clients !== false) operation.push(common.clients)
-    if (permissions.tasks !== false) operation.push(common.tasks)
-    if (permissions.processes !== false) operation.push(common.processes)
-    if (permissions.obligations !== false) operation.push(common.obligations)
+    if (allowed('clients')) operation.push(common.clients)
+    if (allowed('tasks')) operation.push(common.tasks)
+    if (allowed('processes')) operation.push(common.processes)
+    if (allowed('obligations')) operation.push(common.obligations)
     const management = []
-    if (permissions.finance) management.push(item('honorarios', 'Financeiro', 'finance'))
+    if (scopedAdmin) management.push(item('dashboard', 'Painel do Escritório', 'dashboard'))
+    if (permissions.finance_receivables || permissions.finance_payables || permissions.finance_cash || permissions.finance_reports || hasAnyFinanceAccess(access)) management.push(item('honorarios', 'Financeiro', 'finance'))
+    if (scopedAdmin) management.push(item('equipe', 'Usuários', 'clients'))
     return [
       { label: 'Visão geral', items: [common.myDay, common.calendar] },
       ...(operation.length ? [{ label: 'Operação', items: operation }] : []),
@@ -52,7 +62,7 @@ export function navigationGroupsForAccess(access = {}) {
 function mobileItems(access = {}) {
   const groups = navigationGroupsForAccess(access)
   const all = groups.flatMap(group => group.items)
-  const role = access?.membership?.role || 'admin'
+  const role = access?.membership?.role || 'pending'
   const preferredIds = role === 'partner'
     ? ['meu-dia', 'tarefas', 'clientes', 'calendario']
     : ['meu-dia', 'tarefas', 'clientes', 'calendario']
