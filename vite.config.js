@@ -26,6 +26,7 @@ import { applyMultiuserFinanceV2Patch } from './scripts/patch-multiuser-finance-
 import { applyTaskQuickExecutionPatch } from './scripts/patch-task-quick-execution.mjs'
 import { applyV12Patch } from './scripts/patch-v12.mjs'
 import { applyV121Patch } from './scripts/patch-v12-1.mjs'
+import { applyProcessStepStatusesPatch } from './scripts/patch-process-step-statuses.mjs'
 import { applyInviteLinksPatch } from './scripts/patch-invite-links.mjs'
 import { applyTaskDeadlinesPatch } from './scripts/patch-task-deadlines.mjs'
 import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadlines.mjs'
@@ -92,6 +93,7 @@ applyMultiuserFinanceV2Patch(root)
 applyTaskQuickExecutionPatch(root)
 applyV12Patch(root)
 applyV121Patch(root)
+applyProcessStepStatusesPatch(root)
 applyInviteLinksPatch(root)
 applyTaskDeadlinesPatch(root)
 applyObligationDeadlinesPatch(root)
