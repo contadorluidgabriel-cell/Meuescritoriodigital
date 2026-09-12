@@ -1,4 +1,5 @@
 import { addDays, collectCommandCenterItems } from './operationalIntelligence.js'
+import { taskIsInAdvanceWindow } from './taskAdvance.js'
 
 export const WORK_HORIZONS = {
   today: { id: 'today', label: 'Hoje', shortLabel: 'Hoje', days: 1 },
@@ -60,6 +61,16 @@ function weekGroups(items, day, end) {
   return groups
 }
 
+function taskSourceMap(office = {}) {
+  return new Map((office.tasks || []).map(task => [String(task.id || ''), task]))
+}
+
+function isVisibleTodayByAdvance(item, tasksById, day) {
+  if (item?.type !== 'task') return false
+  const task = tasksById.get(String(item.id || ''))
+  return task ? taskIsInAdvanceWindow(task, day) : false
+}
+
 export function horizonEnd(day, horizon = 'today') {
   const config = WORK_HORIZONS[horizon] || WORK_HORIZONS.today
   return addDays(day, config.days - 1)
@@ -69,17 +80,23 @@ export function buildWorkHorizon(office = {}, { day, horizon = 'today' } = {}) {
   const config = WORK_HORIZONS[horizon] || WORK_HORIZONS.today
   const end = horizonEnd(day, config.id)
   const all = collectCommandCenterItems(office, { day, daysBefore: 60 })
+  const tasksById = taskSourceMap(office)
   const overdue = all.filter(item => {
     const due = officialDue(item)
     return due && due < day
   })
   const inPeriod = all.filter(item => {
     const date = itemDate(item)
-    return date && date >= day && date <= end
+    if (date && date >= day && date <= end) return true
+    return config.id === 'today' && isVisibleTodayByAdvance(item, tasksById, day)
   })
   const items = uniqueByKey([...overdue, ...inPeriod])
   const unscheduled = all.filter(item => !itemDate(item) && ['task', 'process', 'obligation'].includes(item.type))
-  const periodGroups = config.id === 'month' ? weekGroups(inPeriod, day, end) : dayGroups(inPeriod, day, end)
+  const periodGroups = config.id === 'today'
+    ? (inPeriod.length ? [{ key: day, start: day, end: day, label: 'Hoje', items: uniqueByKey(inPeriod) }] : [])
+    : config.id === 'month'
+      ? weekGroups(inPeriod, day, end)
+      : dayGroups(inPeriod, day, end)
   const groups = [
     ...(overdue.length ? [{ key: 'overdue', start: '', end: '', label: 'Atrasados', overdue: true, items: overdue }] : []),
     ...periodGroups,
