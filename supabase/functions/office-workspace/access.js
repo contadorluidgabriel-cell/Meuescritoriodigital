@@ -7,7 +7,7 @@ import {
   internalV2Permissions,
   isInternalV2Membership,
   isOwnerMembership,
-} from './accessInternalV2.js'
+} from './accessInternalV2Principal.js'
 
 export const ROLE_ADMIN = legacy.ROLE_ADMIN
 export const ROLE_COLLABORATOR = legacy.ROLE_COLLABORATOR
@@ -21,10 +21,20 @@ export function permissionsFor(membership = {}) {
   return legacy.permissionsFor(membership)
 }
 
+function stripInternalResponsibility(payload = {}) {
+  const next = structuredClone(payload || {})
+  next.med_clientes = (Array.isArray(next.med_clientes) ? next.med_clientes : []).map(client => {
+    const { responsavelPrincipalUserId, responsavelPrincipalNome, ...safe } = client || {}
+    return safe
+  })
+  return next
+}
+
 export function filterPayloadForMembership(payload = {}, membership = {}) {
   if (isOwnerMembership(membership)) return legacy.filterPayloadForMembership(payload, membership)
   if (isInternalV2Membership(membership)) return filterInternalV2Payload(payload, membership)
-  return legacy.filterPayloadForMembership(payload, membership)
+  const filtered = legacy.filterPayloadForMembership(payload, membership)
+  return membership?.role === ROLE_PARTNER ? stripInternalResponsibility(filtered) : filtered
 }
 
 export function applyOfficePatch(fullPayload = {}, patch = {}, membership = {}) {
