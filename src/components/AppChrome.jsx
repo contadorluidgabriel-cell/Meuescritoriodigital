@@ -13,7 +13,7 @@ const common = {
 }
 
 export const pageNames = {
-  'meu-dia': 'Meu Dia', pendencias: 'Pendências', dashboard: 'Painel do Escritório', calendario: 'Calendário', clientes: 'Clientes', tarefas: 'Tarefas', processos: 'Processos', obrigacoes: 'Obrigações', honorarios: 'Financeiro', equipe: 'Equipe', 'financeiro-parceiro': 'Financeiro compartilhado', configuracoes: 'Configurações',
+  'meu-dia': 'Meu Dia', pendencias: 'Pendências', dashboard: 'Painel do Escritório', calendario: 'Calendário', clientes: 'Clientes', tarefas: 'Tarefas', processos: 'Processos', obrigacoes: 'Obrigações', honorarios: 'Financeiro', equipe: 'Usuários', 'financeiro-parceiro': 'Financeiro compartilhado', configuracoes: 'Configurações',
 }
 
 export function navigationGroupsForAccess(access = {}) {
@@ -45,7 +45,7 @@ export function navigationGroupsForAccess(access = {}) {
   return [
     { label: 'Visão geral', items: [common.myDay, common.calendar] },
     { label: 'Operação', items: [common.clients, common.tasks, common.processes, common.obligations] },
-    { label: 'Gestão', items: [item('dashboard', 'Painel do Escritório', 'dashboard'), item('honorarios', 'Financeiro', 'finance'), item('equipe', 'Equipe', 'clients')] },
+    { label: 'Gestão', items: [item('dashboard', 'Painel do Escritório', 'dashboard'), item('honorarios', 'Financeiro', 'finance'), item('equipe', 'Usuários', 'clients')] },
   ]
 }
 
@@ -108,7 +108,7 @@ export function AppSidebar({ currentView, identity, sync, collapsed, notificatio
       <section className="saas-mobile-more-sheet app-mobile-more-panel" aria-label="Mais módulos">
         <header><div><strong>Mais áreas</strong><small>{access?.workspace?.name || 'Gestão do escritório'}</small></div><button type="button" onClick={() => setMobileMoreOpen(false)} aria-label="Fechar"><Icon name="close" size={18} /></button></header>
         <div className="saas-mobile-more-grid">
-          {mobile.more.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' || id === 'financeiro-parceiro' ? 'Honorários e recebimentos' : id === 'equipe' ? 'Usuários e responsabilidades' : id === 'dashboard' ? 'Saúde e indicadores do escritório' : 'Sistema e preferências'}</small></div></button>)}
+          {mobile.more.map(([id, label, icon]) => <button type="button" className={currentView === id ? 'active' : ''} onClick={() => go(id)} aria-current={currentView === id ? 'page' : undefined} key={id}><span className="saas-mobile-more-icon"><Icon name={icon} size={19} /></span><div><strong>{label}</strong><small>{id === 'processos' ? 'Fluxos e protocolos' : id === 'obrigacoes' ? 'Prazos e entregas' : id === 'honorarios' || id === 'financeiro-parceiro' ? 'Honorários e recebimentos' : id === 'equipe' ? 'Usuários e acessos' : id === 'dashboard' ? 'Saúde e indicadores do escritório' : 'Sistema e preferências'}</small></div></button>)}
         </div>
         <footer><div><span>{String(displayName || 'ME').slice(0, 2).toUpperCase()}</span><div><strong>{displayName}</strong><small>{displayRole} · {sync}</small></div></div><Button variant="secondary" size="sm" icon="logout" onClick={onSignOut}>Sair</Button></footer>
       </section>
