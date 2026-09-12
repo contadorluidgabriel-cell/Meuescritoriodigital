@@ -82,6 +82,10 @@ export default function UserAccessManager({ office, update, access, onRefresh })
   const [inviteLinks, setInviteLinks] = useState({})
   const [companyQuery, setCompanyQuery] = useState('')
 
+  const actorMembership = access?.membership || {}
+  const actorOwner = Boolean(actorMembership.user_id && String(actorMembership.user_id) === ownerUserId)
+  const scopedManager = actorMembership.role === 'admin' && actorMembership.permissions?.access_v2 === true && !actorOwner
+  const actorPermissions = useMemo(() => normalizedV2Permissions(actorMembership), [actorMembership])
   const clients = useMemo(() => (office.clients || []).slice().sort((a, b) => clientName(a).localeCompare(clientName(b), 'pt-BR')), [office.clients])
   const clientNames = useMemo(() => new Map(clients.map(client => [String(client.id), clientName(client)])), [clients])
   const partners = useMemo(() => (office.partners || []).filter(partner => partner.status !== 'Inativo'), [office.partners])
@@ -90,6 +94,7 @@ export default function UserAccessManager({ office, update, access, onRefresh })
   const internalSelected = INTERNAL_ROLES.has(String(selected?.role || ''))
   const v2Selected = internalSelected && selected?.permissions?.access_v2 === true && !ownerSelected
   const selectedPermissions = useMemo(() => normalizedV2Permissions(selected || {}), [selected])
+  const selectedVisibleClientCount = useMemo(() => selectedPermissions.client_ids.filter(id => clientNames.has(String(id))).length, [clientNames, selectedPermissions.client_ids])
 
   const activeMembers = useMemo(() => members.filter(member => member.status === 'active' && member.user_id), [members])
   const assignments = useMemo(() => {
@@ -118,6 +123,8 @@ export default function UserAccessManager({ office, update, access, onRefresh })
     if (!query) return clients
     return clients.filter(client => `${clientName(client)} ${client.documento || client.cnpj || client.cpf || ''}`.toLowerCase().includes(query))
   }, [clients, companyQuery])
+  const canDelegate = key => !scopedManager || Boolean(actorPermissions[key])
+  const canDelegateAllWork = !scopedManager || actorPermissions.work_visibility === 'all_allowed'
 
   useEffect(() => {
     let active = true
@@ -267,7 +274,7 @@ export default function UserAccessManager({ office, update, access, onRefresh })
       <div className="user-access-form-grid">
         <label>Nome<input value={invite.display_name} onChange={event => setInvite(current => ({ ...current, display_name: event.target.value }))} /></label>
         <label>E-mail<input type="email" required value={invite.email} onChange={event => setInvite(current => ({ ...current, email: event.target.value }))} /></label>
-        <label>Perfil<select value={invite.role} onChange={event => setInvite(current => ({ ...current, role: event.target.value, partner_id: '' }))}><option value="collaborator">Colaborador</option><option value="admin">Administrador</option><option value="partner">Parceiro</option></select></label>
+        <label>Perfil<select value={invite.role} onChange={event => setInvite(current => ({ ...current, role: event.target.value, partner_id: '' }))}><option value="collaborator">Colaborador</option><option value="admin">Administrador</option>{!scopedManager ? <option value="partner">Parceiro</option> : null}</select></label>
         {invite.role === 'partner' ? <label>Parceiro vinculado<select required value={invite.partner_id} onChange={event => setInvite(current => ({ ...current, partner_id: event.target.value }))}><option value="">Selecione…</option>{partners.map(partner => <option key={partner.id} value={partner.id}>{partnerName(partner)}</option>)}</select></label> : <div className="user-access-safe-note"><strong>Acesso inicial fechado</strong><span>O usuário será criado sem empresas e sem rotinas operacionais. Depois do convite, configure o acesso nesta tela.</span></div>}
       </div>
       <button className="primary" disabled={busy}>{busy ? 'Aguarde…' : 'Criar e convidar'}</button>
@@ -298,7 +305,7 @@ export default function UserAccessManager({ office, update, access, onRefresh })
           {detailTab === 'data' ? <section className="user-access-card">
             <header><div><span>Identidade</span><h3>Dados do usuário</h3></div></header>
             <div className="user-access-form-grid">
-              <label>Nome<input value={selected.display_name || ''} disabled={ownerSelected || busy} onChange={() => {}} onBlur={event => { if (event.target.value !== selected.display_name) mutateMember(selected, { display_name: event.target.value }, 'Nome atualizado.') }} readOnly={ownerSelected} /></label>
+              <label>Nome<input key={selected.id} defaultValue={selected.display_name || ''} disabled={ownerSelected || busy} onBlur={event => { const value = event.target.value.trim(); if (value && value !== selected.display_name) mutateMember(selected, { display_name: value }, 'Nome atualizado.') }} readOnly={ownerSelected} /></label>
               <label>E-mail<input value={selected.email || ''} readOnly /></label>
               <label>Perfil<select value={selected.role} disabled={ownerSelected || selected.role === 'partner' || busy} onChange={event => mutateMember(selected, { role: event.target.value }, 'Perfil atualizado.')}><option value="collaborator">Colaborador</option><option value="admin">Administrador</option>{selected.role === 'partner' ? <option value="partner">Parceiro</option> : null}</select></label>
               <label>Status<input value={statusLabel(selected)} readOnly /></label>
@@ -309,9 +316,9 @@ export default function UserAccessManager({ office, update, access, onRefresh })
           </section> : null}
 
           {detailTab === 'companies' ? <section className="user-access-card">
-            <header><div><span>Carteira</span><h3>Empresas permitidas</h3><p>O usuário só recebe dados das empresas marcadas aqui.</p></div>{v2Selected ? <b>{selectedPermissions.client_ids.length}/{clients.length}</b> : null}</header>
+            <header><div><span>Carteira</span><h3>Empresas permitidas</h3><p>O usuário só recebe dados das empresas marcadas aqui.</p></div>{v2Selected ? <b>{selectedVisibleClientCount}/{clients.length}</b> : null}</header>
             {!internalSelected || ownerSelected ? <div className="user-access-empty">{ownerSelected ? 'O proprietário acessa todas as empresas.' : 'Parceiros usam a carteira definida pela parceria.'}</div> : !v2Selected ? <div className="user-access-empty">Ative Permissões V2 na aba Dados para configurar a carteira.</div> : <>
-              <div className="user-access-company-toolbar"><input value={companyQuery} onChange={event => setCompanyQuery(event.target.value)} placeholder="Buscar empresa…" /><div><button type="button" disabled={busy} onClick={() => savePermissions({ client_ids: clients.map(client => String(client.id)) }, 'Todas as empresas foram liberadas.')}>Selecionar todas</button><button type="button" disabled={busy} onClick={() => savePermissions({ client_ids: [] }, 'Carteira zerada.')}>Nenhuma</button></div></div>
+              <div className="user-access-company-toolbar"><input value={companyQuery} onChange={event => setCompanyQuery(event.target.value)} placeholder="Buscar empresa…" /><div><button type="button" disabled={busy} onClick={() => savePermissions({ client_ids: clients.map(client => String(client.id)) }, 'Todas as empresas visíveis foram liberadas.')}>Selecionar todas</button><button type="button" disabled={busy} onClick={() => savePermissions({ client_ids: [] }, 'Empresas visíveis removidas da carteira.')}>Nenhuma</button></div></div>
               <div className="user-access-company-list">{visibleClients.map(client => { const id = String(client.id); const checked = selectedPermissions.client_ids.includes(id); return <label key={id} className={checked ? 'checked' : ''}><input type="checkbox" disabled={busy} checked={checked} onChange={() => toggleCompany(id)} /><span><strong>{clientName(client)}</strong><small>{client.documento || client.cnpj || client.cpf || 'Sem documento'}</small></span></label> })}</div>
             </>}
           </section> : null}
@@ -319,14 +326,14 @@ export default function UserAccessManager({ office, update, access, onRefresh })
           {detailTab === 'routines' ? <section className="user-access-card">
             <header><div><span>Escopo funcional</span><h3>Rotinas e financeiro</h3><p>Controle quais módulos e dados o usuário pode utilizar.</p></div></header>
             {!internalSelected || ownerSelected ? <div className="user-access-empty">{ownerSelected ? 'O proprietário tem todas as rotinas.' : 'O acesso do parceiro segue as regras da parceria.'}</div> : !v2Selected ? <div className="user-access-empty">Ative Permissões V2 na aba Dados para configurar as rotinas.</div> : <div className="user-access-routine-grid">
-              <div className="user-access-routine-section"><h4>Operação</h4>{routineOptions.map(([key, label, description]) => <label key={key}><input type="checkbox" disabled={busy || (key === 'manage_clients' && !selectedPermissions.clients)} checked={Boolean(selectedPermissions[key])} onChange={event => savePermissions({ [key]: event.target.checked }, `${label} atualizado.`)} /><span><strong>{label}</strong><small>{description}</small></span></label>)}</div>
-              <div className="user-access-routine-section"><h4>Financeiro</h4>{financeOptions.map(([key, label, description]) => <label key={key}><input type="checkbox" disabled={busy} checked={Boolean(selectedPermissions[key])} onChange={event => savePermissions({ [key]: event.target.checked }, `${label} atualizado.`)} /><span><strong>{label}</strong><small>{description}</small></span></label>)}</div>
+              <div className="user-access-routine-section"><h4>Operação</h4>{routineOptions.map(([key, label, description]) => <label key={key}><input type="checkbox" disabled={busy || !canDelegate(key) || (key === 'manage_clients' && !selectedPermissions.clients)} checked={Boolean(selectedPermissions[key])} onChange={event => savePermissions({ [key]: event.target.checked }, `${label} atualizado.`)} /><span><strong>{label}</strong><small>{description}</small></span></label>)}</div>
+              <div className="user-access-routine-section"><h4>Financeiro</h4>{financeOptions.map(([key, label, description]) => <label key={key}><input type="checkbox" disabled={busy || !canDelegate(key)} checked={Boolean(selectedPermissions[key])} onChange={event => savePermissions({ [key]: event.target.checked }, `${label} atualizado.`)} /><span><strong>{label}</strong><small>{description}</small></span></label>)}</div>
             </div>}
           </section> : null}
 
           {detailTab === 'responsibilities' ? <section className="user-access-card">
             <header><div><span>Distribuição</span><h3>Responsabilidades</h3><p>Defina a visibilidade operacional e acompanhe os itens atribuídos ao usuário.</p></div><b>{selectedAssignments.length}</b></header>
-            {v2Selected ? <div className="user-access-visibility"><label className={selectedPermissions.work_visibility === 'mine_and_unassigned' ? 'active' : ''}><input type="radio" name="work_visibility" checked={selectedPermissions.work_visibility === 'mine_and_unassigned'} onChange={() => savePermissions({ work_visibility: 'mine_and_unassigned' }, 'Visibilidade atualizada.')} /><span><strong>Meus + não atribuídos</strong><small>Mostra trabalhos atribuídos ao usuário e itens ainda sem responsável.</small></span></label><label className={selectedPermissions.work_visibility === 'all_allowed' ? 'active' : ''}><input type="radio" name="work_visibility" checked={selectedPermissions.work_visibility === 'all_allowed'} onChange={() => savePermissions({ work_visibility: 'all_allowed' }, 'Visibilidade atualizada.')} /><span><strong>Todos da carteira</strong><small>Mostra todos os trabalhos das empresas permitidas.</small></span></label></div> : null}
+            {v2Selected ? <div className="user-access-visibility"><label className={selectedPermissions.work_visibility === 'mine_and_unassigned' ? 'active' : ''}><input type="radio" name="work_visibility" checked={selectedPermissions.work_visibility === 'mine_and_unassigned'} onChange={() => savePermissions({ work_visibility: 'mine_and_unassigned' }, 'Visibilidade atualizada.')} /><span><strong>Meus + não atribuídos</strong><small>Mostra trabalhos atribuídos ao usuário e itens ainda sem responsável.</small></span></label><label className={selectedPermissions.work_visibility === 'all_allowed' ? 'active' : ''}><input type="radio" name="work_visibility" disabled={!canDelegateAllWork} checked={selectedPermissions.work_visibility === 'all_allowed'} onChange={() => savePermissions({ work_visibility: 'all_allowed' }, 'Visibilidade atualizada.')} /><span><strong>Todos da carteira</strong><small>Mostra todos os trabalhos das empresas permitidas.</small></span></label></div> : null}
             {!selected?.user_id ? <div className="user-access-empty">O usuário ainda não concluiu o acesso. As atribuições ficam disponíveis após vincular a conta.</div> : <div className="user-access-assignment-list">{selectedAssignments.length ? selectedAssignments.map(item => <article key={`${item.kind}-${item.id}-${item.clientId}`}><div><small>{item.kind === 'task' ? 'Tarefa' : item.kind === 'process' ? 'Processo' : 'Obrigação'}</small><strong>{item.title}</strong><span>{item.client} · {item.due ? new Date(`${item.due}T12:00:00`).toLocaleDateString('pt-BR') : 'Sem prazo'}</span></div><select value={item.responsible} onChange={event => assign(item.kind, item.id, item.clientId, event.target.value)}><option value="">Não atribuído</option>{activeMembers.map(member => <option key={member.id} value={member.user_id}>{member.display_name || member.email}</option>)}</select></article>) : <div className="user-access-empty">Nenhum trabalho atribuído diretamente a este usuário.</div>}</div>}
           </section> : null}
 
