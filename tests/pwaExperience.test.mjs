@@ -28,6 +28,23 @@ test('runtime registra o mesmo service worker usado pelo push e oferece instala�
   assert.match(runtime, /document\.getElementById\('med-pwa-install'\)/)
 })
 
+test('PWA instalada no Windows orienta ativação do início automático sem fingir permissão do sistema', () => {
+  const runtime = read('src/lib/pwa.js')
+  const css = read('src/pwa-install.css')
+
+  assert.match(runtime, /STARTUP_CONFIRMED_KEY/)
+  assert.match(runtime, /isStandaloneMode\(\) \|\| !isWindowsDevice\(\)/)
+  assert.match(runtime, /edge:\/\/apps/)
+  assert.match(runtime, /chrome:\/\/apps/)
+  assert.match(runtime, /Iniciar automaticamente ao entrar no dispositivo/)
+  assert.match(runtime, /Iniciar app quando você fizer login/)
+  assert.match(runtime, /data-pwa-startup-done>Já ativei/)
+  assert.match(runtime, /window\.setTimeout\(showStartupGuide, 1400\)/)
+  assert.doesNotMatch(runtime, /--app-run-on-os-login-mode/)
+  assert.match(css, /html\[data-pwa="standalone"\] #med-pwa-install/)
+  assert.match(css, /\.med-pwa-startup/)
+})
+
 test('PWA e navegador abrem Meu Dia e atalhos continuam roteando para módulos', () => {
   const patch = read('scripts/patch-push-notifications.mjs')
   const operational = read('scripts/patch-operational-intelligence.mjs')

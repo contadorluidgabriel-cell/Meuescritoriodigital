@@ -1,9 +1,10 @@
-.med-pwa-install {
+.med-pwa-install,
+.med-pwa-startup {
   position: fixed;
   right: 20px;
   bottom: 20px;
   z-index: 1200;
-  width: min(440px, calc(100vw - 32px));
+  width: min(460px, calc(100vw - 32px));
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr);
   gap: 12px 14px;
@@ -16,7 +17,8 @@
   backdrop-filter: blur(14px);
 }
 
-.med-pwa-install__icon {
+.med-pwa-install__icon,
+.med-pwa-startup__icon {
   width: 44px;
   height: 44px;
   border-radius: 12px;
@@ -29,31 +31,52 @@
   letter-spacing: .04em;
 }
 
-.med-pwa-install__copy {
+.med-pwa-startup__icon {
+  font-size: 20px;
+}
+
+.med-pwa-install__copy,
+.med-pwa-startup__copy {
   display: grid;
   gap: 4px;
   min-width: 0;
 }
 
-.med-pwa-install__copy strong {
+.med-pwa-install__copy strong,
+.med-pwa-startup__copy strong {
   font-size: 14px;
   line-height: 1.3;
 }
 
-.med-pwa-install__copy span {
+.med-pwa-install__copy span,
+.med-pwa-startup__copy span {
   color: #667085;
   font-size: 12px;
   line-height: 1.5;
 }
 
-.med-pwa-install__actions {
+.med-pwa-startup__copy ol {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: #344054;
+  font-size: 12px;
+  line-height: 1.55;
+}
+
+.med-pwa-startup__copy li + li {
+  margin-top: 3px;
+}
+
+.med-pwa-install__actions,
+.med-pwa-startup__actions {
   grid-column: 2;
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
 }
 
-.med-pwa-install__actions button {
+.med-pwa-install__actions button,
+.med-pwa-startup__actions button {
   min-height: 36px;
   padding: 0 14px;
   border: 1px solid #2456E8;
@@ -66,23 +89,32 @@
   cursor: pointer;
 }
 
-.med-pwa-install__actions button.secondary {
+.med-pwa-install__actions button.secondary,
+.med-pwa-startup__actions button.secondary {
   border-color: #E4E9F1;
   background: #FFFFFF;
   color: #344054;
 }
 
-.med-pwa-install__actions button:disabled {
+.med-pwa-startup__actions button.tertiary {
+  border-color: transparent;
+  background: transparent;
+  color: #667085;
+}
+
+.med-pwa-install__actions button:disabled,
+.med-pwa-startup__actions button:disabled {
   opacity: .65;
   cursor: wait;
 }
 
-html[data-pwa="standalone"] .med-pwa-install {
+html[data-pwa="standalone"] #med-pwa-install {
   display: none !important;
 }
 
 @media (max-width: 640px) {
-  .med-pwa-install {
+  .med-pwa-install,
+  .med-pwa-startup {
     right: 12px;
     bottom: 12px;
     left: 12px;
