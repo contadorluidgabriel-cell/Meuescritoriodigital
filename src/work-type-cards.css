@@ -1,0 +1,8 @@
+.v12-horizon-kpis.operational.v12-type-cards{grid-template-columns:repeat(5,minmax(0,1fr))}
+.v12-horizon-kpis.operational.v12-type-cards button{min-height:112px}
+.v12-horizon-kpis.operational.v12-type-cards button.active{border-color:#2456e8;background:#eef3ff;box-shadow:0 0 0 1px #2456e8 inset}
+.v12-horizon-kpis.operational.v12-type-cards button.finance-card .v12-metric-icon{color:#16834a}
+.v12-horizon-kpis.operational.v12-type-cards button.finance-card.active .v12-metric-icon{color:#2456e8}
+@media(max-width:1200px){.v12-horizon-kpis.operational.v12-type-cards{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media(max-width:760px){.v12-horizon-kpis.operational.v12-type-cards{grid-template-columns:repeat(2,minmax(0,1fr))}.v12-horizon-kpis.operational.v12-type-cards button{min-height:96px}}
+@media(max-width:460px){.v12-horizon-kpis.operational.v12-type-cards{grid-template-columns:1fr}}
