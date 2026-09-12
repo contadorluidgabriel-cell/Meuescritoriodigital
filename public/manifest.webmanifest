@@ -1,12 +1,44 @@
 {
+  "id": "/",
   "name": "Meu Escritório Digital",
-  "short_name": "Escritório",
-  "description": "Gestão interna do escritório contábil",
-  "start_url": "/",
+  "short_name": "MED",
+  "description": "Gestão diária do escritório contábil",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/?app=1",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#F7F9FC",
-  "theme_color": "#0B1220",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "background_color": "#F6F8FC",
+  "theme_color": "#2456E8",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
+  "launch_handler": {
+    "client_mode": "navigate-existing"
+  },
+  "shortcuts": [
+    {
+      "name": "Meu Dia",
+      "short_name": "Meu Dia",
+      "description": "Abrir a mesa operacional do dia",
+      "url": "/?push=meu-dia",
+      "icons": [{ "src": "/app-icon-v2.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Tarefas",
+      "short_name": "Tarefas",
+      "description": "Abrir tarefas do escritório",
+      "url": "/?push=tarefas",
+      "icons": [{ "src": "/app-icon-v2.svg", "sizes": "any", "type": "image/svg+xml" }]
+    },
+    {
+      "name": "Calendário",
+      "short_name": "Calendário",
+      "description": "Abrir calendário operacional",
+      "url": "/?push=calendario",
+      "icons": [{ "src": "/app-icon-v2.svg", "sizes": "any", "type": "image/svg+xml" }]
+    }
+  ],
   "icons": [
     {
       "src": "/app-icon-v2.svg",
