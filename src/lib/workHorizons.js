@@ -12,6 +12,7 @@ const itemDate = item => String(item?.effectiveDate || item?.planned || item?.du
 const officialDue = item => String(item?.due || '')
 const normalizeStatus = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
 const isActiveProcess = item => item?.type === 'process' && !/(conclu|cancel)/.test(normalizeStatus(item?.status))
+const staysVisibleTodayWhileOpen = item => item?.type === 'process' || item?.type === 'obligation'
 
 function dateLabel(value, options = {}) {
   if (!value) return ''
@@ -88,7 +89,7 @@ export function buildWorkHorizon(office = {}, { day, horizon = 'today' } = {}) {
     return due && due < day
   })
   const inPeriod = all.filter(item => {
-    if (item.type === 'process' && config.id === 'today') {
+    if (config.id === 'today' && staysVisibleTodayWhileOpen(item)) {
       const due = officialDue(item)
       return !due || due >= day
     }
