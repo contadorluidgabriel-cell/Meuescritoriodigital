@@ -46,7 +46,7 @@ export function accessCanViewFinance(access = {}) {
   if (membership.role === 'admin' && !isV2Internal(membership)) return true
   const permissions = membership.permissions || {}
   return Boolean(
-    permissions.finance_receivables ?? permissions.finance ||
+    (permissions.finance_receivables ?? permissions.finance) ||
     permissions.finance_payables ||
     permissions.finance_cash ||
     permissions.finance_reports
