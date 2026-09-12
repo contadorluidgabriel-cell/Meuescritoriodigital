@@ -20,6 +20,12 @@ export const setClientPrimaryResponsible = (workspaceId, clientId, userId = '', 
   transfer_open: Boolean(transferOpen),
 })
 
+export const assignDistributionWork = (workspaceId, items = [], targetUserId = '') => invoke('assign_work', {
+  workspace_id: workspaceId,
+  items: (items || []).map(item => ({ kind: item.kind, id: item.id, clientId: item.clientId || '' })),
+  target_user_id: targetUserId,
+})
+
 export const deactivateWorkspaceMemberWithReassignment = (workspaceId, memberId, replacementUserId = '') => invoke('deactivate_member', {
   workspace_id: workspaceId,
   member_id: memberId,
