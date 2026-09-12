@@ -31,12 +31,6 @@ const OFFICE_KEYS = {
   lastBackup: 'med_last_backup',
 }
 
-const ARRAY_KEYS = new Set([
-  'clients', 'linkedCompanies', 'partners', 'tasks', 'taskTemplates', 'processes', 'obligations', 'processModels', 'finance',
-  'financeAccounts', 'financePayables', 'financeMovements', 'financeCategories', 'financeRecurrences', 'financeClosings', 'financeCollectionEvents',
-  'departments', 'history',
-])
-
 const recordKey = (name, record = {}) => name === 'departments'
   ? String(record.name || '')
   : name === 'financeClosings'
@@ -236,7 +230,7 @@ function auditEntry(name, id, action = 'update') {
 }
 
 function canOperateWork(record = {}, membership = {}, { allowInternal = false } = {}) {
-  return recordInAllowedPortfolio(record, membership, { allowInternal }) && (membership.role === 'admin' || workVisible(record, membership))
+  return recordInAllowedPortfolio(record, membership, { allowInternal }) && workVisible(record, membership)
 }
 
 function safeResponsibleValue(incoming = {}, existing = {}, membership = {}) {
@@ -293,7 +287,7 @@ function patchObligations(payload = {}, change = {}, membership = {}) {
     const existing = map.get(id)
     if (!existing) {
       const links = Array.isArray(incoming.clientes) ? incoming.clientes : []
-      if (!links.length || !links.every(link => allowed.has(String(link.clienteId || '')) && (membership.role === 'admin' || workVisible(link, membership)))) continue
+      if (!links.length || !links.every(link => allowed.has(String(link.clienteId || '')) && workVisible(link, membership))) continue
       map.set(id, clone(incoming))
       audit.push(auditEntry('obligations', id, 'upsert'))
       continue
@@ -305,13 +299,13 @@ function patchObligations(payload = {}, change = {}, membership = {}) {
     const mergedLinks = existingLinks.map(link => {
       const clientId = String(link.clienteId || '')
       const source = incomingByClient.get(clientId)
-      if (!source || !allowed.has(clientId) || (membership.role !== 'admin' && !workVisible(link, membership))) return link
+      if (!source || !allowed.has(clientId) || !workVisible(link, membership)) return link
       touched = true
       return safeResponsibleValue(clone(source), link, membership)
     })
     if (!touched) continue
 
-    const allExistingLinksAllowed = existingLinks.every(link => allowed.has(String(link.clienteId || '')) && (membership.role === 'admin' || workVisible(link, membership)))
+    const allExistingLinksAllowed = existingLinks.every(link => allowed.has(String(link.clienteId || '')) && workVisible(link, membership))
     const base = allExistingLinksAllowed ? { ...clone(incoming), id } : { ...existing }
     base.clientes = mergedLinks
     map.set(id, base)
@@ -323,7 +317,7 @@ function patchObligations(payload = {}, change = {}, membership = {}) {
       const existing = map.get(String(id))
       if (!existing) continue
       const links = Array.isArray(existing.clientes) ? existing.clientes : []
-      if (!links.length || !links.every(link => allowed.has(String(link.clienteId || '')))) continue
+      if (!links.length || !links.every(link => allowed.has(String(link.clienteId || '')) && workVisible(link, membership))) continue
       map.delete(String(id))
       audit.push(auditEntry('obligations', id, 'delete'))
     }
@@ -343,6 +337,16 @@ function canWriteFinanceName(name, permissions, membership) {
   if (name === 'financeAccounts' || name === 'financeMovements') return permissions.finance_cash
   if (name === 'financeCategories') return membership.role === 'admin' && (permissions.finance_receivables || permissions.finance_payables || permissions.finance_cash || permissions.finance_reports)
   return false
+}
+
+function financeCollectionEventAllowed(record = {}, payload = {}, membership = {}) {
+  const allowed = allowedClientSet(membership)
+  const directClient = clientIdFromRecord(record)
+  if (directClient) return allowed.has(directClient)
+  const chargeId = String(record.cobrancaId || record.financeId || record.receivableId || '')
+  if (!chargeId) return false
+  const charge = (Array.isArray(payload.med_financeiro) ? payload.med_financeiro : []).find(item => String(item.id || '') === chargeId)
+  return Boolean(charge && allowed.has(String(charge.clienteId || '')))
 }
 
 export function applyInternalV2Patch(fullPayload = {}, patch = {}, membership = {}) {
@@ -398,11 +402,7 @@ export function applyInternalV2Patch(fullPayload = {}, patch = {}, membership = 
     if (canWriteFinanceName(name, permissions, membership)) {
       const result = mergeCollection(payload[payloadKey], change, name, membership, record => {
         if (name === 'finance') return allowedClientSet(membership).has(String(record.clienteId || ''))
-        if (name === 'financeCollectionEvents') {
-          const clientId = clientIdFromRecord(record)
-          if (clientId) return allowedClientSet(membership).has(clientId)
-          return true
-        }
+        if (name === 'financeCollectionEvents') return financeCollectionEventAllowed(record, payload, membership)
         return true
       })
       payload[payloadKey] = result.records; audit.push(...result.audit); continue
