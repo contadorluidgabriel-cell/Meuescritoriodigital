@@ -67,26 +67,53 @@ async function audit(service: any, workspaceId: string, actor: any, action: stri
   return data
 }
 
+function routineForKind(kind: string) {
+  if (kind === 'task') return 'tasks'
+  if (kind === 'process') return 'processes'
+  return 'obligations'
+}
+
 function scopedCanManageClient(context: any, clientId: string) {
   if (!context.scoped) return true
   const p = context.actor.permissions || {}
   return Boolean(p.clients && p.manage_clients && (Array.isArray(p.client_ids) ? p.client_ids.map(id) : []).includes(id(clientId)))
 }
 
-function transferClientOpenWork(payload: any, clientId: string, fromUserId: string, toUserId: string, timestamp: string) {
-  const result = { tasks: 0, processes: 0, obligations: 0, total: 0 }
+function actorCanManageWork(context: any, work: any) {
+  if (!context.scoped) return true
+  const p = context.actor.permissions || {}
+  if (!p[routineForKind(work.kind)]) return false
+  if (work.clientId && !(Array.isArray(p.client_ids) ? p.client_ids.map(id) : []).includes(id(work.clientId))) return false
+  if (p.work_visibility !== 'all_allowed') {
+    const responsible = id(work.record?.responsavelUserId)
+    if (responsible && responsible !== id(context.actor.user_id)) return false
+  }
+  return true
+}
+
+function clientOpenWorkForSource(payload: any, clientId: string, sourceUserId: string) {
+  const rows: any[] = []
   ;(payload.med_tarefas || []).forEach((item: any) => {
-    if (id(item.clientId) !== clientId || done(item.status) || id(item.responsavelUserId) !== fromUserId) return
-    item.responsavelUserId = toUserId; item.updatedAt = timestamp; result.tasks += 1
+    if (id(item.clientId) === clientId && !done(item.status) && id(item.responsavelUserId) === sourceUserId) rows.push({ kind: 'task', clientId, record: item })
   })
   ;(payload.med_processos || []).forEach((item: any) => {
-    if (id(item.clientId) !== clientId || done(item.status) || id(item.responsavelUserId) !== fromUserId) return
-    item.responsavelUserId = toUserId; item.updatedAt = timestamp; result.processes += 1
+    if (id(item.clientId) === clientId && !done(item.status) && id(item.responsavelUserId) === sourceUserId) rows.push({ kind: 'process', clientId, record: item })
   })
   ;(payload.med_obrigacoes || []).forEach((obligation: any) => (obligation.clientes || []).forEach((link: any) => {
-    if (id(link.clienteId) !== clientId || !obligationOpen(link) || id(link.responsavelUserId) !== fromUserId) return
-    link.responsavelUserId = toUserId; link.updatedAt = timestamp; result.obligations += 1
+    if (id(link.clienteId) === clientId && obligationOpen(link) && id(link.responsavelUserId) === sourceUserId) rows.push({ kind: 'obligation', clientId, record: link, obligation })
   }))
+  return rows
+}
+
+function transferClientOpenWork(payload: any, clientId: string, fromUserId: string, toUserId: string, timestamp: string) {
+  const result = { tasks: 0, processes: 0, obligations: 0, total: 0 }
+  for (const item of clientOpenWorkForSource(payload, clientId, fromUserId)) {
+    item.record.responsavelUserId = toUserId
+    item.record.updatedAt = timestamp
+    if (item.kind === 'task') result.tasks += 1
+    if (item.kind === 'process') result.processes += 1
+    if (item.kind === 'obligation') result.obligations += 1
+  }
   result.total = result.tasks + result.processes + result.obligations
   return result
 }
@@ -99,12 +126,6 @@ function assignedOpenWork(payload: any, userId: string) {
     if (obligationOpen(link) && id(link.responsavelUserId) === userId) rows.push({ kind: 'obligation', clientId: id(link.clienteId), record: link, obligation })
   }))
   return rows
-}
-
-function routineForKind(kind: string) {
-  if (kind === 'task') return 'tasks'
-  if (kind === 'process') return 'processes'
-  return 'obligations'
 }
 
 function memberCanReceive(member: any, work: any, ownerUserId: string, extraClientIds: string[] = []) {
@@ -133,6 +154,26 @@ async function grantCompanyAccessIfV2(service: any, member: any, clientIds: stri
   return data
 }
 
+function findOpenWork(payload: any, item: any) {
+  const kind = String(item?.kind || '')
+  const recordId = id(item?.id)
+  const clientId = id(item?.clientId)
+  if (kind === 'task') {
+    const record = (payload.med_tarefas || []).find((row: any) => id(row.id) === recordId)
+    return record && !done(record.status) ? { kind, clientId: id(record.clientId), record } : null
+  }
+  if (kind === 'process') {
+    const record = (payload.med_processos || []).find((row: any) => id(row.id) === recordId)
+    return record && !done(record.status) ? { kind, clientId: id(record.clientId), record } : null
+  }
+  if (kind === 'obligation') {
+    const obligation = (payload.med_obrigacoes || []).find((row: any) => id(row.id) === recordId)
+    const record = obligation?.clientes?.find((row: any) => id(row.clienteId) === clientId)
+    return record && obligationOpen(record) ? { kind, clientId: id(record.clienteId), record, obligation } : null
+  }
+  return null
+}
+
 async function setPrimary(service: any, user: any, body: any) {
   const workspaceId = id(body.workspace_id)
   const clientId = id(body.client_id)
@@ -154,11 +195,13 @@ async function setPrimary(service: any, user: any, body: any) {
   }
 
   const previousUserId = id(client.responsavelPrincipalUserId)
+  const workToTransfer = transferOpen ? clientOpenWorkForSource(snapshot.payload, clientId, previousUserId) : []
+  if (context.scoped && workToTransfer.some(item => !actorCanManageWork(context, item))) throw new Error('Sua visibilidade atual não permite transferir todos os trabalhos abertos deste cliente. Atualize a distribuição individualmente ou peça ao proprietário.')
+
   const timestamp = new Date().toISOString()
   client.responsavelPrincipalUserId = nextUserId
   client.responsavelPrincipalNome = nextMember ? memberName(nextMember) : ''
   client.updatedAt = timestamp
-
   const transferred = transferOpen ? transferClientOpenWork(snapshot.payload, clientId, previousUserId, nextUserId, timestamp) : { tasks: 0, processes: 0, obligations: 0, total: 0 }
   await saveSnapshot(service, workspaceId, snapshot, user.id)
   const targetLabel = nextMember ? memberName(nextMember) : 'Não atribuído'
@@ -166,6 +209,43 @@ async function setPrimary(service: any, user: any, body: any) {
     `Responsável principal de ${client.razao || client.nome || client.fantasia || 'cliente'} definido como ${targetLabel}${transferOpen ? `; ${transferred.total} trabalho(s) aberto(s) transferido(s)` : ''}.`,
     { client_id: clientId, previous_user_id: previousUserId, user_id: nextUserId, transfer_open: transferOpen, transferred })
   return { ok: true, transferred, audit: event }
+}
+
+async function assignWork(service: any, user: any, body: any) {
+  const workspaceId = id(body.workspace_id)
+  const targetUserId = id(body.target_user_id)
+  const requested = Array.isArray(body.items) ? body.items.slice(0, 200) : []
+  if (!requested.length) throw new Error('Selecione ao menos um trabalho.')
+  const context = await managerContext(service, user, workspaceId)
+  const snapshot = await workspaceSnapshot(service, workspaceId)
+  let target: any = null
+  if (targetUserId) {
+    target = await activeInternalMember(service, workspaceId, targetUserId)
+    if (!target) throw new Error('O responsável escolhido não está ativo.')
+  }
+
+  const seen = new Set<string>()
+  const work: any[] = []
+  for (const item of requested) {
+    const key = `${String(item?.kind || '')}:${id(item?.id)}:${id(item?.clientId)}`
+    if (seen.has(key)) continue
+    seen.add(key)
+    const resolved = findOpenWork(snapshot.payload, item)
+    if (!resolved) throw new Error('Um dos trabalhos selecionados não está mais disponível. Atualize a distribuição.')
+    if (!actorCanManageWork(context, resolved)) throw new Error('Sua permissão atual não permite redistribuir um dos trabalhos selecionados.')
+    if (target && !memberCanReceive(target, resolved, context.workspace.owner_user_id)) throw new Error(`${memberName(target)} não possui empresa ou rotina necessária para um dos trabalhos selecionados.`)
+    if (id(resolved.record.responsavelUserId) !== targetUserId) work.push(resolved)
+  }
+  if (!work.length) return { ok: true, changed: 0, audit: null }
+
+  const timestamp = new Date().toISOString()
+  work.forEach(item => { item.record.responsavelUserId = targetUserId; item.record.updatedAt = timestamp })
+  await saveSnapshot(service, workspaceId, snapshot, user.id)
+  const destination = target ? memberName(target) : 'Não atribuído'
+  const event = await audit(service, workspaceId, context.actor, 'assign_work', work.length === 1 ? id(requested[0]?.id) : '',
+    `${work.length} trabalho(s) direcionado(s) para ${destination}.`,
+    { target_user_id: targetUserId, count: work.length, items: requested.map((item: any) => ({ kind: item.kind, id: id(item.id), client_id: id(item.clientId) })) })
+  return { ok: true, changed: work.length, audit: event }
 }
 
 async function deactivateMember(service: any, user: any, body: any) {
@@ -188,6 +268,12 @@ async function deactivateMember(service: any, user: any, body: any) {
   const principalIds = principalClients.map((client: any) => id(client.id))
   const work = assignedOpenWork(snapshot.payload, targetUserId)
 
+  if (context.scoped) {
+    if (principalClients.some((client: any) => !scopedCanManageClient(context, id(client.id))) || work.some(item => !actorCanManageWork(context, item))) {
+      throw new Error('Este usuário possui responsabilidades fora do seu escopo atual. O desligamento precisa ser concluído pelo proprietário ou por um administrador com acesso integral.')
+    }
+  }
+
   let replacement: any = null
   if (replacementUserId) {
     replacement = await activeInternalMember(service, workspaceId, replacementUserId)
@@ -207,13 +293,13 @@ async function deactivateMember(service: any, user: any, body: any) {
   })
   work.forEach(item => { item.record.responsavelUserId = nextUserId; item.record.updatedAt = timestamp })
 
-  const counts = {
+  const counts: any = {
     companies: principalClients.length,
     tasks: work.filter(item => item.kind === 'task').length,
     processes: work.filter(item => item.kind === 'process').length,
     obligations: work.filter(item => item.kind === 'obligation').length,
   }
-  ;(counts as any).total = counts.tasks + counts.processes + counts.obligations
+  counts.total = counts.tasks + counts.processes + counts.obligations
 
   await saveSnapshot(service, workspaceId, snapshot, user.id)
   const { error: disableError } = await service.from('office_members').update({ status: 'disabled', updated_at: timestamp }).eq('id', target.id)
@@ -248,6 +334,7 @@ Deno.serve(async (req: Request) => {
   try {
     const action = String(body.action || '')
     if (action === 'set_primary_responsible') return json(await setPrimary(service, user, body))
+    if (action === 'assign_work') return json(await assignWork(service, user, body))
     if (action === 'deactivate_member') return json(await deactivateMember(service, user, body))
     if (action === 'record_event') return json(await recordEvent(service, user, body))
     return json({ error: 'unknown_action' }, 400)
