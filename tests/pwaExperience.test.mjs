@@ -28,7 +28,7 @@ test('runtime registra o mesmo service worker usado pelo push e oferece instala�
   assert.match(runtime, /document\.getElementById\('med-pwa-install'\)/)
 })
 
-test('PWA instalada no Windows orienta ativação do início automático sem fingir permissão do sistema', () => {
+test('PWA instalada no Windows mantém orientação de início automático apenas sob ação manual', () => {
   const runtime = read('src/lib/pwa.js')
   const css = read('src/pwa-install.css')
 
@@ -41,20 +41,19 @@ test('PWA instalada no Windows orienta ativação do início automático sem fin
   assert.match(runtime, /Iniciar app quando você fizer login/)
   assert.match(runtime, /data-pwa-startup-done>Já ativei/)
   assert.match(runtime, /data-pwa-startup-later>Fechar/)
-  assert.match(runtime, /window\.setTimeout\(showStartupGuide, 1400\)/)
+  assert.doesNotMatch(runtime, /window\.setTimeout\(showStartupGuide, 1400\)/)
   assert.doesNotMatch(runtime, /--app-run-on-os-login-mode/)
   assert.match(css, /html\[data-pwa="standalone"\] #med-pwa-install/)
   assert.match(css, /\.med-pwa-startup/)
 })
 
-test('guia de início automático aparece uma vez por perfil e pode ser reaberto manualmente', () => {
+test('guia de início automático pode ser reaberto manualmente sem popup na inicialização', () => {
   const runtime = read('src/lib/pwa.js')
 
-  assert.match(runtime, /localStorage\.getItem\(STARTUP_SEEN_KEY\) === '1'/)
-  assert.match(runtime, /localStorage\.setItem\(STARTUP_SEEN_KEY, '1'\)/)
   assert.match(runtime, /export function openStartupGuide\(\)/)
   assert.match(runtime, /showStartupGuide\(\{ force: true \}\)/)
   assert.match(runtime, /window\.medOpenStartupGuide = openStartupGuide/)
+  assert.match(runtime, /if \(isStandaloneMode\(\)\) \{\s*document\.documentElement\.dataset\.pwa = 'standalone'\s*\}/)
   assert.doesNotMatch(runtime, /STARTUP_DISMISS_FOR_MS/)
 })
 
