@@ -7,6 +7,7 @@ import {
   applyOfficePatch,
   defaultInternalV2Permissions,
   filterPayloadForMembership,
+  isInternalV2Membership,
   memberCanSeeTeam,
   permissionsFor,
 } from './access.js'
@@ -18,6 +19,8 @@ const cleanRole = (value = '') => [ROLE_ADMIN, ROLE_COLLABORATOR, ROLE_PARTNER].
 const displayFromUser = (user: any) => String(user?.user_metadata?.full_name || user?.user_metadata?.name || user?.email || 'Usuário').trim()
 const internalRole = (role = '') => role === ROLE_ADMIN || role === ROLE_COLLABORATOR
 const roleName = (role = '') => role === ROLE_ADMIN ? 'Administrador' : role === ROLE_PARTNER ? 'Parceiro' : 'Colaborador'
+const permissionKeys = ['clients', 'manage_clients', 'tasks', 'processes', 'obligations', 'finance_receivables', 'finance_payables', 'finance_cash', 'finance_reports']
+const uniqueIds = (values: any[] = []) => [...new Set(values.map(value => String(value || '').trim()).filter(Boolean))]
 
 function memberView(member: any, workspace: any = null) {
   const scoped = workspace ? { ...member, workspace } : member
@@ -173,12 +176,47 @@ function invitePermissions(role: string, bodyPermissions: any) {
 function updatePermissions(member: any, role: string, body: any) {
   const supplied = body.permissions && typeof body.permissions === 'object'
   if (internalRole(role)) {
-    if (supplied) return { ...defaultInternalV2Permissions(role), ...body.permissions, access_v2: true, team: role === ROLE_ADMIN, delete_records: role === ROLE_ADMIN }
-    if (member.role === role && member.permissions?.access_v2 === true) return member.permissions
-    return defaultInternalV2Permissions(role)
+    const previous = member.permissions?.access_v2 === true ? { ...defaultInternalV2Permissions(role), ...member.permissions } : null
+    const permissions = supplied
+      ? { ...defaultInternalV2Permissions(role), ...(previous || {}), ...body.permissions }
+      : previous || defaultInternalV2Permissions(role)
+    return { ...permissions, access_v2: true, team: role === ROLE_ADMIN, delete_records: role === ROLE_ADMIN }
   }
   if (supplied) return { ...DEFAULT_PERMISSIONS[role], ...body.permissions }
   return member.role === role ? member.permissions || DEFAULT_PERMISSIONS[role] : DEFAULT_PERMISSIONS[role]
+}
+
+function constrainInternalPermissions(actor: any, member: any, role: string, proposed: any) {
+  if (!isInternalV2Membership(actor) || !internalRole(role)) return proposed
+  const actorPermissions = permissionsFor(actor)
+  const previous = member.permissions?.access_v2 === true
+    ? { ...defaultInternalV2Permissions(member.role), ...member.permissions }
+    : defaultInternalV2Permissions(role)
+  const next = { ...proposed, access_v2: true }
+
+  const actorClientIds = new Set(uniqueIds(actorPermissions.client_ids || []))
+  const previousClientIds = uniqueIds(previous.client_ids || [])
+  const requestedClientIds = uniqueIds(Array.isArray(next.client_ids) ? next.client_ids : previousClientIds)
+  const hiddenExisting = previousClientIds.filter(id => !actorClientIds.has(id))
+  const requestedVisible = requestedClientIds.filter(id => actorClientIds.has(id))
+  next.client_ids = uniqueIds([...hiddenExisting, ...requestedVisible])
+
+  for (const key of permissionKeys) {
+    if (!actorPermissions[key]) next[key] = Boolean(previous[key])
+  }
+  if (actorPermissions.work_visibility !== 'all_allowed') next.work_visibility = previous.work_visibility === 'all_allowed' ? 'all_allowed' : 'mine_and_unassigned'
+  if (!next.clients) next.manage_clients = false
+  next.finance = Boolean(next.finance_receivables)
+  next.finance_edit = Boolean(next.finance_receivables || next.finance_payables || next.finance_cash)
+  next.team = role === ROLE_ADMIN
+  next.delete_records = role === ROLE_ADMIN
+  return next
+}
+
+function scopedAdminCannotManageTarget(actor: any, member: any) {
+  if (!isInternalV2Membership(actor)) return false
+  if (member.role === ROLE_PARTNER) return true
+  return member.role === ROLE_ADMIN && member.permissions?.access_v2 !== true
 }
 
 async function inviteMember(service: any, user: any, body: any) {
@@ -187,6 +225,7 @@ async function inviteMember(service: any, user: any, body: any) {
   const displayName = String(body.display_name || '').trim()
   const role = cleanRole(body.role)
   if (!email || !email.includes('@')) throw new Error('Informe um e-mail válido.')
+  if (isInternalV2Membership(context.selected) && role === ROLE_PARTNER) throw new Error('Administradores com acesso limitado não podem criar acessos de parceiros.')
 
   const partnerId = role === ROLE_PARTNER ? String(body.partner_id || '') : ''
   if (role === ROLE_PARTNER) {
@@ -235,11 +274,14 @@ async function updateMember(service: any, user: any, body: any) {
   const { data: member, error } = await service.from('office_members').select('*').eq('workspace_id', context.selected.workspace_id).eq('id', memberId).single()
   if (error || !member) throw new Error('Membro não encontrado.')
   if (String(member.user_id || '') === String(context.selected.office_workspaces?.owner_user_id || '')) throw new Error('O administrador proprietário não pode ser rebaixado ou desativado.')
+  if (scopedAdminCannotManageTarget(context.selected, member)) throw new Error('Este acesso só pode ser alterado pelo proprietário ou por um administrador com acesso integral.')
 
   const role = cleanRole(body.role || member.role)
+  if (isInternalV2Membership(context.selected) && role === ROLE_PARTNER) throw new Error('Administradores com acesso limitado não podem configurar acessos de parceiros.')
   const partnerId = role === ROLE_PARTNER ? String(body.partner_id ?? member.partner_id ?? '') : ''
   if (role === ROLE_PARTNER && !partnerId) throw new Error('Selecione o parceiro vinculado.')
-  const permissions = updatePermissions(member, role, body)
+  let permissions = updatePermissions(member, role, body)
+  permissions = constrainInternalPermissions(context.selected, member, role, permissions)
   const status = ['invited', 'active', 'disabled'].includes(body.status) ? body.status : member.status
 
   const { data: saved, error: saveError } = await service.from('office_members').update({ display_name: String(body.display_name ?? member.display_name ?? '').trim(), role, partner_id: partnerId || null, status, permissions, updated_at: new Date().toISOString() }).eq('id', member.id).select('*').single()
@@ -254,6 +296,7 @@ async function removeMember(service: any, user: any, body: any) {
   const { data: member } = await service.from('office_members').select('*').eq('workspace_id', context.selected.workspace_id).eq('id', memberId).maybeSingle()
   if (!member) return { ok: true }
   if (String(member.user_id || '') === String(context.selected.office_workspaces?.owner_user_id || '')) throw new Error('O administrador proprietário não pode ser removido.')
+  if (scopedAdminCannotManageTarget(context.selected, member)) throw new Error('Este acesso só pode ser removido pelo proprietário ou por um administrador com acesso integral.')
   const { error } = await service.from('office_members').delete().eq('id', member.id)
   if (error) throw error
   await writeAudit(service, context.selected.workspace_id, user, context.selected, [{ action: 'delete', entity_type: 'member', entity_id: member.id, summary: `Acesso removido: ${member.email}` }])
@@ -262,11 +305,13 @@ async function removeMember(service: any, user: any, body: any) {
 
 async function listAudit(service: any, user: any, body: any) {
   const context = await contextFor(service, user, String(body.workspace_id || ''))
-  const isAdmin = context.selected.role === ROLE_ADMIN
+  const scopedAdmin = isInternalV2Membership(context.selected)
+  const isFullAdmin = context.selected.role === ROLE_ADMIN && !scopedAdmin
   let query = service.from('office_audit_log').select('*').eq('workspace_id', context.selected.workspace_id).order('created_at', { ascending: false }).limit(120)
-  if (!isAdmin) query = query.eq('actor_user_id', user.id)
+  if (!isFullAdmin && !scopedAdmin) query = query.eq('actor_user_id', user.id)
   const { data, error } = await query
   if (error) throw error
+  if (scopedAdmin) return { audit: (data || []).filter(entry => entry.entity_type === 'member' || String(entry.actor_user_id || '') === String(user.id)) }
   return { audit: data || [] }
 }
 
