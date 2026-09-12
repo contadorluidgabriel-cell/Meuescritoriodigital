@@ -81,27 +81,23 @@ export function horizonEnd(day, horizon = 'today') {
 export function buildWorkHorizon(office = {}, { day, horizon = 'today' } = {}) {
   const config = WORK_HORIZONS[horizon] || WORK_HORIZONS.today
   const end = horizonEnd(day, config.id)
-  const all = collectCommandCenterItems(office, { day, daysBefore: 60 })
+  const all = collectCommandCenterItems(office, { day, daysBefore: 60 }).filter(item => item.type !== 'process' || isActiveProcess(item))
   const tasksById = taskSourceMap(office)
   const overdue = all.filter(item => {
-    if (item.type === 'process' && !isActiveProcess(item)) return false
     const due = officialDue(item)
     return due && due < day
   })
   const inPeriod = all.filter(item => {
-    if (item.type === 'process') {
-      if (!isActiveProcess(item)) return false
-      if (config.id === 'today') {
-        const due = officialDue(item)
-        return !due || due >= day
-      }
+    if (item.type === 'process' && config.id === 'today') {
+      const due = officialDue(item)
+      return !due || due >= day
     }
     const date = itemDate(item)
     if (date && date >= day && date <= end) return true
     return config.id === 'today' && isVisibleTodayByAdvance(item, tasksById, day)
   })
   const items = uniqueByKey([...overdue, ...inPeriod])
-  const unscheduled = all.filter(item => !itemDate(item) && ['task', 'process', 'obligation'].includes(item.type) && (item.type !== 'process' || isActiveProcess(item)))
+  const unscheduled = all.filter(item => !itemDate(item) && ['task', 'process', 'obligation'].includes(item.type))
   const periodGroups = config.id === 'today'
     ? (inPeriod.length ? [{ key: day, start: day, end: day, label: 'Hoje', items: uniqueByKey(inPeriod) }] : [])
     : config.id === 'month'
