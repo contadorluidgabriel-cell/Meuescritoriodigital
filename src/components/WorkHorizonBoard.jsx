@@ -3,6 +3,7 @@ import { today } from '../lib/storage.js'
 import { buildWorkHorizon, WORK_HORIZONS } from '../lib/workHorizons.js'
 import { selectWorkBoard, workItemSummary } from '../lib/workBoardView.js'
 import { obligationProgress, operationalResponsible } from '../lib/operationalPresentation.js'
+import { completeObligationLink } from '../lib/obligationExecution.js'
 import { undoTaskCompletion } from '../lib/taskExecution.js'
 import ProcessStepQuickStatus from './ProcessStepQuickStatus.jsx'
 import TaskQuickExecution from './TaskQuickExecution.jsx'
@@ -49,6 +50,21 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
     onNotice?.('Andamento do processo atualizado.')
   }
 
+  function completePendingObligation() {
+    if (!progress?.firstPendingClientId) {
+      onNotice?.('Não há CNPJ pendente nesta obrigação.')
+      return
+    }
+    const result = completeObligationLink(office.obligations || [], item.id, progress.firstPendingClientId)
+    if (!result.changed) {
+      onNotice?.(result.error || 'Não foi possível concluir este CNPJ.')
+      return
+    }
+    update(draft => { draft.obligations = result.obligations })
+    const target = progress.firstPendingName ? ` de ${progress.firstPendingName}` : ''
+    onNotice?.(`CNPJ${target} concluído. ${Math.max(0, progress.open - 1)} pendente(s).`)
+  }
+
   return <article className={`v12-work-item level-${item.level || 'info'} type-${item.type}`}>
     <div className="v12-work-copy">
       <div className="v12-work-tags"><span className={`type-${item.type}`}>{kindLabel(item.type)}</span>{item.level === 'critical' ? <b>Crítico</b> : item.level === 'attention' ? <b className="attention">Atenção</b> : null}</div>
@@ -58,7 +74,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>
-    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : process ? <div className="v12-process-actions"><ProcessStepQuickStatus process={process} onChangeProcess={updateProcess} compact /><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
+    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : process ? <div className="v12-process-actions"><ProcessStepQuickStatus process={process} onChangeProcess={updateProcess} compact /><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : item.type === 'obligation' && progress?.open ? <div className="v12-obligation-actions"><button type="button" className="v12-obligation-complete" title={progress.firstPendingName ? `Concluir ${progress.firstPendingName}` : 'Concluir próximo CNPJ pendente'} onClick={completePendingObligation}>Concluir CNPJ</button><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
   </article>
 }
 
