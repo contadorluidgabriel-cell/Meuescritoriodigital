@@ -1,10 +1,9 @@
-name: Validate V11.1
+name: Validate V12.1
 
 on:
   push:
     branches:
       - main
-      - migration/v11.1
   pull_request:
     branches:
       - main
@@ -35,11 +34,11 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Regression tests
-        run: pnpm test
-
-      - name: Build
+      - name: Build patched production source
         run: pnpm build
+
+      - name: Regression tests on patched source
+        run: pnpm test
 
       - name: Verify legacy bundle
         run: test -s dist/legacy-v10-7.html
