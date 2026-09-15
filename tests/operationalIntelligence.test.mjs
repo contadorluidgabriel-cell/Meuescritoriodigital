@@ -75,7 +75,7 @@ test('week plan respects safe planned date when a task is re-planned', () => {
 })
 
 test('office query identifies overdue finance without guessing', () => {
-  const result = answerOfficeQuery(office, 'overdue payments', { day: '2026-09-01' })
+  const result = answerOfficeQuery(office, 'inadimplentes', { day: '2026-09-01' })
   assert.equal(result.mode, 'finance')
   assert.ok(result.items.some(item => item.id === 'f1'))
   assert.ok(!result.items.some(item => item.id === 'f2'))
