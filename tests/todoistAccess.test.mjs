@@ -11,19 +11,19 @@ function evaluate(overrides = {}) {
   return evaluateTodoistAccess({
     userId: ownerId,
     requestedWorkspaceId: workspaceId,
-    configuredWorkspaceId: workspaceId,
+    workspaceConfigured: true,
     membership: adminMembership,
     workspace,
     ...overrides,
   })
 }
 
-test('Todoist permite somente proprietário administrador do workspace configurado', () => {
+test('Todoist permite somente proprietário administrador do workspace habilitado', () => {
   assert.deepEqual(evaluate(), { ok: true, status: 200, workspaceId })
 })
 
-test('Todoist rejeita outro workspace mesmo para administrador', () => {
-  const result = evaluate({ requestedWorkspaceId: 'ws-other' })
+test('Todoist rejeita workspace fora da allowlist', () => {
+  const result = evaluate({ workspaceConfigured: false })
   assert.equal(result.ok, false)
   assert.equal(result.status, 403)
 })
