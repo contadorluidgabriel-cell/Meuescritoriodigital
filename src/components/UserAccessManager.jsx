@@ -3,6 +3,7 @@ import { isDone } from '../lib/storage.js'
 import { createWorkspaceInviteLink } from '../lib/inviteLinks.js'
 import {
   inviteWorkspaceMember,
+  deleteWorkspaceUser,
   listWorkspaceMembers,
   loadWorkspaceAudit,
   removeWorkspaceMember,
@@ -67,7 +68,7 @@ function permissionSummary(member = {}) {
   return `${p.client_ids.length} empresa(s) · ${routines} rotina(s) · ${finance} acesso(s) financeiro(s)`
 }
 
-export default function UserAccessManager({ office, update, access, onRefresh }) {
+export default function UserAccessManager({ office, update, access, onRefresh, onOpenDistribution }) {
   const workspaceId = access?.workspace?.id || ''
   const ownerUserId = String(access?.workspace?.owner_user_id || '')
   const [members, setMembers] = useState([])
@@ -215,6 +216,28 @@ export default function UserAccessManager({ office, update, access, onRefresh })
     finally { setBusy(false) }
   }
 
+  async function deleteUserPermanently(member) {
+    if (!member || !actorOwner || ownerSelected || member.status !== 'disabled' || !member.user_id) return
+    if (selectedAssignments.length) {
+      setDetailTab('responsibilities')
+      setMessage(`Antes da exclusão definitiva, redistribua ${selectedAssignments.length} responsabilidade(s) ativa(s) deste usuário.`)
+      return
+    }
+    const confirmation = window.prompt(`Excluir definitivamente ${member.display_name || member.email}?\n\nA conta de login será apagada e não poderá ser reativada.\nDigite EXCLUIR para confirmar.`)
+    if (confirmation == null) return
+    if (confirmation !== 'EXCLUIR') { setMessage('Exclusão cancelada: a confirmação deve ser exatamente EXCLUIR.'); return }
+    setBusy(true); setMessage('')
+    try {
+      await deleteWorkspaceUser(workspaceId, member.id, confirmation)
+      await refreshTeam('')
+      setMessage('Usuário e conta de login excluídos definitivamente.')
+    } catch (error) {
+      const text = error?.message || 'Não foi possível excluir o usuário.'
+      setMessage(text)
+      if (/redistribua|responsabil/i.test(text)) setDetailTab('responsibilities')
+    } finally { setBusy(false) }
+  }
+
   async function activateV2(member) {
     if (!member || !INTERNAL_ROLES.has(member.role)) return
     if (!window.confirm('Ativar o controle detalhado V2 para este usuário? O acesso operacional começará fechado e você configurará empresas e rotinas em seguida.')) return
@@ -297,7 +320,12 @@ export default function UserAccessManager({ office, update, access, onRefresh })
         {!selected ? <div className="user-access-empty">Nenhum usuário cadastrado.</div> : <>
           <header className="user-access-detail-header">
             <div><span>{ownerSelected ? 'Proprietário' : roleLabel(selected.role)}</span><h2>{selected.display_name || selected.email}</h2><p>{selected.email} · {statusLabel(selected)}</p></div>
-            {!ownerSelected ? <div className="user-access-detail-actions"><button type="button" disabled={busy} onClick={() => mutateMember(selected, { status: selected.status === 'disabled' ? 'active' : 'disabled' }, selected.status === 'disabled' ? 'Acesso reativado.' : 'Acesso desativado.')}>{selected.status === 'disabled' ? 'Reativar' : 'Desativar'}</button><button type="button" className="danger" disabled={busy} onClick={() => removeMember(selected)}>Remover</button></div> : null}
+            {!ownerSelected ? <div className="user-access-detail-actions">
+              {selected.status === 'disabled' ? <button type="button" disabled={busy} onClick={() => mutateMember(selected, { status: 'active' }, 'Acesso reativado.')}>Reativar</button> : selected.status === 'active' && selected.user_id ? <button type="button" disabled={busy || !onOpenDistribution} onClick={() => onOpenDistribution?.(selected.user_id, 'deactivate')}>Desativar</button> : <button type="button" disabled={busy} onClick={() => mutateMember(selected, { status: 'disabled' }, 'Convite desativado.')}>Desativar convite</button>}
+              {selected.status === 'invited' ? <button type="button" disabled={busy} onClick={() => removeMember(selected)}>Remover convite</button> : null}
+              {selected.status === 'disabled' ? <button type="button" disabled={busy} onClick={() => removeMember(selected)}>Remover do escritório</button> : null}
+              {actorOwner && selected.status === 'disabled' && selected.user_id ? <button type="button" className="danger" disabled={busy} onClick={() => deleteUserPermanently(selected)}>Excluir definitivamente</button> : null}
+            </div> : null}
           </header>
 
           <nav className="user-access-tabs">{detailTabs.map(([id, label]) => <button type="button" key={id} className={detailTab === id ? 'active' : ''} onClick={() => setDetailTab(id)}>{label}</button>)}</nav>

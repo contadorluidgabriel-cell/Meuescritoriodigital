@@ -1,16 +1,15 @@
 import { supabase } from './supabase.js'
+import { invokeEdgeJson } from './workspaceSync.js'
 
 async function invoke(action, body = {}) {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
-  const { data, error } = await supabase.functions.invoke('office-distribution', {
+  return invokeEdgeJson('office-distribution', {
     body: { action, ...body },
-    headers: { Authorization: `Bearer ${token}` },
+    token,
+    fallback: 'Falha ao atualizar a distribuição.',
   })
-  if (error) throw new Error(error.message || 'Falha ao atualizar a distribuição.')
-  if (data?.error) throw new Error(data.message || 'Falha ao atualizar a distribuição.')
-  return data
 }
 
 export const setClientPrimaryResponsible = (workspaceId, clientId, userId = '', transferOpen = false) => invoke('set_primary_responsible', {
