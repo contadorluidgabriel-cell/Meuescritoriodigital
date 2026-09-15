@@ -34,6 +34,7 @@ import { applyObligationsV2Patch } from './scripts/patch-obligations-v2.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.mjs'
 import { applyResponsibilityDistributionV2Patch } from './scripts/patch-responsibility-distribution-v2.mjs'
+import { applyTodayObligationFilterPatch } from './scripts/patch-today-obligation-filter.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -102,6 +103,7 @@ applyObligationsV2Patch(root)
 applySharingStylesPatch(root)
 applyFinancePdfPolishV2(root)
 applyResponsibilityDistributionV2Patch(root)
+applyTodayObligationFilterPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
