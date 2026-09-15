@@ -45,7 +45,7 @@ test('invoice follows the approved premium payment layout', () => {
   const pdf = Buffer.from(bytes).toString('latin1')
   assert.match(pdf, /\(TOTAL A PAGAR\)/)
   assert.match(pdf, /\(R\$ 1\.000,00\)/)
-  assert.match(pdf, /\(Vencimento\)/)
+  assert.match(pdf, /\(VENCIMENTO\)/)
   assert.match(pdf, /\(10\/09\/2026\)/)
   assert.match(pdf, /\(PAGAMENTO\)/)
   assert.match(pdf, /\(contadorluidgabriel@gmail\.com\)/)
