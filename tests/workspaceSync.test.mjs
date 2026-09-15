@@ -13,6 +13,20 @@ test('patch altera somente registros modificados sem substituir a coleção inte
   assert.deepEqual(patch.tasks.upserts.map(item => item.id), ['b'])
 })
 
+test('patch ignora somente reordenação de chaves vindas do JSONB', () => {
+  const before = {
+    tasks: [], clients: [], linkedCompanies: [], partners: [], taskTemplates: [], processes: [], obligations: [], processModels: [],
+    finance: [{ id: 'fin-1', status: 'Pendente', dados: { valor: 400, vencimento: '2026-09-29' }, parceiros: [{ parceiroId: 'p1', valor: 200 }] }],
+    settings: {}, departments: [], ui: {}, history: [], meta: {}, lastBackup: '',
+  }
+  const after = {
+    ...structuredClone(before),
+    finance: [{ parceiros: [{ valor: 200, parceiroId: 'p1' }], dados: { vencimento: '2026-09-29', valor: 400 }, status: 'Pendente', id: 'fin-1' }],
+  }
+  const patch = buildOfficePatch(before, after, admin)
+  assert.equal(patch.finance, undefined)
+})
+
 test('colaborador não envia alterações financeiras quando só possui visualização', () => {
   const before = { tasks: [], clients: [], linkedCompanies: [], partners: [], taskTemplates: [], processes: [], obligations: [], processModels: [], finance: [{ id: 'f', valor: 100 }], settings: {}, departments: [], ui: {}, history: [], meta: {}, lastBackup: '' }
   const after = structuredClone(before)
