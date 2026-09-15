@@ -16,15 +16,7 @@ function insertBefore(source, marker, content, label, path) {
 export function applyTaskHistoryCommentsPatch(root) {
   const taskPath = `${root}src/components/TasksReactBase.jsx`
   let source = readFileSync(taskPath, 'utf8')
-  if (!source.includes('MED_TASK_HISTORY_COMMENTS_V1')) {
-    source = replaceRequired(
-      source,
-      "import { useMemo, useState } from 'react'",
-      "import { useMemo, useState } from 'react'\n\nconst MED_TASK_HISTORY_COMMENTS_V1 = true",
-      'feature marker',
-      taskPath,
-    )
-
+  if (!source.includes('task-history-panel')) {
     source = replaceRequired(
       source,
       "  const [editing, setEditing] = useState(null)",
