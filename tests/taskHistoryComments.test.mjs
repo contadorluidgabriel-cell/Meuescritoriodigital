@@ -9,7 +9,7 @@ const viteSource = readFileSync(new URL('../vite.config.js', import.meta.url), '
 
 test('tarefas concluídas saem da listagem principal e ficam no histórico', () => {
   const source = taskSource()
-  assert.match(source, /if \(isDone\(task\.status\)\) return false/)
+  assert.match(source, /rows\.filter\(task => !isDone\(task\.status\)\)\.map/)
   assert.match(source, /Histórico de tarefas/)
   assert.match(source, /Nenhuma tarefa em aberto encontrada/)
   assert.match(source, /Reabrir/)
