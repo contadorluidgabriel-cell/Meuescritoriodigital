@@ -149,7 +149,7 @@ export function useOfficeData(session) {
     })
 
     return () => { active = false }
-  }, [clearSyncRetry, ready, session?.user?.id, workspaceRequest])
+  }, [clearSyncRetry, session?.user?.id, workspaceRequest])
 
   useEffect(() => {
     const userId = session?.user?.id
