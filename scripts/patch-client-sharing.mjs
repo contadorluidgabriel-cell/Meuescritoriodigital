@@ -33,7 +33,7 @@ export function applyClientSharingPatch(root) {
     ],
     [
       "    <OutsourcedCompaniesPanel office={office} update={update} />",
-      "    <PartnersPanel office={office} update={update} />\n\n    <OutsourcedCompaniesPanel office={office} update={update} />",
+      "    <PartnersPanel office={office} update={update} access={access} onRefresh={onRefresh} />\n\n    <OutsourcedCompaniesPanel office={office} update={update} />",
       'partners panel',
     ],
     [
