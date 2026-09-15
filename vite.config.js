@@ -34,6 +34,7 @@ import { applyObligationsV2Patch } from './scripts/patch-obligations-v2.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.mjs'
 import { applyResponsibilityDistributionV2Patch } from './scripts/patch-responsibility-distribution-v2.mjs'
+import { applyUserPermanentDeletePatch } from './scripts/patch-user-permanent-delete.mjs'
 import { applyTodayObligationFilterPatch } from './scripts/patch-today-obligation-filter.mjs'
 import { applyTaskUxFixesPatch } from './scripts/patch-task-ux-fixes.mjs'
 import { applySyncSafetyPatch } from './scripts/patch-sync-safety.mjs'
@@ -105,6 +106,7 @@ applyObligationsV2Patch(root)
 applySharingStylesPatch(root)
 applyFinancePdfPolishV2(root)
 applyResponsibilityDistributionV2Patch(root)
+applyUserPermanentDeletePatch(root)
 applyTodayObligationFilterPatch(root)
 applyTaskUxFixesPatch(root)
 applySyncSafetyPatch(root)
