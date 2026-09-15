@@ -51,8 +51,8 @@ export function applyTaskHistoryCommentsPatch(root) {
 
     source = replaceRequired(
       source,
-      "<div className=\"react-module-actions\"><span className=\"sync-indicator\">{sync}</span><button className=\"primary\" onClick={openNew}>+ Nova tarefa</button></div>",
-      "<div className=\"react-module-actions\"><span className=\"sync-indicator\">{sync}</span><button type=\"button\" className=\"task-history-link\" onClick={() => setHistoryOpen(current => !current)}>Histórico {completedCount ? `(${completedCount})` : ''}</button><button className=\"primary\" onClick={openNew}>+ Nova tarefa</button></div>",
+      "<button className=\"primary\" onClick={openNew}>+ Nova tarefa</button>",
+      "<button type=\"button\" className=\"task-history-link\" onClick={() => setHistoryOpen(current => !current)}>Histórico {completedCount ? `(${completedCount})` : ''}</button><button className=\"primary\" onClick={openNew}>+ Nova tarefa</button>",
       'history top action',
       taskPath,
     )
