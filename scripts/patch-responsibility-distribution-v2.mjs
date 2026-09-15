@@ -83,4 +83,33 @@ export function applyResponsibilityDistributionV2Patch(root) {
     )
     writeFileSync(usersPath, users)
   }
+
+  users = readFileSync(usersPath, 'utf8')
+  if (!users.includes('Acesso do usuário parceiro desativado.')) {
+    users = replaceOrFail(
+      users,
+      "selected.status === 'active' && selected.user_id ? <button type=\"button\" disabled={busy || !onOpenDistribution} onClick={() => onOpenDistribution?.(selected.user_id, 'deactivate')}>Desativar</button> :",
+      "selected.status === 'active' && selected.user_id ? <button type=\"button\" disabled={busy || (selected.role !== 'partner' && !onOpenDistribution)} onClick={() => selected.role === 'partner' ? mutateMember(selected, { status: 'disabled' }, 'Acesso do usuário parceiro desativado. As responsabilidades continuam vinculadas à parceria.') : onOpenDistribution?.(selected.user_id, 'deactivate')}>Desativar</button> :",
+      'partner direct deactivation',
+    )
+    if (users.includes('<strong>Parceiro</strong><span>O escopo continua sendo definido pela parceria e pelas responsabilidades compartilhadas do escritório.</span>')) {
+      users = users.replace(
+        '<strong>Parceiro</strong><span>O escopo continua sendo definido pela parceria e pelas responsabilidades compartilhadas do escritório.</span>',
+        '<strong>Parceiro</strong><span>O usuário herda clientes e atividades da parceria vinculada. O vínculo entre parceiro e usuários é gerenciado na área Parceiros.</span>',
+      )
+    }
+    writeFileSync(usersPath, users)
+  }
+
+  const distributionPath = `${root}src/components/WorkDistributionV2.jsx`
+  let distribution = readFileSync(distributionPath, 'utf8')
+  if (!distribution.includes('Usuários parceiros recebem atividades pelo vínculo da parceria')) {
+    distribution = replaceOrFail(
+      distribution,
+      '<span>Parceiros operacionais continuam fora desta etapa.</span>',
+      '<span>Usuários parceiros recebem atividades pelo vínculo da parceria correspondente. Gerencie esses acessos na área de Parceiros.</span>',
+      'partner distribution guidance',
+    )
+    writeFileSync(distributionPath, distribution)
+  }
 }
