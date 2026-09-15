@@ -43,7 +43,7 @@ test('invoice follows the approved premium payment layout', () => {
     client: { razao: 'Empresa Exemplo' }, office: {},
   })
   const pdf = Buffer.from(bytes).toString('latin1')
-  assert.match(pdf, /\(TOTAL\)/)
+  assert.match(pdf, /\(TOTAL A PAGAR\)/)
   assert.match(pdf, /\(R\$ 1\.000,00\)/)
   assert.match(pdf, /\(Vencimento\)/)
   assert.match(pdf, /\(10\/09\/2026\)/)
