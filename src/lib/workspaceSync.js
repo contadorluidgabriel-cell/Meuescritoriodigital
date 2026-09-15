@@ -1,11 +1,12 @@
 import { supabase } from './supabase.js'
+import { deepEqual } from './deepEqual.js'
 
 export const ACTIVE_WORKSPACE_KEY = 'med_active_workspace_id'
 const arrayNames = new Set(['clients','linkedCompanies','partners','tasks','taskTemplates','processes','obligations','processModels','finance','financeAccounts','financePayables','financeMovements','financeCategories','financeRecurrences','financeClosings','financeCollectionEvents','departments','history'])
 const officeNames = ['clients','linkedCompanies','partners','tasks','taskTemplates','processes','obligations','processModels','finance','financeAccounts','financePayables','financeMovements','financeCategories','financeRecurrences','financeClosings','financeCollectionEvents','financeConfig','settings','departments','ui','history','meta','lastBackup']
 const clone = value => value == null ? value : structuredClone(value)
 const recordKey = (name, record = {}) => name === 'departments' ? String(record.name || '') : name === 'financeClosings' ? String(record.competencia || record.id || '') : String(record.id || '')
-const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
+const same = deepEqual
 
 async function invoke(action, body = {}) {
   const { data: sessionData } = await supabase.auth.getSession()
