@@ -1,4 +1,5 @@
 import { supabase } from './supabase.js'
+import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './supabase.js'
 import { deepEqual } from './deepEqual.js'
 
 export const ACTIVE_WORKSPACE_KEY = 'med_active_workspace_id'
@@ -8,14 +9,70 @@ const clone = value => value == null ? value : structuredClone(value)
 const recordKey = (name, record = {}) => name === 'departments' ? String(record.name || '') : name === 'financeClosings' ? String(record.competencia || record.id || '') : String(record.id || '')
 const same = deepEqual
 
+function edgeFunctionMessageFromBody(body) {
+  if (body == null) return ''
+  if (typeof body === 'string') {
+    const text = body.trim()
+    if (!text) return ''
+    try { return edgeFunctionMessageFromBody(JSON.parse(text)) || '' } catch { return text.startsWith('<') ? '' : text }
+  }
+  if (typeof body === 'object') {
+    for (const key of ['message', 'error_description', 'error']) {
+      const value = body?.[key]
+      if (typeof value === 'string' && value.trim()) return value.trim()
+    }
+  }
+  return ''
+}
+
+function parseEdgeFunctionBody(text = '') {
+  const value = String(text || '').trim()
+  if (!value) return null
+  try { return JSON.parse(value) } catch { return value }
+}
+
+export async function invokeEdgeJson(functionName, {
+  body = {},
+  token = '',
+  fallback = 'Falha ao executar a operação.',
+  fetchImpl = globalThis.fetch,
+} = {}) {
+  if (!functionName) throw new Error(fallback)
+  if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
+  if (typeof fetchImpl !== 'function') throw new Error(fallback)
+
+  let response
+  try {
+    response = await fetchImpl(`${SUPABASE_URL}/functions/v1/${functionName}`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        apikey: SUPABASE_PUBLISHABLE_KEY,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(body || {}),
+    })
+  } catch (error) {
+    const message = String(error?.message || '').trim()
+    throw new Error(message || fallback)
+  }
+
+  const text = await response.text().catch(() => '')
+  const data = parseEdgeFunctionBody(text)
+  if (!response.ok) throw new Error(edgeFunctionMessageFromBody(data) || fallback)
+  if (data && typeof data === 'object' && data.error) throw new Error(edgeFunctionMessageFromBody(data) || fallback)
+  return data
+}
+
 async function invoke(action, body = {}) {
   const { data: sessionData } = await supabase.auth.getSession()
   const token = sessionData.session?.access_token
   if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
-  const { data, error } = await supabase.functions.invoke('office-workspace-web', { body: { action, ...body }, headers: { Authorization: `Bearer ${token}` } })
-  if (error) throw new Error(error.message || 'Falha ao acessar o escritório.')
-  if (data?.error) throw new Error(data.message || 'Falha ao acessar o escritório.')
-  return data
+  return invokeEdgeJson('office-workspace-web', {
+    body: { action, ...body },
+    token,
+    fallback: 'Falha ao acessar o escritório.',
+  })
 }
 
 export function preferredWorkspaceId() { return localStorage.getItem(ACTIVE_WORKSPACE_KEY) || '' }
@@ -27,6 +84,16 @@ export const listWorkspaceMembers = workspaceId => invoke('members', { workspace
 export const inviteWorkspaceMember = (workspaceId, values) => invoke('invite', { workspace_id: workspaceId, ...values })
 export const updateWorkspaceMember = (workspaceId, values) => invoke('update_member', { workspace_id: workspaceId, ...values })
 export const removeWorkspaceMember = (workspaceId, memberId) => invoke('remove_member', { workspace_id: workspaceId, member_id: memberId })
+export async function deleteWorkspaceUser(workspaceId, memberId, confirmation) {
+  const { data: sessionData } = await supabase.auth.getSession()
+  const token = sessionData.session?.access_token
+  if (!token) throw new Error('Sua sessão expirou. Entre novamente.')
+  return invokeEdgeJson('office-user-admin', {
+    body: { action: 'delete_user', workspace_id: workspaceId, member_id: memberId, confirmation },
+    token,
+    fallback: 'Falha ao excluir o usuário.',
+  })
+}
 export const loadWorkspaceAudit = workspaceId => invoke('audit', { workspace_id: workspaceId })
 export function roleLabel(role = '') { if (role === 'admin') return 'Administrador'; if (role === 'partner') return 'Parceiro'; return 'Colaborador' }
 export function isAdminAccess(access = {}) { return access?.membership?.role === 'admin' }
