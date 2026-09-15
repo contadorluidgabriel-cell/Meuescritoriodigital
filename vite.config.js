@@ -36,6 +36,7 @@ import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.m
 import { applyResponsibilityDistributionV2Patch } from './scripts/patch-responsibility-distribution-v2.mjs'
 import { applyTodayObligationFilterPatch } from './scripts/patch-today-obligation-filter.mjs'
 import { applyTaskUxFixesPatch } from './scripts/patch-task-ux-fixes.mjs'
+import { diagnoseTaskSource } from './scripts/diagnose-task-source.mjs'
 import { applyTaskHistoryCommentsPatch } from './scripts/patch-task-history-comments.mjs'
 import { applySyncSafetyPatch } from './scripts/patch-sync-safety.mjs'
 
@@ -108,6 +109,7 @@ applyFinancePdfPolishV2(root)
 applyResponsibilityDistributionV2Patch(root)
 applyTodayObligationFilterPatch(root)
 applyTaskUxFixesPatch(root)
+diagnoseTaskSource(root)
 applyTaskHistoryCommentsPatch(root)
 applySyncSafetyPatch(root)
 
