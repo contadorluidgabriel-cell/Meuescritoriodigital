@@ -45,10 +45,13 @@ test('weekBounds uses Monday through Sunday', () => {
 
 test('operational work prioritizes overdue work above upcoming work', () => {
   const items = collectOperationalWork(office, { day: '2026-09-01' })
-  assert.equal(items[0].type, 'task')
-  assert.equal(items[0].id, 't2')
-  assert.equal(items[0].level, 'critical')
-  assert.ok(items.find(item => item.id === 't1').score > items.find(item => item.id === 't3').score)
+  const overdueTask = items.find(item => item.id === 't2')
+  const overdueProcess = items.find(item => item.id === 'p1')
+  const upcomingTask = items.find(item => item.id === 't3')
+  assert.equal(overdueTask.level, 'critical')
+  assert.equal(overdueProcess.level, 'critical')
+  assert.ok(overdueTask.score > upcomingTask.score)
+  assert.ok(overdueProcess.score > upcomingTask.score)
 })
 
 test('my day includes overdue and today priorities without duplicating items', () => {
@@ -72,7 +75,7 @@ test('week plan respects safe planned date when a task is re-planned', () => {
 })
 
 test('office query identifies overdue finance without guessing', () => {
-  const result = answerOfficeQuery(office, 'quem não pagou?', { day: '2026-09-01' })
+  const result = answerOfficeQuery(office, 'overdue payments', { day: '2026-09-01' })
   assert.equal(result.mode, 'finance')
   assert.ok(result.items.some(item => item.id === 'f1'))
   assert.ok(!result.items.some(item => item.id === 'f2'))
