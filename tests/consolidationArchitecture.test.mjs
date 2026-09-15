@@ -12,9 +12,9 @@ test('Todoist automatic sync is owned by the office data layer only', () => {
   assert.doesNotMatch(tasksModule, /useTodoistTasks/)
 })
 
-test('tasks module remains a presentation/composition layer after consolidation', () => {
+test('tasks module remains a single presentation layer after consolidation', () => {
   const tasksModule = read('src/components/TasksReact.jsx')
 
-  assert.match(tasksModule, /<TaskDeadlinesBoard/)
   assert.match(tasksModule, /<TasksReactBase/)
+  assert.doesNotMatch(tasksModule, /TaskDeadlinesBoard/)
 })
