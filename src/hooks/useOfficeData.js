@@ -264,8 +264,15 @@ export function useOfficeData(session) {
     return true
   }, [clearSyncRetry])
 
+  const todoistOwner = Boolean(
+    ready
+    && session?.user?.id
+    && isAdminAccess(access)
+    && String(access.workspace?.owner_user_id || '') === String(session.user.id),
+  )
   const todoist = useTodoistTasks({
-    enabled: Boolean(ready && session?.user?.id && isAdminAccess(access)),
+    enabled: todoistOwner,
+    workspaceId: String(access.workspace?.id || ''),
     tasks: office.tasks || [],
     update,
   })
