@@ -90,5 +90,21 @@ export function applyFinanceCompletePatch(root) {
       'payment editor accounts',
     )
   }
+  if (!finance.includes("import { deepEqual } from '../lib/deepEqual.js'")) {
+    finance = replaceOrFail(
+      finance,
+      "import { today, uid } from '../lib/storage.js'",
+      "import { today, uid } from '../lib/storage.js'\nimport { deepEqual } from '../lib/deepEqual.js'",
+      'stable finance comparison import',
+    )
+  }
+  if (!finance.includes('!deepEqual(charge, raw)')) {
+    finance = replaceOrFail(
+      finance,
+      "      if (JSON.stringify(charge) !== JSON.stringify(raw)) changed = true",
+      "      if (!deepEqual(charge, raw)) changed = true",
+      'stable finance comparison',
+    )
+  }
   writeFileSync(financePath, finance)
 }
