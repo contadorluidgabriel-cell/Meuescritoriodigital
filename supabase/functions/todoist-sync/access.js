@@ -1,15 +1,14 @@
 export function evaluateTodoistAccess({
   userId = '',
   requestedWorkspaceId = '',
-  configuredWorkspaceId = '',
+  workspaceConfigured = false,
   membership = null,
   workspace = null,
 } = {}) {
   const user = String(userId || '')
   const requested = String(requestedWorkspaceId || '')
-  const configured = String(configuredWorkspaceId || '')
 
-  if (!requested || !configured || requested !== configured) {
+  if (!requested || !workspaceConfigured) {
     return { ok: false, status: 403, message: 'Todoist não está habilitado neste escritório.' }
   }
 
