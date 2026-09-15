@@ -35,8 +35,8 @@ export function applyTaskHistoryCommentsPatch(root) {
 
     source = replaceRequired(
       source,
-      "  const filtered = useMemo(() => office.tasks.filter(task => {",
-      "  const filtered = useMemo(() => office.tasks.filter(task => {\n    if (isDone(task.status)) return false",
+      "{rows.map(task => {",
+      "{rows.filter(task => !isDone(task.status)).map(task => {",
       'hide completed from main list',
       taskPath,
     )
@@ -59,8 +59,8 @@ export function applyTaskHistoryCommentsPatch(root) {
 
     source = replaceRequired(
       source,
-      "{!filtered.length ? <div className=\"empty\">Nenhuma tarefa encontrada.</div> : null}",
-      "{!filtered.length ? <div className=\"empty\">Nenhuma tarefa em aberto encontrada.</div> : null}",
+      "{!rows.length ? <div className=\"empty\">Nenhuma tarefa encontrada.</div> : null}",
+      "{!rows.filter(task => !isDone(task.status)).length ? <div className=\"empty\">Nenhuma tarefa em aberto encontrada.</div> : null}",
       'main empty message',
       taskPath,
     )
