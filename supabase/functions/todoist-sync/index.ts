@@ -14,7 +14,6 @@ const secretKeys = JSON.parse(Deno.env.get("SUPABASE_SECRET_KEYS") ?? "{}");
 const publishableKey = publishableKeys.default || Deno.env.get("SUPABASE_ANON_KEY") || "";
 const secretKey = secretKeys.default || Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || "";
 const todoistToken = Deno.env.get("TODOIST_API_TOKEN") ?? "";
-const configuredWorkspaceId = Deno.env.get("TODOIST_WORKSPACE_ID") || "119182a3-b58f-4088-ae9e-27e4fa1b1022";
 const projectId = "6hP4XC379R6c6fHx";
 const officeTimezone = "America/Sao_Paulo";
 const sectionIds: Record<string, string> = {
@@ -116,7 +115,7 @@ async function activeWorkspaceId(userId: string, requestedWorkspaceId = "") {
 
 async function authorizeWorkspace(userId: string, requestedWorkspaceId = "") {
   const workspaceId = await activeWorkspaceId(userId, requestedWorkspaceId);
-  const [membershipResult, workspaceResult] = await Promise.all([
+  const [membershipResult, workspaceResult, configResult] = await Promise.all([
     admin
       .from("office_members")
       .select("user_id,workspace_id,role,status")
@@ -128,14 +127,20 @@ async function authorizeWorkspace(userId: string, requestedWorkspaceId = "") {
       .select("id,owner_user_id")
       .eq("id", workspaceId || "__missing__")
       .maybeSingle(),
+    admin
+      .from("todoist_workspace_config")
+      .select("workspace_id,enabled")
+      .eq("workspace_id", workspaceId || "__missing__")
+      .maybeSingle(),
   ]);
   if (membershipResult.error) throw membershipResult.error;
   if (workspaceResult.error) throw workspaceResult.error;
+  if (configResult.error) throw configResult.error;
 
   const access = evaluateTodoistAccess({
     userId,
     requestedWorkspaceId: workspaceId,
-    configuredWorkspaceId,
+    workspaceConfigured: Boolean(configResult.data?.enabled),
     membership: membershipResult.data,
     workspace: workspaceResult.data,
   });
