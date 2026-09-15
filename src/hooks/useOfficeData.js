@@ -9,6 +9,7 @@ const timeValue = value => {
 }
 
 const storageScope = (userId, workspaceId) => `${String(userId || '')}_ws_${String(workspaceId || '')}`
+const SYNC_RETRY_DELAYS = [2000, 5000, 15000, 30000, 60000]
 
 export function useOfficeData(session) {
   const [office, setOfficeState] = useState(loadOffice)
@@ -16,6 +17,7 @@ export function useOfficeData(session) {
   const [sync, setSync] = useState('Aguardando acesso')
   const [access, setAccess] = useState({ workspace: null, membership: null, workspaces: [] })
   const [workspaceRequest, setWorkspaceRequest] = useState(() => preferredWorkspaceId())
+  const [syncRetryTick, setSyncRetryTick] = useState(0)
   const hydratedKey = useRef('')
   const cloudWriteAllowed = useRef(false)
   const dirtyVersion = useRef(0)
@@ -25,12 +27,33 @@ export function useOfficeData(session) {
   const accessRef = useRef(access)
   const workspaceIdRef = useRef('')
   const storageScopeRef = useRef('')
+  const retryTimer = useRef(null)
+  const retryAttempt = useRef(0)
+
+  const clearSyncRetry = useCallback(() => {
+    if (retryTimer.current) clearTimeout(retryTimer.current)
+    retryTimer.current = null
+    retryAttempt.current = 0
+  }, [])
+
+  const scheduleSyncRetry = useCallback(() => {
+    if (retryTimer.current) return
+    const attempt = Math.min(retryAttempt.current, SYNC_RETRY_DELAYS.length - 1)
+    const delay = SYNC_RETRY_DELAYS[attempt]
+    retryAttempt.current += 1
+    retryTimer.current = setTimeout(() => {
+      retryTimer.current = null
+      setSyncRetryTick(current => current + 1)
+    }, delay)
+  }, [])
 
   useEffect(() => { accessRef.current = access }, [access])
+  useEffect(() => () => clearSyncRetry(), [clearSyncRetry])
 
   useEffect(() => {
     const userId = session?.user?.id
     if (!userId) {
+      clearSyncRetry()
       hydratedKey.current = ''
       cloudWriteAllowed.current = false
       dirtyVersion.current = 0
@@ -47,6 +70,7 @@ export function useOfficeData(session) {
     if (hydratedKey.current === key && ready) return
 
     let active = true
+    clearSyncRetry()
     cloudWriteAllowed.current = false
     dirtyVersion.current = 0
     syncedVersion.current = 0
@@ -77,6 +101,7 @@ export function useOfficeData(session) {
 
       let next = remote
       let remoteBase = remote
+      let localSyncPending = false
       const localIsNewer = Boolean(localUpdatedAt) && timeValue(localUpdatedAt) > timeValue(result.updated_at)
       if (localIsNewer) {
         const patch = buildOfficePatch(remote, local, nextAccess)
@@ -87,6 +112,7 @@ export function useOfficeData(session) {
             next = remoteBase
           } catch {
             next = local
+            localSyncPending = true
           }
         }
       }
@@ -96,12 +122,16 @@ export function useOfficeData(session) {
       storageScopeRef.current = scope
       baseOffice.current = structuredClone(remoteBase)
       accessRef.current = nextAccess
-      saveOffice(next, scope, { touch: false })
+      if (localSyncPending) {
+        dirtyVersion.current = 1
+        syncedVersion.current = 0
+      }
+      saveOffice(next, scope, { touch: localSyncPending })
       setOfficeState(next)
       setAccess(nextAccess)
       setReady(true)
       cloudWriteAllowed.current = true
-      setSync('Sincronizado · equipe')
+      setSync(localSyncPending ? 'Alterações locais pendentes · tentando sincronizar…' : 'Sincronizado · equipe')
       if (workspaceRequest !== workspaceId) setWorkspaceRequest(workspaceId)
     }
 
@@ -119,7 +149,7 @@ export function useOfficeData(session) {
     })
 
     return () => { active = false }
-  }, [session?.user?.id, workspaceRequest])
+  }, [clearSyncRetry, session?.user?.id, workspaceRequest])
 
   useEffect(() => {
     const userId = session?.user?.id
@@ -138,6 +168,7 @@ export function useOfficeData(session) {
         const nextAccess = { workspace: result.workspace || null, membership: result.membership || null, workspaces: result.workspaces || [] }
         accessRef.current = nextAccess
         setAccess(nextAccess)
+        clearSyncRetry()
         setSync('Sincronizado · equipe')
       } catch {
         if (!cancelled) setSync('Conectado · atualização pendente')
@@ -155,7 +186,7 @@ export function useOfficeData(session) {
       window.removeEventListener('focus', onFocus)
       document.removeEventListener('visibilitychange', onVisibility)
     }
-  }, [ready, session?.user?.id])
+  }, [clearSyncRetry, ready, session?.user?.id])
 
   useEffect(() => {
     const userId = session?.user?.id
@@ -171,12 +202,13 @@ export function useOfficeData(session) {
       return undefined
     }
 
-    setSync('Salvando para a equipe…')
+    setSync(retryAttempt.current ? 'Tentando sincronizar novamente…' : 'Salvando para a equipe…')
     const timer = setTimeout(() => {
       const snapshot = structuredClone(office)
       const patch = buildOfficePatch(baseOffice.current, snapshot, accessRef.current)
       if (!hasOfficePatch(patch)) {
         syncedVersion.current = Math.max(syncedVersion.current, version)
+        clearSyncRetry()
         if (dirtyVersion.current <= syncedVersion.current) setSync('Sincronizado · equipe')
         return
       }
@@ -187,18 +219,20 @@ export function useOfficeData(session) {
         const remote = payloadToOffice(result.payload || {})
         baseOffice.current = structuredClone(remote)
         syncedVersion.current = Math.max(syncedVersion.current, version)
+        clearSyncRetry()
         if (dirtyVersion.current <= syncedVersion.current) {
           saveOffice(remote, storageScopeRef.current, { touch: false })
           setOfficeState(remote)
           setSync('Sincronizado · equipe')
         }
       }).catch(() => {
-        setSync('Falha ao sincronizar · alterações mantidas neste navegador')
+        setSync('Falha ao sincronizar · nova tentativa automática agendada')
+        scheduleSyncRetry()
       })
     }, 650)
 
     return () => clearTimeout(timer)
-  }, [office, ready, session?.user?.id])
+  }, [clearSyncRetry, office, ready, scheduleSyncRetry, session?.user?.id, syncRetryTick])
 
   const update = useCallback(recipe => setOfficeState(current => {
     const draft = structuredClone(current)
@@ -210,9 +244,10 @@ export function useOfficeData(session) {
   const switchWorkspace = useCallback(workspaceId => {
     const id = String(workspaceId || '')
     if (!id || id === workspaceIdRef.current) return
+    clearSyncRetry()
     hydratedKey.current = ''
     setWorkspaceRequest(id)
-  }, [])
+  }, [clearSyncRetry])
 
   const refreshWorkspace = useCallback(async () => {
     if (!workspaceIdRef.current || dirtyVersion.current > syncedVersion.current) return false
@@ -224,9 +259,10 @@ export function useOfficeData(session) {
     const nextAccess = { workspace: result.workspace || null, membership: result.membership || null, workspaces: result.workspaces || [] }
     accessRef.current = nextAccess
     setAccess(nextAccess)
+    clearSyncRetry()
     setSync('Sincronizado · equipe')
     return true
-  }, [])
+  }, [clearSyncRetry])
 
   const todoist = useTodoistTasks({
     enabled: Boolean(ready && session?.user?.id && isAdminAccess(access)),
