@@ -4,6 +4,28 @@ import { reconcileExternalTaskPayload, taskCompletionBlocker } from './taskProgr
 const normalizeRecurrence = value => String(value || '').trim().toLowerCase()
 const COMPETENCIA_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/
 
+export function competenciaStepMonths(recurrence) {
+  const value = normalizeRecurrence(recurrence)
+  if (['monthly', 'mensal'].includes(value)) return 1
+  if (value === 'bimestral') return 2
+  if (['quarterly', 'trimestral'].includes(value)) return 3
+  if (value === 'semestral') return 6
+  if (['yearly', 'anual'].includes(value)) return 12
+  return 0
+}
+
+export function shouldAutoAdvanceCompetencia(task = {}) {
+  if (!task.usaCompetencia || !COMPETENCIA_PATTERN.test(String(task.competencia || ''))) return false
+  if (competenciaStepMonths(task.recorrencia) <= 0) return false
+  return task.competenciaAvancoAutomatico !== false
+}
+
+export function taskCompetenciaError(task = {}) {
+  if (!task.usaCompetencia) return ''
+  if (!COMPETENCIA_PATTERN.test(String(task.competencia || ''))) return 'Informe uma competência válida.'
+  return ''
+}
+
 export function nextTaskDue(date, recurrence) {
   const source = date || today()
   const next = new Date(`${source}T12:00:00`)
@@ -37,21 +59,14 @@ export function nextTaskDue(date, recurrence) {
   return next.toISOString().slice(0, 10)
 }
 
-export function nextTaskCompetencia(competencia, currentDue, nextDue) {
+export function nextTaskCompetencia(competencia, recurrence, autoAdvance = true) {
   const match = String(competencia || '').match(COMPETENCIA_PATTERN)
   if (!match) return ''
-
-  let deltaMonths = 1
-  const currentMatch = String(currentDue || '').match(/^(\d{4})-(\d{2})-\d{2}$/)
-  const nextMatch = String(nextDue || '').match(/^(\d{4})-(\d{2})-\d{2}$/)
-  if (currentMatch && nextMatch) {
-    const currentIndex = Number(currentMatch[1]) * 12 + Number(currentMatch[2]) - 1
-    const nextIndex = Number(nextMatch[1]) * 12 + Number(nextMatch[2]) - 1
-    deltaMonths = Math.max(0, nextIndex - currentIndex)
-  }
+  const step = competenciaStepMonths(recurrence)
+  if (!autoAdvance || step <= 0) return String(competencia)
 
   const sourceIndex = Number(match[1]) * 12 + Number(match[2]) - 1
-  const targetIndex = sourceIndex + deltaMonths
+  const targetIndex = sourceIndex + step
   const year = Math.floor(targetIndex / 12)
   const month = targetIndex % 12 + 1
   return `${year}-${String(month).padStart(2, '0')}`
@@ -68,19 +83,22 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
   if (!task.recorrencia || !task.prazo || !recurringClientIsActive(task, clients)) return { tasks: current, generatedTaskId: '' }
   const nextDue = nextTaskDue(task.prazo, task.recorrencia)
   if (!nextDue) return { tasks: current, generatedTaskId: '' }
+
+  const autoAdvanceCompetencia = shouldAutoAdvanceCompetencia(task)
+  const nextCompetencia = task.usaCompetencia && task.competencia
+    ? nextTaskCompetencia(task.competencia, task.recorrencia, autoAdvanceCompetencia)
+    : ''
   const alreadyExists = current.some(item => String(item.id) !== String(task.id)
     && String(item.clientId || '') === String(task.clientId || '')
     && String(item.titulo || '') === String(task.titulo || '')
     && normalizeRecurrence(item.recorrencia) === normalizeRecurrence(task.recorrencia)
     && String(item.prazo || '') === nextDue
+    && (!task.usaCompetencia || (Boolean(item.usaCompetencia) && String(item.competencia || '') === String(nextCompetencia || '')))
     && !isDone(item.status))
   if (alreadyExists) return { tasks: current, generatedTaskId: '' }
 
   const generatedTaskId = uid('tar')
   const now = new Date().toISOString()
-  const nextCompetencia = task.usaCompetencia && task.competencia
-    ? nextTaskCompetencia(task.competencia, task.prazo, nextDue)
-    : ''
   const nextTask = {
     ...structuredClone(task),
     id: generatedTaskId,
@@ -91,6 +109,7 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
     concluidoEm: '',
     usaCompetencia: Boolean(task.usaCompetencia),
     competencia: task.usaCompetencia ? (nextCompetencia || task.competencia || '') : '',
+    competenciaAvancoAutomatico: Boolean(task.usaCompetencia && autoAdvanceCompetencia),
     observacao: '',
     comentarios: [],
     subtarefas: (task.subtarefas || []).map(item => ({ ...structuredClone(item), id: uid('sub'), concluida: false })),
