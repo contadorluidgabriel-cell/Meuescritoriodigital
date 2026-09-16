@@ -9,7 +9,7 @@ const viteSource = readFileSync(new URL('../vite.config.js', import.meta.url), '
 
 test('tarefas concluídas saem da listagem principal e ficam no histórico', () => {
   const source = taskSource()
-  assert.match(source, /rows\.filter\(task => !isDone\(task\.status\)\)\.map/)
+  assert.match(source, /rows\.filter\(task => !isDone\(task\.status\)[^)]*.*\)\.map/)
   assert.match(source, /Histórico de tarefas/)
   assert.match(source, /Nenhuma tarefa em aberto encontrada/)
   assert.match(source, /Reabrir/)
@@ -27,10 +27,12 @@ test('tarefa expõe observação e comentários persistentes', () => {
 test('patch de histórico é aplicado depois das demais correções de tarefas', () => {
   const uxIndex = viteSource.indexOf('applyTaskUxFixesPatch(root)')
   const historyIndex = viteSource.indexOf('applyTaskHistoryCommentsPatch(root)')
+  const competenciaIndex = viteSource.indexOf('applyTaskCompetenciaOpcionalPatch(root)')
   const safetyIndex = viteSource.indexOf('applySyncSafetyPatch(root)')
   assert.ok(uxIndex >= 0)
   assert.ok(historyIndex > uxIndex)
-  assert.ok(safetyIndex > historyIndex)
+  assert.ok(competenciaIndex > historyIndex)
+  assert.ok(safetyIndex > competenciaIndex)
 })
 
 test('concluir e reabrir preserva observação e comentários', () => {
