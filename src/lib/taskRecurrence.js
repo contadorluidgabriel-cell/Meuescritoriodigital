@@ -2,6 +2,7 @@ import { isDone, today, uid } from './storage.js'
 import { reconcileExternalTaskPayload, taskCompletionBlocker } from './taskProgress.js'
 
 const normalizeRecurrence = value => String(value || '').trim().toLowerCase()
+const COMPETENCIA_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/
 
 export function nextTaskDue(date, recurrence) {
   const source = date || today()
@@ -36,6 +37,26 @@ export function nextTaskDue(date, recurrence) {
   return next.toISOString().slice(0, 10)
 }
 
+export function nextTaskCompetencia(competencia, currentDue, nextDue) {
+  const match = String(competencia || '').match(COMPETENCIA_PATTERN)
+  if (!match) return ''
+
+  let deltaMonths = 1
+  const currentMatch = String(currentDue || '').match(/^(\d{4})-(\d{2})-\d{2}$/)
+  const nextMatch = String(nextDue || '').match(/^(\d{4})-(\d{2})-\d{2}$/)
+  if (currentMatch && nextMatch) {
+    const currentIndex = Number(currentMatch[1]) * 12 + Number(currentMatch[2]) - 1
+    const nextIndex = Number(nextMatch[1]) * 12 + Number(nextMatch[2]) - 1
+    deltaMonths = Math.max(0, nextIndex - currentIndex)
+  }
+
+  const sourceIndex = Number(match[1]) * 12 + Number(match[2]) - 1
+  const targetIndex = sourceIndex + deltaMonths
+  const year = Math.floor(targetIndex / 12)
+  const month = targetIndex % 12 + 1
+  return `${year}-${String(month).padStart(2, '0')}`
+}
+
 function recurringClientIsActive(task, clients = []) {
   if (!task.clientId || !Array.isArray(clients) || !clients.length) return true
   const client = clients.find(item => String(item.id) === String(task.clientId))
@@ -57,6 +78,9 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
 
   const generatedTaskId = uid('tar')
   const now = new Date().toISOString()
+  const nextCompetencia = task.usaCompetencia && task.competencia
+    ? nextTaskCompetencia(task.competencia, task.prazo, nextDue)
+    : ''
   const nextTask = {
     ...structuredClone(task),
     id: generatedTaskId,
@@ -65,6 +89,8 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
     planejadoPara: '',
     completedAt: '',
     concluidoEm: '',
+    usaCompetencia: Boolean(task.usaCompetencia),
+    competencia: task.usaCompetencia ? (nextCompetencia || task.competencia || '') : '',
     observacao: '',
     comentarios: [],
     subtarefas: (task.subtarefas || []).map(item => ({ ...structuredClone(item), id: uid('sub'), concluida: false })),
