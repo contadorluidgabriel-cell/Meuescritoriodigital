@@ -154,10 +154,10 @@ export function applyTaskCompetenciaOpcionalPatch(root) {
     path,
   )
 
-  source = replaceRequired(
+  source = insertBefore(
     source,
-    "          recorrencia: model.recorrencia || '', descricao: model.descricao || '', prazo: addDays(today(), model.diasPrazo),",
-    "          recorrencia: model.recorrencia || '', descricao: model.descricao || '', prazo: addDays(today(), model.diasPrazo), usaCompetencia: Boolean(model.usaCompetencia), competencia: '', competenciaAvancoAutomatico: Boolean(model.usaCompetencia && competenciaStepMonths(model.recorrencia) > 0 && model.competenciaAvancoAutomatico !== false),",
+    'subtarefas: (model.subtarefas || []).map',
+    "usaCompetencia: Boolean(model.usaCompetencia), competencia: '', competenciaAvancoAutomatico: Boolean(model.usaCompetencia && competenciaStepMonths(model.recorrencia) > 0 && model.competenciaAvancoAutomatico !== false),\n          ",
     'template applies competencia rule',
     path,
   )
