@@ -5,8 +5,9 @@ export function applyPartnerFlowPatch(root) {
   let source = readFileSync(path, 'utf8')
   if (source.includes('<PartnerFlowReact office={office} partnerBalances={partnerBalances} />')) return
   const importAnchor = "import FinanceProReact from './FinanceProReact.jsx'"
-  const partnerStart = source.indexOf("{tab === 'parceiros' ?")
-  const nextSection = partnerStart >= 0 ? source.indexOf("{tab === 'relatorios' ?", partnerStart) : -1
+  // A proteção multiusuário antecede a condição de aba com fullFinanceAdmin &&.
+  const partnerStart = source.indexOf("tab === 'parceiros' ?")
+  const nextSection = partnerStart >= 0 ? source.indexOf("tab === 'relatorios' ?", partnerStart) : -1
   const partnerEnd = nextSection >= 0 ? source.lastIndexOf('</section>', nextSection) : -1
   if (!source.includes(importAnchor) || partnerStart < 0 || partnerEnd < partnerStart) {
     throw new Error('Partner flow patch failed: financial partner section changed')
