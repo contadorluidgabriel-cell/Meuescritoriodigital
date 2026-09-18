@@ -42,6 +42,7 @@ import { applySyncSafetyPatch } from './scripts/patch-sync-safety.mjs'
 import { applyPartnerAccountingPatch } from './scripts/patch-partner-accounting.mjs'
 import { applyPartnerPaymentEditorPatch } from './scripts/patch-partner-payment-editor.mjs'
 import { applyPartnerForecastPatch } from './scripts/patch-partner-forecast.mjs'
+import { applyPartnerFlowPatch } from './scripts/patch-partner-flow.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -104,7 +105,6 @@ applyV12Patch(root)
 applyV121Patch(root)
 applyProcessStepStatusesPatch(root)
 applyInviteLinksPatch(root)
-applyTaskDeadlinesPatch(root)
 applyObligationDeadlinesPatch(root)
 applyObligationsV2Patch(root)
 applySharingStylesPatch(root)
@@ -118,6 +118,7 @@ applySyncSafetyPatch(root)
 applyPartnerAccountingPatch(root)
 applyPartnerPaymentEditorPatch(root)
 applyPartnerForecastPatch(root)
+applyPartnerFlowPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
