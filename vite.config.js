@@ -41,6 +41,7 @@ import { applyTaskCompetenciaOpcionalPatch } from './scripts/patch-task-competen
 import { applySyncSafetyPatch } from './scripts/patch-sync-safety.mjs'
 import { applyPartnerAccountingPatch } from './scripts/patch-partner-accounting.mjs'
 import { applyPartnerPaymentEditorPatch } from './scripts/patch-partner-payment-editor.mjs'
+import { applyPartnerForecastPatch } from './scripts/patch-partner-forecast.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -116,6 +117,7 @@ applyTaskCompetenciaOpcionalPatch(root)
 applySyncSafetyPatch(root)
 applyPartnerAccountingPatch(root)
 applyPartnerPaymentEditorPatch(root)
+applyPartnerForecastPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
