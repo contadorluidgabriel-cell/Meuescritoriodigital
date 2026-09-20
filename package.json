@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "vite",
     "test": "node --test tests/*.test.mjs",
-    "build": "node scripts/patch-client-deletion.mjs && vite build",
+    "build": "vite build",
     "preview": "vite preview"
   },
   "dependencies": {
