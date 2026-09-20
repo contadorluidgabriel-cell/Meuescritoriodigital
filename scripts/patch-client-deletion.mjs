@@ -14,9 +14,12 @@ export function applyClientDeletionPatch(root) {
     client = replaceOnce(client,
       "import { today, uid } from '../lib/storage.js'",
       "import { today, uid } from '../lib/storage.js'\nimport { deleteClientFromWorkspace, clientDependencies, clientHasEmbeddedHistory } from '../lib/clientDeletion.js'\nimport '../client-deletion.css'", 'importações')
-    client = replaceOnce(client,
-      "export default function ClientsReact({ office, update, sync, onOpenTasks, onOpenProcesses, onOpenFinance, initialClientId = '', openClientRequest = 0 }) {",
-      "export default function ClientsReact({ office, update, sync, access, refreshWorkspace, onOpenTasks, onOpenProcesses, onOpenFinance, initialClientId = '', openClientRequest = 0 }) {", 'propriedades')
+    const signature = client.match(/export default function ClientsReact\(\{[^\n]*\}\) \{/)
+    if (!signature) throw new Error('Não foi possível localizar assinatura da tela de clientes.')
+    let nextSignature = signature[0]
+    if (!nextSignature.includes('access,')) nextSignature = nextSignature.replace('sync, ', 'sync, access, ')
+    if (!nextSignature.includes('refreshWorkspace,')) nextSignature = nextSignature.replace('access, ', 'access, refreshWorkspace, ')
+    client = replaceOnce(client, signature[0], nextSignature, 'propriedades')
     client = replaceOnce(client,
       "  const [selectedTemplates, setSelectedTemplates] = useState(new Set())",
       `  const [selectedTemplates, setSelectedTemplates] = useState(new Set())
@@ -98,12 +101,20 @@ export function applyClientDeletionPatch(root) {
   const appPath = resolve(root, 'src/App.jsx')
   let app = readFileSync(appPath, 'utf8')
   if (!app.includes('refreshWorkspace={refreshWorkspace}')) {
-    app = replaceOnce(app,
-      '  const { office, update, ready, sync } = useOfficeData(session)',
-      '  const { office, update, ready, sync, access, refreshWorkspace } = useOfficeData(session)', 'acesso no App')
-    app = replaceOnce(app,
-      '<ClientsReact office={office} update={update} sync={sync} onOpenTasks=',
-      '<ClientsReact office={office} update={update} sync={sync} access={access} refreshWorkspace={refreshWorkspace} onOpenTasks=', 'acesso na tela')
+    if (!app.includes('refreshWorkspace } = useOfficeData(session)')) {
+      app = replaceOnce(app,
+        '  const { office, update, ready, sync } = useOfficeData(session)',
+        '  const { office, update, ready, sync, access, refreshWorkspace } = useOfficeData(session)', 'acesso no App')
+    }
+    if (app.includes('onRefresh={refreshWorkspace} onOpenTasks=')) {
+      app = replaceOnce(app,
+        'onRefresh={refreshWorkspace} onOpenTasks=',
+        'onRefresh={refreshWorkspace} refreshWorkspace={refreshWorkspace} onOpenTasks=', 'acesso na tela V12')
+    } else {
+      app = replaceOnce(app,
+        '<ClientsReact office={office} update={update} sync={sync} onOpenTasks=',
+        '<ClientsReact office={office} update={update} sync={sync} access={access} refreshWorkspace={refreshWorkspace} onOpenTasks=', 'acesso na tela original')
+    }
     writeFileSync(appPath, app)
   }
 }
