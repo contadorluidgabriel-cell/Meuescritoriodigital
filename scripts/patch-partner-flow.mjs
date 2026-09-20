@@ -1,6 +1,9 @@
 import { readFileSync, writeFileSync } from 'node:fs'
+import { applyClientDeletionPatch } from './patch-client-deletion.mjs'
 
 export function applyPartnerFlowPatch(root) {
+  // Este é o último patch de vite.config.js: os anchors do cadastro já estão estabilizados.
+  applyClientDeletionPatch(root)
   const path = `${root}src/components/FinanceCompleteReact.jsx`
   let source = readFileSync(path, 'utf8')
   if (source.includes('<PartnerFlowReact office={office} partnerBalances={partnerBalances} />')) return

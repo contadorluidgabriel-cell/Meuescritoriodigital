@@ -1,0 +1,10 @@
+.client-delete-trigger { color: #b42318 !important; border-color: #fecdca !important; background: #fff !important; }
+.client-delete-trigger:hover { background: #fff4f2 !important; }
+.client-delete-dialog { display: grid; gap: 14px; padding: 16px 20px 20px; }
+.client-delete-dialog p { margin: 0; line-height: 1.55; }
+.client-delete-dialog .client-field { display: grid; gap: 7px; }
+.client-delete-dialog .client-field input { width: 100%; min-height: 42px; border: 1px solid #d0d5dd; border-radius: 9px; padding: 8px 12px; background: #fff; color: #182230; }
+.client-delete-warning { border: 1px solid #fecdca; background: #fff4f2; border-radius: 10px; color: #912018; padding: 12px; }
+.client-delete-confirm { background: #b42318 !important; color: #fff !important; border: 1px solid #b42318 !important; }
+.client-delete-confirm:disabled { opacity: .5; cursor: not-allowed; }
+.client-delete-notice { margin: 12px 0 0; padding: 12px 14px; border-radius: 10px; border: 1px solid #aedfbe; background: #edfcf1; color: #175c36; font-size: 13px; }
