@@ -1,5 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { applyLegacySettingsBridgePatch } from './patch-legacy-settings-bridge.mjs'
+import { applyFollowUpsPatch } from './patch-follow-ups.mjs'
+import { applyFollowUpsLinkedV2 } from './patch-follow-ups-linked-v2.mjs'
+import { applyFollowUpsFinalPatch } from './patch-follow-ups-final.mjs'
 
 function replaceRequired(source, oldValue, newValue, label) {
   if (source.includes(newValue)) return source
@@ -20,7 +23,7 @@ export function applyDepartmentsPatch(root) {
     const renderStart = legacy.indexOf('function renderDepartments(){')
     const renderEnd = legacy.indexOf('function ensureVisualThemeSelector(){',renderStart)
     if (renderStart < 0 || renderEnd < 0) throw new Error('Departments patch: legacy department renderer not found')
-    const renderer = `function renderDepartments(){const el=document.getElementById('departmentList');if(!el)return;el.innerHTML=getDepartments().map(d=>\`<div class="department-row"><div><strong>\${U.esc(d.name)}</strong><small>Disponível nos cadastros e filtros do escritório.</small></div></div>\`).join('')}\n`
+    const renderer = `function renderDepartments(){const el=document.getElementById('departmentList');if(!el)return;el.innerHTML=getDepartments().map(d=>` + '`' + `<div class="department-row"><div><strong>\${U.esc(d.name)}</strong><small>Disponível nos cadastros e filtros do escritório.</small></div></div>` + '`' + `).join('')}\n`
     legacy = legacy.slice(0,renderStart)+renderer+legacy.slice(renderEnd)
     legacy = replaceRequired(legacy,
       'Desativar uma área não apaga registros antigos; apenas retira a opção de novos cadastros.',
@@ -37,4 +40,7 @@ export function applyDepartmentsPatch(root) {
     'task department choices')
   writeFileSync(taskPath,tasks)
   applyLegacySettingsBridgePatch(root)
+  applyFollowUpsPatch(root)
+  applyFollowUpsLinkedV2(root)
+  applyFollowUpsFinalPatch(root)
 }
