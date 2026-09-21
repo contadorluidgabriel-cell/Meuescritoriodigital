@@ -1,3 +1,5 @@
+import { DEFAULT_DEPARTMENT_NAMES, normalizeDepartments } from './departments.js'
+
 export const KEYS = {
   clients: 'med_clientes', linkedCompanies: 'med_cnpjs_vinculados', partners: 'med_parceiros_trabalho', tasks: 'med_tarefas', taskTemplates: 'med_tarefas_modelos',
   processes: 'med_processos', obligations: 'med_obrigacoes', processModels: 'med_processos_modelos',
@@ -19,7 +21,7 @@ export const defaults = {
   financeAccounts: [], financePayables: [], financeMovements: [], financeCategories: [], financeRecurrences: [], financeClosings: [], financeCollectionEvents: [],
   financeConfig: { defaultAccountId: '', closingDay: 1, forecastDays: 30 },
   settings: { office: 'Meu Escritório', system: 'Meu Escritório Digital', user: 'Usuário', role: 'Administrador', initials: 'ME', visual: 'macos' },
-  departments: ['Fiscal', 'Contábil', 'DP', 'Societário', 'Administrativo'].map(name => ({ name, active: true })),
+  departments: DEFAULT_DEPARTMENT_NAMES.map(name => ({ name, active: true })),
   ui: {}, meta: { version: '11.1' }, lastBackup: '',
 }
 
@@ -80,7 +82,9 @@ function readValue(name, userId) {
 }
 
 export function loadOffice(userId = '') {
-  return Object.fromEntries(Object.keys(KEYS).map(name => [name, readValue(name, userId)]))
+  const office = Object.fromEntries(Object.keys(KEYS).map(name => [name, readValue(name, userId)]))
+  office.departments = normalizeDepartments(office.departments)
+  return office
 }
 
 export function getLocalUpdatedAt(userId) {
@@ -96,21 +100,21 @@ export function saveOffice(office, userId = '', { touch = true, mirror = true } 
     localStorage.setItem(ACTIVE_USER_KEY, normalizedUserId)
 
     Object.entries(KEYS).forEach(([name, key]) => {
-      if (name in office) localStorage.setItem(userStorageKey(key, normalizedUserId), JSON.stringify(office[name]))
+      if (name in office) localStorage.setItem(userStorageKey(key, normalizedUserId), JSON.stringify(name === 'departments' ? normalizeDepartments(office[name]) : office[name]))
     })
     if (touch) localStorage.setItem(updatedKey(normalizedUserId), new Date().toISOString())
 
     if (mirror) {
       mirrorUserExtras(normalizedUserId)
       Object.entries(KEYS).forEach(([name, key]) => {
-        if (name in office) localStorage.setItem(key, JSON.stringify(office[name]))
+        if (name in office) localStorage.setItem(key, JSON.stringify(name === 'departments' ? normalizeDepartments(office[name]) : office[name]))
       })
     }
     return
   }
 
   Object.entries(KEYS).forEach(([name, key]) => {
-    if (name in office) localStorage.setItem(key, JSON.stringify(office[name]))
+    if (name in office) localStorage.setItem(key, JSON.stringify(name === 'departments' ? normalizeDepartments(office[name]) : office[name]))
   })
 }
 
@@ -124,13 +128,14 @@ export function officePayload(office, userId = '') {
 
   if (userId) localStorage.setItem(extrasKey(userId), JSON.stringify(extras))
   Object.assign(payload, extras)
-  Object.entries(KEYS).forEach(([name, key]) => { if (name in office) payload[key] = office[name] })
+  Object.entries(KEYS).forEach(([name, key]) => { if (name in office) payload[key] = name === 'departments' ? normalizeDepartments(office[name]) : office[name] })
   return payload
 }
 
 export function payloadToOffice(payload = {}) {
   const next = { ...defaults }
   Object.entries(KEYS).forEach(([name, key]) => { if (key in payload) next[name] = payload[key] })
+  next.departments = normalizeDepartments(next.departments)
   return next
 }
 
