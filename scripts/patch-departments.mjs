@@ -1,6 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { applyLegacySettingsBridgePatch } from './patch-legacy-settings-bridge.mjs'
 import { applyFollowUpsPatch } from './patch-follow-ups.mjs'
+import { applyFollowUpsLinkedV2 } from './patch-follow-ups-linked-v2.mjs'
 
 function replaceRequired(source, oldValue, newValue, label) {
   if (source.includes(newValue)) return source
@@ -39,4 +40,5 @@ export function applyDepartmentsPatch(root) {
   writeFileSync(taskPath,tasks)
   applyLegacySettingsBridgePatch(root)
   applyFollowUpsPatch(root)
+  applyFollowUpsLinkedV2(root)
 }
