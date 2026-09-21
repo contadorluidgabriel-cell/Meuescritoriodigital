@@ -33,6 +33,7 @@ import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadli
 import { applyObligationsV2Patch } from './scripts/patch-obligations-v2.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.mjs'
+import { applyInvoicePrintV3 } from './scripts/patch-invoice-print-v3.mjs'
 import { applyResponsibilityDistributionV2Patch } from './scripts/patch-responsibility-distribution-v2.mjs'
 import { applyTodayObligationFilterPatch } from './scripts/patch-today-obligation-filter.mjs'
 import { applyTaskUxFixesPatch } from './scripts/patch-task-ux-fixes.mjs'
@@ -58,7 +59,6 @@ const payloadMap = [
   ['obligations-react.css.gz.b64', 'src/obligations-react.css'],
   ['processes-react.css.gz.b64', 'src/processes-react.css'],
   ['styles.css.gz.b64', 'src/styles.css'],
-  ['tasks-react.css.gz.b64', 'src/tasks-react.css'],
 ]
 function decodePayload(text) { return gunzipSync(Buffer.from(text.replace(/\s+/g, ''), 'base64')) }
 function readLegacyChunk(index) {
@@ -111,6 +111,7 @@ applyObligationDeadlinesPatch(root)
 applyObligationsV2Patch(root)
 applySharingStylesPatch(root)
 applyFinancePdfPolishV2(root)
+applyInvoicePrintV3(root)
 applyResponsibilityDistributionV2Patch(root)
 applyTodayObligationFilterPatch(root)
 applyTaskUxFixesPatch(root)
