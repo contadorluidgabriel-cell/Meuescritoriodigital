@@ -1,4 +1,4 @@
-import './follow-ups.css'
+import './follow-up-linked.css'
 
 const formatDate = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : '—'
 
