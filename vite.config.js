@@ -33,6 +33,7 @@ import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadli
 import { applyObligationsV2Patch } from './scripts/patch-obligations-v2.mjs'
 import { applySharingStylesPatch } from './scripts/patch-sharing-styles.mjs'
 import { applyFinancePdfPolishV2 } from './scripts/patch-finance-pdf-polish-v2.mjs'
+import { applyInvoicePrintV3 } from './scripts/patch-invoice-print-v3.mjs'
 import { applyResponsibilityDistributionV2Patch } from './scripts/patch-responsibility-distribution-v2.mjs'
 import { applyTodayObligationFilterPatch } from './scripts/patch-today-obligation-filter.mjs'
 import { applyTaskUxFixesPatch } from './scripts/patch-task-ux-fixes.mjs'
@@ -111,6 +112,7 @@ applyObligationDeadlinesPatch(root)
 applyObligationsV2Patch(root)
 applySharingStylesPatch(root)
 applyFinancePdfPolishV2(root)
+applyInvoicePrintV3(root)
 applyResponsibilityDistributionV2Patch(root)
 applyTodayObligationFilterPatch(root)
 applyTaskUxFixesPatch(root)
