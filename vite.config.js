@@ -43,6 +43,7 @@ import { applyPartnerAccountingPatch } from './scripts/patch-partner-accounting.
 import { applyPartnerPaymentEditorPatch } from './scripts/patch-partner-payment-editor.mjs'
 import { applyPartnerForecastPatch } from './scripts/patch-partner-forecast.mjs'
 import { applyPartnerFlowPatch } from './scripts/patch-partner-flow.mjs'
+import { applyDepartmentsPatch } from './scripts/patch-departments.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -120,6 +121,7 @@ applyPartnerAccountingPatch(root)
 applyPartnerPaymentEditorPatch(root)
 applyPartnerForecastPatch(root)
 applyPartnerFlowPatch(root)
+applyDepartmentsPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
