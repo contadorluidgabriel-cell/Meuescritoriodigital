@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'node:fs'
+import { applyLegacySettingsBridgePatch } from './patch-legacy-settings-bridge.mjs'
 
 function replaceRequired(source, oldValue, newValue, label) {
   if (source.includes(newValue)) return source
@@ -35,4 +36,5 @@ export function applyDepartmentsPatch(root) {
     "(office.departments || []).map(item => typeof item === 'string' ? item : item?.name)",
     'task department choices')
   writeFileSync(taskPath,tasks)
+  applyLegacySettingsBridgePatch(root)
 }
