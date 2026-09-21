@@ -76,9 +76,7 @@ export function applyLegacySettingsBridgePatch(root) {
   const appPath = `${root}src/App.jsx`
   let app = readFileSync(appPath, 'utf8')
   if (!app.includes('MED_REACT_SETTINGS_PERSISTENCE_V1')) {
-    const anchor = '  return <div className={`react-shell ${collapsed ? \'is-collapsed\' : \'\'}`}> '
-    // Use the precise opening tag without depending on trailing whitespace.
-    const actualAnchor = '  return <div className={`react-shell ${collapsed ? \'is-collapsed\' : \'\'}`}>'
+    const opening = '  return <div className='
     const handler = `  /* MED_REACT_SETTINGS_PERSISTENCE_V1: keep legacy settings in the authenticated workspace. */
   function applyLegacySettingsChange(key, value) {
     if (!value || typeof value !== 'object') return
@@ -90,8 +88,8 @@ export function applyLegacySettingsBridgePatch(root) {
     })
   }
 
-${actualAnchor}`
-    app = replaceRequired(app, actualAnchor, handler, 'React settings persistence')
+${opening}`
+    app = replaceRequired(app, opening, handler, 'React settings persistence')
     app = replaceRequired(app,
       '<LegacyModule view={view} record={legacyTarget} />',
       '<LegacyModule view={view} record={legacyTarget} onSettingsChange={applyLegacySettingsChange} />',
