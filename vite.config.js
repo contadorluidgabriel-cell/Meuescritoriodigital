@@ -59,6 +59,7 @@ const payloadMap = [
   ['obligations-react.css.gz.b64', 'src/obligations-react.css'],
   ['processes-react.css.gz.b64', 'src/processes-react.css'],
   ['styles.css.gz.b64', 'src/styles.css'],
+  ['tasks-react.css.gz.b64', 'src/tasks-react.css'],
 ]
 function decodePayload(text) { return gunzipSync(Buffer.from(text.replace(/\s+/g, ''), 'base64')) }
 function readLegacyChunk(index) {
