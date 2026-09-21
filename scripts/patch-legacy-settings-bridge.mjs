@@ -76,7 +76,7 @@ export function applyLegacySettingsBridgePatch(root) {
   const appPath = `${root}src/App.jsx`
   let app = readFileSync(appPath, 'utf8')
   if (!app.includes('MED_REACT_SETTINGS_PERSISTENCE_V1')) {
-    const opening = '  return <div className='
+    const opening = '  return <>\n'
     const handler = `  /* MED_REACT_SETTINGS_PERSISTENCE_V1: keep legacy settings in the authenticated workspace. */
   function applyLegacySettingsChange(key, value) {
     if (!value || typeof value !== 'object') return
