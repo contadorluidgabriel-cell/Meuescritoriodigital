@@ -45,8 +45,8 @@ export function applyProcessCompletionPatch(root) {
   processes = replaceOnce(
     processes,
     "    const saved = normalized.id ? normalized : { ...normalized, id: uid('proc') }",
-    "    if (isDone(normalized.status)) normalized.dataConclusao ||= today()\n    else normalized.dataConclusao = ''\n    const saved = normalized.id ? normalized : { ...normalized, id: uid('proc') }",
-    'completion date on process editor save',
+    "    const unfinishedStep = processActionState(normalized).step\n    if (isDone(normalized.status) && unfinishedStep) Object.assign(normalized, setCurrentProcessStep(normalized, unfinishedStep.id).process)\n    if (isDone(normalized.status)) normalized.dataConclusao ||= today()\n    else normalized.dataConclusao = ''\n    const saved = normalized.id ? normalized : { ...normalized, id: uid('proc') }",
+    'process status and completion date on editor save',
   )
   processes = replaceOnce(
     processes,
