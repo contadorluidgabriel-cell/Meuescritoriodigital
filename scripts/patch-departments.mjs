@@ -3,6 +3,7 @@ import { applyLegacySettingsBridgePatch } from './patch-legacy-settings-bridge.m
 import { applyFollowUpsPatch } from './patch-follow-ups.mjs'
 import { applyFollowUpsLinkedV2 } from './patch-follow-ups-linked-v2.mjs'
 import { applyFollowUpsFinalPatch } from './patch-follow-ups-final.mjs'
+import { applyProcessCompletionPatch } from './patch-process-completion.mjs'
 
 function replaceRequired(source, oldValue, newValue, label) {
   if (source.includes(newValue)) return source
@@ -17,7 +18,7 @@ export function applyDepartmentsPatch(root) {
     const getStart = legacy.indexOf('function getDepartments(){')
     const getEnd = legacy.indexOf('function applyIdentity(){', getStart)
     if (getStart < 0 || getEnd < 0) throw new Error('Departments patch: legacy getters not found')
-    const getters = `/* MED_DEPARTMENTS_ALWAYS_AVAILABLE_V1 */\nfunction getDepartments(){const saved=Store.get(K.departments,null),seen=new Set(),names=[...DEPARTMENT_NAMES,...(Array.isArray(saved)?saved.map(x=>typeof x==='string'?x:x?.name):[]),'Comercial'];return names.filter(name=>{const key=String(name||'').trim().toLocaleLowerCase('pt-BR');if(!key||seen.has(key))return false;seen.add(key);return true}).map(name=>({name,active:true}))}\nfunction activeDepartments(){return getDepartments().map(x=>x.name)}\n`
+    const getters = `/* MED_DEPARTMENTS_ALWAYS_AVAILABLE_V1 */\nfunction getDepartments(){const saved=Store.get(K.departments,null),seen=new Set(),names=[...DEPARTMENT_NAMES,...(Array.isArray(saved)?saved.map(x=>typeof x==='string'?x:x?.name):[]),'Comercial'];return names.filter(name=>{const key=String(name||'').trim().toLocaleLowerCase('pt-BR');if(!key||seen.has(key))return false;seen.add(key);return true}).map(name=>({name,active:true}))}\n`
     legacy = legacy.slice(0,getStart)+getters+legacy.slice(getEnd)
 
     const renderStart = legacy.indexOf('function renderDepartments(){')
@@ -43,4 +44,5 @@ export function applyDepartmentsPatch(root) {
   applyFollowUpsPatch(root)
   applyFollowUpsLinkedV2(root)
   applyFollowUpsFinalPatch(root)
+  applyProcessCompletionPatch(root)
 }
