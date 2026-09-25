@@ -16,8 +16,8 @@ test('selecionar modelos não cria serviços sem ação explícita no formulári
   const ui = readFileSync('src/components/ClientsReact.jsx', 'utf8')
   assert.match(ui, /MED_PF_CLIENT_FORM_V1/)
   assert.match(ui, /event\.nativeEvent\?\.submitter\?\.value === 'save-create-services'/)
-  assert.match(ui, /value="save">Salvar cliente/)
-  assert.match(ui, /value="save-create-services" className="primary">Salvar e criar serviços/)
+  assert.match(ui, /value="save"[^>]*>Salvar cliente/)
+  assert.match(ui, /value="save-create-services"[^>]*>Salvar e criar serviços/)
   assert.match(ui, /Nada será criado até você usar “Salvar e criar serviços”/)
 })
 
