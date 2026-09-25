@@ -22,10 +22,10 @@ test('selecionar modelos não cria serviços sem ação explícita no formulári
   assert.match(ui, /Nada será criado até você usar “Salvar e criar serviços”/)
 })
 
-test('formulário PF oculta dados empresariais e inclui dados próprios de pessoa física', () => {
+test('formulário PF oculta dados empresariais e mantém cadastro enxuto', () => {
   const ui = readFileSync('src/components/ClientsReact.jsx', 'utf8')
   assert.match(ui, /editing\.tipo === 'PF' \? 'Nome completo \*' : 'Razão Social \*'/)
-  assert.match(ui, /label="Data de nascimento"/)
+  assert.doesNotMatch(ui, /Data de nascimento/)
   assert.match(ui, /editing\.tipo === 'PJ' \? <>.*label="Tributação"/s)
   assert.match(ui, /editing\.tipo === 'PJ' \? <>.*label="Mensalidade"/s)
   assert.match(ui, /editing\.tipo === 'PF' \? <Field label="Serviços contratados"/)
