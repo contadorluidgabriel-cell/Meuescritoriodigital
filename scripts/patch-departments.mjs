@@ -7,6 +7,7 @@ import { applyProcessCompletionPatch } from './patch-process-completion.mjs'
 import { applyProcessFollowUpCompletionPatch } from './patch-process-followup-completion.mjs'
 import { applyClientViewsPatch } from './patch-client-views.mjs'
 import { applyPfClientFormPatch } from './patch-pf-client-form.mjs'
+import { applyPfClientFormV2Patch } from './patch-pf-client-form-v2.mjs'
 
 function replaceRequired(source, oldValue, newValue, label) {
   if (source.includes(newValue)) return source
@@ -51,4 +52,5 @@ export function applyDepartmentsPatch(root) {
   applyProcessFollowUpCompletionPatch(root)
   applyClientViewsPatch(root)
   applyPfClientFormPatch(root)
+  applyPfClientFormV2Patch(root)
 }
