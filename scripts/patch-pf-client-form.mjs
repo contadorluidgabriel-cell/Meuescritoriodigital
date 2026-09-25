@@ -166,7 +166,7 @@ export function applyPfClientFormPatch(root) {
       'explicit save actions',
     )
 
-    source = marker + '\n' + source
+    source = '// ' + marker + '\n' + source
     writeFileSync(componentPath, source)
   }
 
