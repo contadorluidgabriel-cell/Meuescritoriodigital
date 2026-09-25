@@ -14,7 +14,7 @@ const makeId = (() => {
 
 test('selecionar modelos não cria serviços sem ação explícita no formulário PF', () => {
   const ui = readFileSync('src/components/ClientsReact.jsx', 'utf8')
-  assert.ok(ui.startsWith('// MED_PF_CLIENT_FORM_V1\\n'))
+  assert.match(ui, /^\/\/ MED_PF_CLIENT_FORM_V1$/m)
   assert.doesNotMatch(ui, /^MED_PF_CLIENT_FORM_V1$/m)
   assert.match(ui, /event\.nativeEvent\?\.submitter\?\.value === 'save-create-services'/)
   assert.match(ui, /value="save"[^>]*>Salvar cliente/)
