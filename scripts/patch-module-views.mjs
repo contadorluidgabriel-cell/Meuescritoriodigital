@@ -100,17 +100,9 @@ function patchTasks(root) {
       let next = props
       if (!/\baccess\b/.test(next)) next += ', access'
       if (!/\bonNavigate\b/.test(next)) next += ', onNavigate'
-      return `export default function ${name}({${next}}) {`
+      return `export default function ${name}({${next}}) {\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true`
     },
     'task component props',
-    path,
-  )
-
-  source = replaceRequired(
-    source,
-    "  const [editing, setEditing] = useState(null)",
-    "  const [editing, setEditing] = useState(null)\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true",
-    'task view state',
     path,
   )
 
@@ -169,15 +161,11 @@ function patchProcesses(root) {
     (match, name, props) => {
       let next = props
       if (!/\bonNavigate\b/.test(next)) next += ', onNavigate'
-      return `export default function ${name}({${next}}) {`
+      return `export default function ${name}({${next}}) {\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true`
     },
     'process component props',
     path,
   )
-
-  const processStateLine = source.match(/^.*useState\\(['"]processes['"]\\).*$/m)
-  if (!processStateLine) throw new Error(`Module views patch failed (process view state) in ${path}`)
-  source = source.replace(processStateLine[0], processStateLine[0] + "\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true")
 
   source = replaceRequired(
     source,
