@@ -16,7 +16,7 @@ test('Tarefas usa quatro visões operacionais e direciona Modelos para a área p
 test('Processos usa execução, espera externa e concluídos como visões', () => {
   const source = readFileSync('src/components/ProcessesReact.jsx', 'utf8')
   assert.match(source, /MED_PROCESS_OPERATIONAL_VIEWS_V1/)
-  for (const label of ['Em andamento', 'Aguardando terceiros\/cliente', 'Concluídos']) assert.match(source, new RegExp(label))
+  for (const label of ['Em andamento', 'Aguardando terceiros\/cliente', 'Concluídos']) assert.match(viewSource, new RegExp(label))
   assert.match(source, /processViewOf\(process\) === processView/)
   assert.match(source, /onNavigate\?\.\('modelos'\)/)
 })
