@@ -124,7 +124,7 @@ function patchTasks(root) {
     'Organize a execução por responsável, dependência e conclusão.',
   )
   source = source.replace(
-    /<button onClick=\{\(\) => setView\('models'\)\}>Modelos<\/button>/,
+    /<button onClick=\{\(\) => (?:setView|setTab)\('models'\)\}>Modelos<\/button>/,
     "<button type=\"button\" onClick={() => onNavigate?.('modelos')}>Modelos</button>",
   )
 
