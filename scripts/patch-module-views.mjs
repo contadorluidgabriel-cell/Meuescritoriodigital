@@ -106,13 +106,20 @@ function patchTasks(root) {
     path,
   )
 
-  source = replaceRequired(
-    source,
-    "  const [view, setView] = useState('tasks')",
-    "  const [view, setView] = useState('tasks')\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true",
-    'task view state',
-    path,
-  )
+  if (source.includes("const [view, setView] = useState('tasks'),")) {
+    source = source.replace(
+      "const [view, setView] = useState('tasks'),",
+      "const [view, setView] = useState('tasks')\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true\n  const",
+    )
+  } else {
+    source = replaceRequired(
+      source,
+      "  const [view, setView] = useState('tasks')",
+      "  const [view, setView] = useState('tasks')\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true",
+      'task view state',
+      path,
+    )
+  }
 
   source = replaceRequired(
     source,
@@ -175,13 +182,20 @@ function patchProcesses(root) {
     path,
   )
 
-  source = replaceRequired(
-    source,
-    "  const [view, setView] = useState('processes')",
-    "  const [view, setView] = useState('processes')\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true",
-    'process view state',
-    path,
-  )
+  if (source.includes("const [view, setView] = useState('processes'),")) {
+    source = source.replace(
+      "const [view, setView] = useState('processes'),",
+      "const [view, setView] = useState('processes')\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true\n  const",
+    )
+  } else {
+    source = replaceRequired(
+      source,
+      "  const [view, setView] = useState('processes')",
+      "  const [view, setView] = useState('processes')\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true",
+      'process view state',
+      path,
+    )
+  }
 
   source = replaceRequired(
     source,
