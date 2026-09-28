@@ -2,10 +2,12 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 
+const viewSource = readFileSync('src/lib/moduleViews.js', 'utf8')
+
 test('Tarefas usa quatro visões operacionais e direciona Modelos para a área própria', () => {
   const source = readFileSync('src/components/TasksReactBase.jsx', 'utf8')
   assert.match(source, /MED_TASK_OPERATIONAL_VIEWS_V1/)
-  for (const label of ['Minhas', 'Equipe', 'Aguardando cliente', 'Concluídas']) assert.match(source, new RegExp(label))
+  for (const label of ['Minhas', 'Equipe', 'Aguardando cliente', 'Concluídas']) assert.match(viewSource, new RegExp(label))
   assert.match(source, /taskViewOf\(task, currentTaskUserId\)/)
   assert.match(source, /onNavigate\?\.\('modelos'\)/)
   assert.doesNotMatch(source, /onClick=\{\(\) => setView\('models'\)\}>Modelos/)
@@ -22,7 +24,7 @@ test('Processos usa execução, espera externa e concluídos como visões', () =
 test('Obrigações possui Pendentes, Em andamento, Concluídas e Todas', () => {
   const source = readFileSync('src/components/ObligationsWorkspace.jsx', 'utf8')
   assert.match(source, /MED_OBLIGATION_OPERATIONAL_VIEWS_V1/)
-  for (const label of ['Pendentes', 'Em andamento', 'Concluídas', 'Todas']) assert.match(source, new RegExp(label))
+  for (const label of ['Pendentes', 'Em andamento', 'Concluídas', 'Todas']) assert.match(viewSource, new RegExp(label))
   assert.match(source, /obligationViewOf\(obligation\) === tab/)
   assert.match(source, /tab === 'all' \? matchingRows/)
   assert.match(source, /tab=\{tab === 'completed' \? 'history' : 'open'\}/)
