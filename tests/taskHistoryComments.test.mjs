@@ -7,12 +7,13 @@ import { appendNextRecurringTaskWithMeta } from '../src/lib/taskRecurrence.js'
 const taskSource = () => readFileSync(new URL('../src/components/TasksReactBase.jsx', import.meta.url), 'utf8')
 const viteSource = readFileSync(new URL('../vite.config.js', import.meta.url), 'utf8')
 
-test('tarefas concluídas saem da listagem principal e ficam no histórico', () => {
+test('tarefas concluídas ficam na visão Concluídas e podem ser reabertas', () => {
   const source = taskSource()
-  assert.match(source, /const visibleRows = useMemo\(\(\) => rows\.filter\(task => !isDone\(task\.status\)/)
+  assert.match(source, /taskViewOf\(task, currentTaskUserId\) === taskView/)
+  assert.match(source, /TASK_VIEW_OPTIONS/)
   assert.match(source, /visibleRows\.map/)
-  assert.match(source, /Histórico de tarefas/)
-  assert.match(source, /Nenhuma tarefa em aberto encontrada/)
+  assert.match(source, /Nenhuma tarefa encontrada nesta visão/)
+  assert.doesNotMatch(source, /className="task-history-toolbar"/)
   assert.match(source, /Reabrir/)
 })
 
