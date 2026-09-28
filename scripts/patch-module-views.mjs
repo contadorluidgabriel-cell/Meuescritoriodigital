@@ -167,10 +167,10 @@ function patchProcesses(root) {
     path,
   )
 
-  source = replaceRequired(
+  source = replaceRegexRequired(
     source,
-    '  return <div className="react-module-page">',
-    "  const processViewCounts = useMemo(() => (office.processes || []).reduce((counts, process) => { const key = processViewOf(process); counts[key] = (counts[key] || 0) + 1; return counts }, { active: 0, waiting: 0, completed: 0 }), [office.processes])\n  const visibleProcessRows = useMemo(() => rows.filter(process => processViewOf(process) === processView), [processView, rows])\n\n  return <div className=\"react-module-page\">",
+    /  return <div className="react-module-page[^"]*">/,
+    match => "  const processViewCounts = useMemo(() => (office.processes || []).reduce((counts, process) => { const key = processViewOf(process); counts[key] = (counts[key] || 0) + 1; return counts }, { active: 0, waiting: 0, completed: 0 }), [office.processes])\n  const visibleProcessRows = useMemo(() => rows.filter(process => processViewOf(process) === processView), [processView, rows])\n\n" + match,
     'process visible rows',
     path,
   )
