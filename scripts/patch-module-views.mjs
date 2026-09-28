@@ -106,20 +106,9 @@ function patchTasks(root) {
     path,
   )
 
-  if (source.includes("const [view, setView] = useState('tasks'),")) {
-    source = source.replace(
-      "const [view, setView] = useState('tasks'),",
-      "const [view, setView] = useState('tasks')\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true\n  const",
-    )
-  } else {
-    source = replaceRequired(
-      source,
-      "  const [view, setView] = useState('tasks')",
-      "  const [view, setView] = useState('tasks')\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true",
-      'task view state',
-      path,
-    )
-  }
+  const taskStateLine = source.match(/^.*useState\\(['"]tasks['"]\\).*$/m)
+  if (!taskStateLine) throw new Error(`Module views patch failed (task view state) in ${path}`)
+  source = source.replace(taskStateLine[0], taskStateLine[0] + "\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true")
 
   source = replaceRequired(
     source,
@@ -182,20 +171,9 @@ function patchProcesses(root) {
     path,
   )
 
-  if (source.includes("const [view, setView] = useState('processes'),")) {
-    source = source.replace(
-      "const [view, setView] = useState('processes'),",
-      "const [view, setView] = useState('processes')\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true\n  const",
-    )
-  } else {
-    source = replaceRequired(
-      source,
-      "  const [view, setView] = useState('processes')",
-      "  const [view, setView] = useState('processes')\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true",
-      'process view state',
-      path,
-    )
-  }
+  const processStateLine = source.match(/^.*useState\\(['"]processes['"]\\).*$/m)
+  if (!processStateLine) throw new Error(`Module views patch failed (process view state) in ${path}`)
+  source = source.replace(processStateLine[0], processStateLine[0] + "\n  const [processView, setProcessView] = useState('active')\n  const MED_PROCESS_OPERATIONAL_VIEWS_V1 = true")
 
   source = replaceRequired(
     source,
