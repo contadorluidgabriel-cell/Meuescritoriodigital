@@ -106,9 +106,13 @@ function patchTasks(root) {
     path,
   )
 
-  const taskStateLine = source.match(/^.*useState\\(['"]tasks['"]\\).*$/m)
-  if (!taskStateLine) throw new Error(`Module views patch failed (task view state) in ${path}`)
-  source = source.replace(taskStateLine[0], taskStateLine[0] + "\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true")
+  source = replaceRequired(
+    source,
+    "  const [editing, setEditing] = useState(null)",
+    "  const [editing, setEditing] = useState(null)\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true",
+    'task view state',
+    path,
+  )
 
   source = replaceRequired(
     source,
