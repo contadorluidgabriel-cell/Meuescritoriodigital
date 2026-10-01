@@ -2,6 +2,7 @@ import { isDone } from './storage.js'
 import { normalizeText } from './textUtils.js'
 import { entityDisplayName, obligationLinkEntityType } from './entityUtils.js'
 import { obligationQuantitySummary } from './obligationQuantity.js'
+import { linkProductivity } from './obligationProductivity.js'
 
 const normalize = value => normalizeText(value || '')
 
@@ -27,6 +28,7 @@ export function obligationProgress(office = {}, obligationId = '') {
     firstEntity = firstEntityType === 'linkedCompany' ? linked.get(String(first.clienteId)) : clients.get(String(first.clienteId))
   }
   const quantity = obligation.quantitativo ? obligationQuantitySummary(obligation) : null
+  const firstProductivity = obligation.quantitativo && first ? linkProductivity(first, first.vencimento || obligation.vencimento || '') : null
   return {
     obligation,
     total: links.length,
@@ -42,6 +44,11 @@ export function obligationProgress(office = {}, obligationId = '') {
     firstPendingName: firstEntity ? entityDisplayName(firstEntity) : '',
     firstPendingTotalPeople: first ? Number(first.quantidadePessoas || 0) : 0,
     firstPendingCompletedPeople: first ? Number(first.quantidadeConcluida || 0) : 0,
+    firstPendingBusinessDaysRemaining: firstProductivity?.businessDaysRemaining ?? null,
+    firstPendingRequiredPerDay: firstProductivity?.requiredPerDay || 0,
+    firstPendingDoneToday: firstProductivity?.doneToday || 0,
+    firstPendingRemainingToday: firstProductivity?.remainingToday || 0,
+    firstPendingOverdue: Boolean(firstProductivity?.overdue),
     openLinks,
   }
 }
