@@ -4,6 +4,7 @@ import { obligationProgress, obligationStatuses } from '../lib/obligationUtils.j
 import { formatCnpj } from '../lib/thirdPartyWork.js'
 import { clientPartnerIds } from '../lib/sharedWork.js'
 import { workResponsibilityFields } from '../lib/sharedResponsibility.js'
+import { normalizedObligationLinkQuantity, obligationQuantitySummary, quantityValidationError } from '../lib/obligationQuantity.js'
 import ObligationDeadlinesBoard from './ObligationDeadlinesBoard.jsx'
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -68,12 +69,14 @@ function baseNameFromObligation(obligation) {
   return name
 }
 
-function EntityPicker({ office, clientsById, selected, setSelected, query, setQuery, includeAvulsos, setIncludeAvulsos, hint = '' }) {
+function EntityPicker({ office, clientsById, selected, setSelected, query, setQuery, includeAvulsos, setIncludeAvulsos, hint = '', mode = 'all', outsourcerId = '' }) {
   const entities = useMemo(() => {
     const clients = (office.clients || []).map(entity => ({ ...entity, _entityType: 'client' }))
     const linked = (office.linkedCompanies || []).map(entity => ({ ...entity, _entityType: 'linkedCompany' }))
     return [...clients, ...linked].filter(entity => {
       const key = entityKey(entity._entityType, entity.id)
+      if (mode === 'direct' && entity._entityType !== 'client') return false
+      if (mode === 'outsourced' && (entity._entityType !== 'linkedCompany' || !outsourcerId || String(entity.clientId || '') !== String(outsourcerId))) return false
       const chosen = selected.has(key)
       if (entity.status === 'Inativo' && !chosen) return false
       if (entity._entityType === 'client' && entity.relacionamento === 'Avulso' && !includeAvulsos && !chosen) return false
@@ -84,7 +87,7 @@ function EntityPicker({ office, clientsById, selected, setSelected, query, setQu
       if (a._entityType !== b._entityType) return a._entityType === 'client' ? -1 : 1
       return clientName(a).localeCompare(clientName(b), 'pt-BR')
     })
-  }, [clientsById, includeAvulsos, office.clients, office.linkedCompanies, query, selected])
+  }, [clientsById, includeAvulsos, mode, office.clients, office.linkedCompanies, outsourcerId, query, selected])
 
   const allVisibleSelected = entities.length > 0 && entities.every(entity => selected.has(entityKey(entity._entityType, entity.id)))
   function toggle(key) { setSelected(current => { const next = new Set(current); next.has(key) ? next.delete(key) : next.add(key); return next }) }
@@ -101,6 +104,16 @@ function EntityPicker({ office, clientsById, selected, setSelected, query, setQu
       return <label key={key}><input type="checkbox" checked={selected.has(key)} onChange={() => toggle(key)} /><span><b>{clientName(entity)}</b>{linked ? <em>Terceirizado</em> : entity.relacionamento === 'Avulso' ? <em>Avulso</em> : entity.status === 'Inativo' ? <em>Inativo</em> : <em className="client-badge">Cliente</em>}<small>{entityDocument(entity) || 'Sem documento'}{linked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></span></label>
     })}{!entities.length ? <p>Nenhuma empresa encontrada.</p> : null}</div>
   </div>
+}
+
+function QuantityFields({ selected, clientsById, linkedCompaniesById, quantities, setQuantities }) {
+  const rows = [...selected].map(key => {
+    const { entityType, entityId } = splitEntityKey(key)
+    const entity = entityType === 'linkedCompany' ? linkedCompaniesById.get(entityId) : clientsById.get(entityId)
+    return { key, entity }
+  }).filter(item => item.entity)
+  if (!rows.length) return null
+  return <div className="obligation-quantity-grid">{rows.map(({ key, entity }) => <label key={key}><span><b>{clientName(entity)}</b><small>{entityDocument(entity) || 'Sem documento'}</small></span><input type="number" min="1" step="1" value={quantities[key] ?? ''} onChange={event => setQuantities(current => ({ ...current, [key]: event.target.value }))} placeholder="Pessoas" /></label>)}</div>
 }
 
 function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, partners, focusClientId, onClose, onSave }) {
@@ -138,7 +151,7 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, part
     return <article className={String(row.clienteId) === String(focusClientId) ? 'focused' : ''} key={entityKey(entityType, row.clienteId)}>
       <header><div><b>{clientName(entity)}</b>{linked ? <em>Terceirizado</em> : entity?.relacionamento === 'Avulso' ? <em>Avulso</em> : <em className="client-badge">Cliente</em>}<small>{entityDocument(entity) || 'Sem documento'}{linked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></div><span className={`obligation-status status-${normalize(row.status).replaceAll(' ', '-')}`}>{row.status || 'Pendente'}</span></header>
       <div className="obligation-client-fields obligation-v2-client-fields">
-        <Field label="Status"><select value={row.status || 'Pendente'} onChange={event => changeRow(row, { status: event.target.value })}>{obligationStatuses.map(status => <option key={status}>{status}</option>)}</select></Field>
+{obligation.quantitativo ? <><Field label="Pessoas"><input type="number" min="1" step="1" value={row.quantidadePessoas || ''} onChange={event => changeRow(row, { quantidadePessoas: event.target.value })} /></Field><Field label="Fechamento"><label className="obligation-quantity-close"><input type="checkbox" checked={Boolean(row.fechado || row.status === 'Concluída')} onChange={event => changeRow(row, { fechado: event.target.checked, status: event.target.checked ? 'Concluída' : 'Pendente' })} /> Fechado</label></Field></> : <Field label="Status"><select value={row.status || 'Pendente'} onChange={event => changeRow(row, { status: event.target.value })}>{obligationStatuses.map(status => <option key={status}>{status}</option>)}</select></Field>}
         {receiptEnabled ? <Field label="Recibo / protocolo"><input value={row.recibo || ''} onChange={event => changeRow(row, { recibo: event.target.value })} placeholder="Número ou referência" /></Field> : null}
         {!linked && entity?.perfilAtendimento === 'Compartilhado' ? <><Field label="Responsabilidade"><select value={sharedResponsibility.compartilhadoResponsavel || 'Escritorio'} onChange={event => { const responsavel = event.target.value; changeRow(row, { compartilhadoResponsavel: responsavel, compartilhadoParceiroId: responsavel === 'Escritorio' ? '' : (sharedResponsibility.compartilhadoParceiroId || sharedPartnerIds[0] || '') }) }}><option value="Escritorio">Meu escritório</option><option value="Parceiro">Parceiro</option><option value="Ambos">Ambos</option></select></Field>{sharedResponsibility.compartilhadoResponsavel !== 'Escritorio' ? <Field label="Parceiro"><select value={sharedResponsibility.compartilhadoParceiroId || sharedPartnerIds[0] || ''} onChange={event => changeRow(row, { compartilhadoParceiroId: event.target.value })}>{sharedPartners.map(partner => <option value={partner.id} key={partner.id}>{partner.nome || partner.razao || 'Parceiro'}{partner.status === 'Inativo' ? ' (inativo)' : ''}</option>)}</select></Field> : null}</> : null}
       </div>
@@ -150,7 +163,7 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, part
 export default function ObligationsWorkspace({ office, update, sync, onNavigate, initialObligationId = '', initialClientId = '', openObligationRequest = 0, access }) {
   const [tab, setTab] = useState('open')
   const [query, setQuery] = useState(''), [category, setCategory] = useState('')
-  const [editing, setEditing] = useState(null), [selected, setSelected] = useState(new Set()), [entityQuery, setEntityQuery] = useState(''), [includeAvulsos, setIncludeAvulsos] = useState(false)
+  const [editing, setEditing] = useState(null), [selected, setSelected] = useState(new Set()), [entityQuery, setEntityQuery] = useState(''), [includeAvulsos, setIncludeAvulsos] = useState(false), [quantities, setQuantities] = useState({})
   const [details, setDetails] = useState(null)
   const [modelsOpen, setModelsOpen] = useState(false), [modelEditing, setModelEditing] = useState(null), [modelSelected, setModelSelected] = useState(new Set()), [modelQuery, setModelQuery] = useState(''), [modelIncludeAvulsos, setModelIncludeAvulsos] = useState(false)
   const [error, setError] = useState(''), [modelError, setModelError] = useState(''), [notice, setNotice] = useState('')
@@ -217,15 +230,16 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
   }
 
   function emptyDraft() {
-    return { id: '', modelId: '', baseNome: '', categoria: departments[0] || 'Fiscal', usaCompetencia: true, competencia: '', vencimento: '', vencimentoMixed: false, vencimentoTouched: false, controlaRecibo: false, descricao: '', observacoes: '', terceirizado: false, terceiroCnpj: '', terceiroNome: '' }
+    return { id: '', modelId: '', baseNome: '', categoria: departments[0] || 'Fiscal', usaCompetencia: true, competencia: '', vencimento: '', vencimentoMixed: false, vencimentoTouched: false, controlaRecibo: false, quantitativo: false, tipoCliente: 'Direto', terceirizadorId: '', descricao: '', observacoes: '', terceirizado: false, terceiroCnpj: '', terceiroNome: '' }
   }
 
   function openNew(model = null) {
     const draft = emptyDraft()
-    if (model) Object.assign(draft, { modelId: model.id, baseNome: model.nome || '', categoria: model.categoria || draft.categoria, usaCompetencia: Boolean(model.usaCompetencia), controlaRecibo: Boolean(model.controlaRecibo) })
+    if (model) Object.assign(draft, { modelId: model.id, baseNome: model.nome || '', categoria: model.categoria || draft.categoria, usaCompetencia: Boolean(model.usaCompetencia), controlaRecibo: Boolean(model.controlaRecibo), quantitativo: Boolean(model.quantitativo), tipoCliente: model.tipoCliente || 'Direto', terceirizadorId: model.terceirizadorId || '' })
     setEditing(draft)
     setSelected(model ? selectionFromModel(model) : new Set())
     setEntityQuery('')
+    setQuantities({})
     setIncludeAvulsos(model ? [...selectionFromModel(model)].some(key => { const { entityType, entityId } = splitEntityKey(key); return entityType === 'client' && clientsById.get(entityId)?.relacionamento === 'Avulso' }) : false)
     setError('')
     setModelsOpen(false)
@@ -233,10 +247,13 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
 
   function openEdit(obligation) {
     const due = dueInfo(obligation)
-    setEditing({ ...structuredClone(obligation), baseNome: baseNameFromObligation(obligation), usaCompetencia: usesCompetence(obligation), controlaRecibo: controlsReceipt(obligation), vencimento: due.value, vencimentoMixed: due.mixed, vencimentoTouched: false, modelId: obligation.modelId || '' })
+    const obligationLinks = obligation.clientes || []
+    const inferredOutsourcers = [...new Set(obligationLinks.map(link => inferLinkType(link, clientsById, linkedCompaniesById) === 'linkedCompany' ? linkedCompaniesById.get(String(link.clienteId))?.clientId : '').filter(Boolean).map(String))]
+    setEditing({ ...structuredClone(obligation), baseNome: baseNameFromObligation(obligation), usaCompetencia: usesCompetence(obligation), controlaRecibo: controlsReceipt(obligation), quantitativo: Boolean(obligation.quantitativo), tipoCliente: obligation.tipoCliente || (obligationLinks.length && obligationLinks.every(link => inferLinkType(link, clientsById, linkedCompaniesById) === 'linkedCompany') ? 'Terceirizado' : 'Direto'), terceirizadorId: obligation.terceirizadorId || (inferredOutsourcers.length === 1 ? inferredOutsourcers[0] : ''), vencimento: due.value, vencimentoMixed: due.mixed, vencimentoTouched: false, modelId: obligation.modelId || '' })
     const current = selectionFromLinks(obligation.clientes || [])
     setSelected(current)
     setEntityQuery('')
+    setQuantities(Object.fromEntries((obligation.clientes || []).map(link => [entityKey(inferLinkType(link, clientsById, linkedCompaniesById), link.clienteId), link.quantidadePessoas ?? ''])))
     setIncludeAvulsos([...current].some(key => { const { entityType, entityId } = splitEntityKey(key); return entityType === 'client' && clientsById.get(entityId)?.relacionamento === 'Avulso' }))
     setError('')
   }
@@ -244,9 +261,10 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
   function applyModelToDraft(modelId) {
     const model = models.find(item => String(item.id) === String(modelId))
     if (!model) { setEditing(current => ({ ...current, modelId: '' })); return }
-    setEditing(current => ({ ...current, modelId: model.id, baseNome: model.nome || '', categoria: model.categoria || current.categoria, usaCompetencia: Boolean(model.usaCompetencia), competencia: model.usaCompetencia ? current.competencia : '', controlaRecibo: Boolean(model.controlaRecibo) }))
+    setEditing(current => ({ ...current, modelId: model.id, baseNome: model.nome || '', categoria: model.categoria || current.categoria, usaCompetencia: Boolean(model.usaCompetencia), competencia: model.usaCompetencia ? current.competencia : '', controlaRecibo: Boolean(model.controlaRecibo), quantitativo: Boolean(model.quantitativo), tipoCliente: model.tipoCliente || 'Direto', terceirizadorId: model.terceirizadorId || '' }))
     const next = selectionFromModel(model)
     setSelected(next)
+    setQuantities({})
     setIncludeAvulsos([...next].some(key => { const { entityType, entityId } = splitEntityKey(key); return entityType === 'client' && clientsById.get(entityId)?.relacionamento === 'Avulso' }))
   }
 
@@ -258,6 +276,7 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
     const competence = editing.usaCompetencia ? String(editing.competencia || '').trim() : ''
     if (!base) { setError('Informe o nome da obrigação.'); return }
     if (editing.usaCompetencia && !competence) { setError('Informe a competência / referência.'); return }
+    if (editing.tipoCliente === 'Terceirizado' && !editing.terceirizadorId) { setError('Selecione o cliente terceirizador.'); return }
     if (!selected.size) { setError('Selecione pelo menos uma empresa.'); return }
 
     const previous = editing.id ? (office.obligations || []).find(item => String(item.id) === String(editing.id)) : null
@@ -267,15 +286,19 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
       const old = previousLinks.get(key)
       const link = { ...structuredClone(old || emptyLink(entityId, entityType)), clienteId: entityId, entityType }
       if (!previous || editing.vencimentoTouched || !old) link.vencimento = editing.vencimento || ''
-      return entityType === 'client' ? { ...link, ...workResponsibilityFields(link, clientsById.get(entityId), editing.categoria) } : link
+      if (editing.quantitativo) link.quantidadePessoas = quantities[key] ?? old?.quantidadePessoas ?? ''
+      const normalizedLink = normalizedObligationLinkQuantity(link, Boolean(editing.quantitativo))
+      return entityType === 'client' ? { ...normalizedLink, ...workResponsibilityFields(normalizedLink, clientsById.get(entityId), editing.categoria) } : normalizedLink
     })
+    const quantityError = quantityValidationError(links, Boolean(editing.quantitativo))
+    if (quantityError) { setError(quantityError); return }
     const ids = links.map(link => String(link.clienteId))
     const legacy = previous ? { terceirizado: Boolean(previous.terceirizado), terceiroCnpj: previous.terceiroCnpj || '', terceiroNome: previous.terceiroNome || '' } : { terceirizado: false, terceiroCnpj: '', terceiroNome: '' }
     const obligation = {
       ...(previous || {}), id: editing.id || uid('obr'), modelId: editing.modelId || '', baseNome: base, tipo: base,
       usaCompetencia: Boolean(editing.usaCompetencia), competencia: competence, nome: buildName(base, competence, Boolean(editing.usaCompetencia)),
       categoria: editing.categoria || 'Outros', vencimento: editing.vencimentoMixed && !editing.vencimentoTouched ? (previous?.vencimento || '') : (editing.vencimento || ''),
-      controlaRecibo: Boolean(editing.controlaRecibo), descricao: String(editing.descricao || '').trim(), observacoes: String(editing.observacoes || '').trim(),
+      controlaRecibo: Boolean(editing.controlaRecibo), quantitativo: Boolean(editing.quantitativo), unidadeQuantidade: editing.quantitativo ? 'Pessoas' : '', tipoCliente: editing.tipoCliente || 'Direto', terceirizadorId: editing.tipoCliente === 'Terceirizado' ? String(editing.terceirizadorId || '') : '', descricao: String(editing.descricao || '').trim(), observacoes: String(editing.observacoes || '').trim(),
       clientesIds: ids, clientes: links, ...legacy,
     }
     update(draft => { draft.obligations = previous ? (draft.obligations || []).map(item => String(item.id) === String(obligation.id) ? obligation : item) : [...(draft.obligations || []), obligation] })
@@ -291,7 +314,7 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
   }
 
   function openNewModel() {
-    setModelEditing({ id: '', nome: '', categoria: departments[0] || 'Fiscal', usaCompetencia: true, controlaRecibo: false })
+    setModelEditing({ id: '', nome: '', categoria: departments[0] || 'Fiscal', usaCompetencia: true, controlaRecibo: false, quantitativo: false, tipoCliente: 'Direto', terceirizadorId: '' })
     setModelSelected(new Set())
     setModelQuery('')
     setModelIncludeAvulsos(false)
@@ -300,7 +323,7 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
 
   function openEditModel(model) {
     const chosen = selectionFromModel(model)
-    setModelEditing({ ...structuredClone(model), nome: model.nome || '', categoria: model.categoria || departments[0] || 'Fiscal', usaCompetencia: Boolean(model.usaCompetencia), controlaRecibo: Boolean(model.controlaRecibo) })
+    setModelEditing({ ...structuredClone(model), nome: model.nome || '', categoria: model.categoria || departments[0] || 'Fiscal', usaCompetencia: Boolean(model.usaCompetencia), controlaRecibo: Boolean(model.controlaRecibo), quantitativo: Boolean(model.quantitativo), tipoCliente: model.tipoCliente || 'Direto', terceirizadorId: model.terceirizadorId || '' })
     setModelSelected(chosen)
     setModelQuery('')
     setModelIncludeAvulsos([...chosen].some(key => { const { entityType, entityId } = splitEntityKey(key); return entityType === 'client' && clientsById.get(entityId)?.relacionamento === 'Avulso' }))
@@ -311,7 +334,7 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
     event.preventDefault()
     const name = String(modelEditing.nome || '').trim()
     if (!name) { setModelError('Informe o nome do modelo.'); return }
-    const model = { ...modelEditing, id: modelEditing.id || uid('obm'), nome: name, categoria: modelEditing.categoria || 'Outros', usaCompetencia: Boolean(modelEditing.usaCompetencia), controlaRecibo: Boolean(modelEditing.controlaRecibo), vinculos: [...modelSelected].map(key => { const { entityType, entityId } = splitEntityKey(key); return { entityId, entityType } }) }
+    const model = { ...modelEditing, id: modelEditing.id || uid('obm'), nome: name, categoria: modelEditing.categoria || 'Outros', usaCompetencia: Boolean(modelEditing.usaCompetencia), controlaRecibo: Boolean(modelEditing.controlaRecibo), quantitativo: Boolean(modelEditing.quantitativo), unidadeQuantidade: modelEditing.quantitativo ? 'Pessoas' : '', tipoCliente: modelEditing.tipoCliente || 'Direto', terceirizadorId: modelEditing.tipoCliente === 'Terceirizado' ? String(modelEditing.terceirizadorId || '') : '', vinculos: [...modelSelected].map(key => { const { entityType, entityId } = splitEntityKey(key); return { entityId, entityType } }) }
     update(draft => { draft.obligationModels = modelEditing.id ? (draft.obligationModels || []).map(item => String(item.id) === String(model.id) ? model : item) : [...(draft.obligationModels || []), model] })
     setModelEditing(null)
     setNotice('Modelo salvo.')
@@ -343,7 +366,7 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
         const pct = complete ? 100 : progress.pct
         const due = dueInfo(obligation)
         const situation = obligationSituation(obligation)
-        return <article className="obligation-row" key={obligation.id}><div className="obligation-title"><b>{obligation.nome}</b><small>{[obligation.competencia && `Referência ${obligation.competencia}`, controlsReceipt(obligation) && 'Com recibo/protocolo'].filter(Boolean).join(' · ') || 'Sem referência adicional'}</small></div><span className="obligation-category">{obligation.categoria || 'Outros'}</span><strong>{progress.total}</strong><div className="obligation-v2-progress-cell"><b>{progress.done} de {progress.applicable}</b><Progress value={pct} /></div><time>{due.mixed ? 'Datas diferentes' : formatDate(due.value)}</time><span className={`obligation-v2-situation situation-${normalize(situation).replaceAll(' ', '-')}`}>{situation}</span><div className="obligation-row-actions"><button type="button" className="primary" onClick={() => openDetails(obligation)}>{tab === 'history' ? 'Consultar' : 'Acompanhar'}</button><button type="button" onClick={() => openEdit(obligation)}>Editar</button></div></article>
+        return <article className="obligation-row" key={obligation.id}><div className="obligation-title"><b>{obligation.nome}</b><small>{[obligation.competencia && `Referência ${obligation.competencia}`, controlsReceipt(obligation) && 'Com recibo/protocolo', obligation.quantitativo && `${obligationQuantitySummary(obligation).totalPessoas} pessoas · ${obligationQuantitySummary(obligation).fechadas}/${obligationQuantitySummary(obligation).empresas} fechamentos`].filter(Boolean).join(' · ') || 'Sem referência adicional'}</small></div><span className="obligation-category">{obligation.categoria || 'Outros'}</span><strong>{progress.total}</strong><div className="obligation-v2-progress-cell"><b>{progress.done} de {progress.applicable}</b><Progress value={pct} /></div><time>{due.mixed ? 'Datas diferentes' : formatDate(due.value)}</time><span className={`obligation-v2-situation situation-${normalize(situation).replaceAll(' ', '-')}`}>{situation}</span><div className="obligation-row-actions"><button type="button" className="primary" onClick={() => openDetails(obligation)}>{tab === 'history' ? 'Consultar' : 'Acompanhar'}</button><button type="button" onClick={() => openEdit(obligation)}>Editar</button></div></article>
       })}{!rows.length ? <div className="obligation-empty">{tab === 'history' ? 'Nenhuma obrigação concluída encontrada.' : 'Nenhuma obrigação em aberto encontrada.'}</div> : null}</div>
     </section>
 
@@ -354,20 +377,24 @@ export default function ObligationsWorkspace({ office, update, sync, onNavigate,
       {editing.usaCompetencia ? <Field label="Competência / referência *"><input value={editing.competencia || ''} onChange={event => setField('competencia', event.target.value)} placeholder="Ex.: 09/2026 ou 2026" /></Field> : null}
       <Field label="Vencimento" hint={editing.vencimentoMixed && !editing.vencimentoTouched ? 'Este registro antigo possui datas diferentes por CNPJ. Escolha uma data apenas se quiser unificar.' : 'Opcional. Pode ser alterado depois.'}><input type="date" value={editing.vencimento || ''} onChange={event => setEditing(current => ({ ...current, vencimento: event.target.value, vencimentoTouched: true, vencimentoMixed: false }))} /></Field>
       <Field label="Recibo / protocolo" full><div className="obligation-v2-check"><label><input type="checkbox" checked={Boolean(editing.controlaRecibo)} onChange={event => setField('controlaRecibo', event.target.checked)} /> Esta obrigação possui controle de recibo ou protocolo por CNPJ</label></div></Field>
+      <Field label="Tipo de cliente"><select value={editing.tipoCliente || 'Direto'} onChange={event => { const value = event.target.value; setEditing(current => ({ ...current, tipoCliente: value, terceirizadorId: '', })); setSelected(new Set()); setQuantities({}) }}><option value="Direto">Cliente direto</option><option value="Terceirizado">Cliente terceirizado</option></select></Field>{editing.tipoCliente === 'Terceirizado' ? <Field label="Cliente terceirizador *"><select value={editing.terceirizadorId || ''} onChange={event => { setEditing(current => ({ ...current, terceirizadorId: event.target.value })); setSelected(new Set()); setQuantities({}) }}><option value="">Selecione</option>{(office.clients || []).filter(client => client.status !== 'Inativo' && client.perfilAtendimento === 'Terceirizador').map(client => <option key={client.id} value={client.id}>{clientName(client)}</option>)}</select></Field> : null}
+      <Field label="Controle de quantidade" full><div className="obligation-v2-check"><label><input type="checkbox" checked={Boolean(editing.quantitativo)} onChange={event => setField('quantitativo', event.target.checked)} /> Controlar quantidade de pessoas e fechamento por empresa</label></div></Field>
       <div className="obligation-v2-name-preview"><small>Nome que será criado</small><strong>{buildName(editing.baseNome, editing.competencia, editing.usaCompetencia) || 'Informe a obrigação'}</strong></div>
       {editing.terceirizado ? <div className="obligation-v2-legacy"><b>Referência terceirizada antiga</b><span>{editing.terceiroNome || 'Sem nome'} · {formatCnpj(editing.terceiroCnpj)}</span><small>O registro foi preservado. Novos terceirizados são escolhidos diretamente na lista de empresas.</small></div> : null}
-      <Field label="Empresas *" full><EntityPicker office={office} clientsById={clientsById} selected={selected} setSelected={setSelected} query={entityQuery} setQuery={setEntityQuery} includeAvulsos={includeAvulsos} setIncludeAvulsos={setIncludeAvulsos} hint="A obrigação é criada uma vez. O status será acompanhado separadamente para cada CNPJ." /></Field>
+      <Field label="Empresas *" full><EntityPicker office={office} clientsById={clientsById} selected={selected} setSelected={setSelected} query={entityQuery} setQuery={setEntityQuery} includeAvulsos={includeAvulsos} setIncludeAvulsos={setIncludeAvulsos} mode={editing.tipoCliente === 'Terceirizado' ? 'outsourced' : 'direct'} outsourcerId={editing.terceirizadorId || ''} hint={editing.tipoCliente === 'Terceirizado' ? 'Selecione somente as empresas vinculadas ao cliente terceirizador escolhido.' : 'A obrigação é criada uma vez. O status será acompanhado separadamente para cada CNPJ.'} /></Field>{editing.quantitativo ? <Field label="Quantidade de pessoas" full hint="Informe a quantidade de pessoas de cada empresa selecionada."><QuantityFields selected={selected} clientsById={clientsById} linkedCompaniesById={linkedCompaniesById} quantities={quantities} setQuantities={setQuantities} /></Field> : null}
       <Field label="Observações" full><textarea value={editing.observacoes || ''} onChange={event => setField('observacoes', event.target.value)} placeholder="Observação geral opcional" /></Field>
       {error ? <p className="obligation-error">{error}</p> : null}<footer className="obligation-form-actions"><button type="button" onClick={() => setEditing(null)}>Cancelar</button><button className="primary">{editing.id ? 'Salvar alterações' : 'Criar obrigação'}</button></footer>
     </form></Modal> : null}
 
-    {modelsOpen ? <Modal title="Modelos de obrigação" subtitle="Guarde a configuração que se repete. Vencimento e competência são informados ao criar cada obrigação." onClose={() => setModelsOpen(false)} wide><div className="obligation-v2-models"><div className="obligation-v2-model-actions"><p>{models.length ? `${models.length} modelo(s) salvo(s)` : 'Você ainda não criou modelos.'}</p><button type="button" className="primary" onClick={openNewModel}>+ Novo modelo</button></div><div className="obligation-v2-model-grid">{models.map(model => <article key={model.id}><div><strong>{model.nome}</strong><small>{model.categoria || 'Outros'} · {model.usaCompetencia ? 'Usa competência' : 'Sem competência'}{model.controlaRecibo ? ' · Controla recibo/protocolo' : ''}</small><span>{(model.vinculos || model.clientesIds || []).length} empresa(s) padrão</span></div><footer><button type="button" className="primary" onClick={() => openNew(model)}>Usar</button><button type="button" onClick={() => openEditModel(model)}>Editar</button><button type="button" className="danger-text" onClick={() => deleteModel(model)}>Excluir</button></footer></article>)}{!models.length ? <div className="obligation-empty">Crie um modelo para não selecionar as mesmas empresas toda vez.</div> : null}</div></div></Modal> : null}
+    {modelsOpen ? <Modal title="Modelos de obrigação" subtitle="Guarde a configuração que se repete. Vencimento e competência são informados ao criar cada obrigação." onClose={() => setModelsOpen(false)} wide><div className="obligation-v2-models"><div className="obligation-v2-model-actions"><p>{models.length ? `${models.length} modelo(s) salvo(s)` : 'Você ainda não criou modelos.'}</p><button type="button" className="primary" onClick={openNewModel}>+ Novo modelo</button></div><div className="obligation-v2-model-grid">{models.map(model => <article key={model.id}><div><strong>{model.nome}</strong><small>{model.categoria || 'Outros'} · {model.usaCompetencia ? 'Usa competência' : 'Sem competência'}{model.controlaRecibo ? ' · Controla recibo/protocolo' : ''}{model.quantitativo ? ' · Pessoas + fechamento' : ''}{model.tipoCliente === 'Terceirizado' ? ' · Terceirização' : ''}</small><span>{(model.vinculos || model.clientesIds || []).length} empresa(s) padrão</span></div><footer><button type="button" className="primary" onClick={() => openNew(model)}>Usar</button><button type="button" onClick={() => openEditModel(model)}>Editar</button><button type="button" className="danger-text" onClick={() => deleteModel(model)}>Excluir</button></footer></article>)}{!models.length ? <div className="obligation-empty">Crie um modelo para não selecionar as mesmas empresas toda vez.</div> : null}</div></div></Modal> : null}
 
     {modelEditing ? <Modal title={modelEditing.id ? 'Editar modelo' : 'Novo modelo'} subtitle="O modelo guarda somente o que normalmente se repete. Ele não cria recorrências automáticas." onClose={() => setModelEditing(null)} wide><form className="obligation-form obligation-v2-form" onSubmit={saveModel}>
       <Field label="Nome do modelo *"><input value={modelEditing.nome || ''} onChange={event => setModelEditing(current => ({ ...current, nome: event.target.value }))} placeholder="Ex.: PGDAS-D" /></Field><Field label="Departamento"><select value={modelEditing.categoria || ''} onChange={event => setModelEditing(current => ({ ...current, categoria: event.target.value }))}>{categoryChoices.map(name => <option key={name}>{name}</option>)}</select></Field>
       <Field label="Competência / referência" full><div className="obligation-v2-check"><label><input type="checkbox" checked={Boolean(modelEditing.usaCompetencia)} onChange={event => setModelEditing(current => ({ ...current, usaCompetencia: event.target.checked }))} /> Ao usar este modelo, pedir competência ou referência</label></div></Field>
       <Field label="Recibo / protocolo" full><div className="obligation-v2-check"><label><input type="checkbox" checked={Boolean(modelEditing.controlaRecibo)} onChange={event => setModelEditing(current => ({ ...current, controlaRecibo: event.target.checked }))} /> Controlar recibo ou protocolo individual por CNPJ</label></div></Field>
-      <Field label="Empresas padrão" full><EntityPicker office={office} clientsById={clientsById} selected={modelSelected} setSelected={setModelSelected} query={modelQuery} setQuery={setModelQuery} includeAvulsos={modelIncludeAvulsos} setIncludeAvulsos={setModelIncludeAvulsos} hint="Você poderá adicionar ou retirar empresas toda vez que usar o modelo, sem alterar esta lista padrão." /></Field>
+      <Field label="Tipo de cliente"><select value={modelEditing.tipoCliente || 'Direto'} onChange={event => { const value = event.target.value; setModelEditing(current => ({ ...current, tipoCliente: value, terceirizadorId: '' })); setModelSelected(new Set()) }}><option value="Direto">Cliente direto</option><option value="Terceirizado">Cliente terceirizado</option></select></Field>{modelEditing.tipoCliente === 'Terceirizado' ? <Field label="Cliente terceirizador padrão"><select value={modelEditing.terceirizadorId || ''} onChange={event => { setModelEditing(current => ({ ...current, terceirizadorId: event.target.value })); setModelSelected(new Set()) }}><option value="">Escolher ao usar o modelo</option>{(office.clients || []).filter(client => client.status !== 'Inativo' && client.perfilAtendimento === 'Terceirizador').map(client => <option key={client.id} value={client.id}>{clientName(client)}</option>)}</select></Field> : null}
+      <Field label="Controle de quantidade" full><div className="obligation-v2-check"><label><input type="checkbox" checked={Boolean(modelEditing.quantitativo)} onChange={event => setModelEditing(current => ({ ...current, quantitativo: event.target.checked }))} /> Quantidade de pessoas + fechamento por empresa</label></div></Field>
+      <Field label="Empresas padrão" full><EntityPicker office={office} clientsById={clientsById} selected={modelSelected} setSelected={setModelSelected} query={modelQuery} setQuery={setModelQuery} includeAvulsos={modelIncludeAvulsos} setIncludeAvulsos={setModelIncludeAvulsos} mode={modelEditing.tipoCliente === 'Terceirizado' ? 'outsourced' : 'direct'} outsourcerId={modelEditing.terceirizadorId || ''} hint={modelEditing.tipoCliente === 'Terceirizado' && !modelEditing.terceirizadorId ? 'Escolha um terceirizador padrão para selecionar empresas, ou deixe a lista vazia e escolha ao criar a obrigação.' : 'Você poderá adicionar ou retirar empresas toda vez que usar o modelo, sem alterar esta lista padrão.'} /></Field>
       {modelError ? <p className="obligation-error">{modelError}</p> : null}<footer className="obligation-form-actions"><button type="button" onClick={() => setModelEditing(null)}>Cancelar</button><button className="primary">Salvar modelo</button></footer>
     </form></Modal> : null}
 
