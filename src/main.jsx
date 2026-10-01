@@ -21,6 +21,7 @@ import './third-party-work.css'
 import './client-outsourcing.css'
 import './visual-refresh-v13.css'
 import './pwa-install.css'
+import './modal-hardening.css'
 
 initPwaRuntime()
 
