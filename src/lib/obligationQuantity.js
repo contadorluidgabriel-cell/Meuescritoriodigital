@@ -12,6 +12,7 @@ export function normalizedObligationLinkQuantity(link = {}, quantitative = false
   if (!quantitative) {
     const next = { ...link }
     delete next.quantidadePessoas
+    delete next.quantidadeConcluida
     delete next.fechado
     return next
   }
