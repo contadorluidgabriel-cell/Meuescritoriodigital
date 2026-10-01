@@ -9,44 +9,9 @@ function replaceRequired(source, before, after, label, path) {
 }
 
 function patchModels(root) {
-  const path = root + 'src/components/ModelsReact.jsx'
-  let source = readFileSync(path, 'utf8')
-  if (source.includes('MED_PROCESS_MODEL_QUANTITY_V1')) return
-
-  source = replaceRequired(
-    source,
-    "const processEmpty = { id: '', nome: '', departamento: '', descricao: '', etapas: [] }",
-    "const processEmpty = { id: '', nome: '', departamento: '', descricao: '', quantitativo: false, unidadeQuantidade: 'Pessoas', etapas: [] }",
-    'process model defaults',
-    path,
-  )
-
-  source = replaceRequired(
-    source,
-    "      descricao: String(processEditing.descricao || '').trim(),\n      etapas: steps,",
-    "      descricao: String(processEditing.descricao || '').trim(),\n      quantitativo: Boolean(processEditing.quantitativo),\n      unidadeQuantidade: processEditing.quantitativo ? (String(processEditing.unidadeQuantidade || 'Pessoas').trim() || 'Pessoas') : '',\n      etapas: steps,",
-    'process model quantity save',
-    path,
-  )
-
-  source = replaceRequired(
-    source,
-    "<div className=\"model-meta\"><span>{model.departamento || 'Sem área'}</span></div><ol>",
-    "<div className=\"model-meta\"><span>{model.departamento || 'Sem área'}</span>{model.quantitativo ? <span>Quantidade · {model.unidadeQuantidade || 'Pessoas'}</span> : null}</div><ol>",
-    'process model quantity summary',
-    path,
-  )
-
-  source = replaceRequired(
-    source,
-    "<Field label=\"Descrição\" full><textarea value={processEditing.descricao} onChange={event => setProcessEditing(current => ({ ...current, descricao: event.target.value }))} /></Field>\n      <div className=\"models-field full process-model-steps\">",
-    "<Field label=\"Descrição\" full><textarea value={processEditing.descricao} onChange={event => setProcessEditing(current => ({ ...current, descricao: event.target.value }))} /></Field>\n      <Field label=\"Controle de quantidade\" full><div className=\"models-choice-list stacked\"><label><input type=\"checkbox\" checked={Boolean(processEditing.quantitativo)} onChange={event => setProcessEditing(current => ({ ...current, quantitativo: event.target.checked, unidadeQuantidade: event.target.checked ? (current.unidadeQuantidade || 'Pessoas') : current.unidadeQuantidade }))} /> Este modelo usa quantidade por empresa</label></div></Field>{processEditing.quantitativo ? <Field label=\"Unidade\"><input value={processEditing.unidadeQuantidade || 'Pessoas'} onChange={event => setProcessEditing(current => ({ ...current, unidadeQuantidade: event.target.value }))} placeholder=\"Pessoas\" /></Field> : null}\n      <div className=\"models-field full process-model-steps\">",
-    'process model quantity fields',
-    path,
-  )
-
-  source = '// MED_PROCESS_MODEL_QUANTITY_V1\n' + source
-  writeFileSync(path, source)
+  // Hotfix: keep ModelsReact on the previously stable implementation.
+  // Quantitative model controls will be reintroduced separately after runtime validation.
+  return
 }
 
 function patchProcesses(root) {
