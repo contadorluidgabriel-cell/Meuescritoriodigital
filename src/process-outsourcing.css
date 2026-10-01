@@ -1,0 +1,15 @@
+.process-outsourcing-picker{display:grid;gap:10px;width:100%}
+.process-outsourcing-picker>article{border:1px solid var(--line,#d9e0ea);border-radius:12px;padding:12px;background:var(--card,#fff)}
+.process-outsourcing-picker>article.selected{border-color:var(--primary,#2456e8);box-shadow:0 0 0 1px color-mix(in srgb,var(--primary,#2456e8) 24%,transparent)}
+.process-outsourcing-company{display:flex;align-items:flex-start;gap:10px;cursor:pointer}
+.process-outsourcing-company input{margin-top:3px}
+.process-outsourcing-company span{display:grid;gap:3px}
+.process-outsourcing-company b{font-size:14px}
+.process-outsourcing-company small{font-size:12px;opacity:.72}
+.process-outsourcing-controls{display:flex;gap:14px;align-items:end;margin-top:10px;padding-top:10px;border-top:1px solid var(--line,#e5e7eb)}
+.process-outsourcing-controls>label:not(.process-outsourcing-close){display:grid;gap:5px;min-width:150px}
+.process-outsourcing-controls span{font-size:12px;font-weight:700}
+.process-outsourcing-controls input[type=number]{width:150px}
+.process-outsourcing-close{display:flex;align-items:center;gap:7px;min-height:38px;font-size:13px;font-weight:700}
+.process-outsourcing-summary{font-weight:700}
+@media (max-width:700px){.process-outsourcing-controls{align-items:stretch;flex-direction:column}.process-outsourcing-controls input[type=number]{width:100%}}
