@@ -15,3 +15,41 @@
 .obligation-accordion-quantity b{font-size:14px}
 .obligation-accordion-quantity small{font-size:11px;opacity:.72}
 @media (max-width:700px){.obligation-quantity-grid>label{grid-template-columns:1fr}.obligation-quantity-grid input{width:100%}}
+
+
+/* Modal de obrigações: manter formulários longos navegáveis dentro da viewport */
+.obligation-v2-modal{
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  align-items:flex-start!important;
+  padding-top:16px;
+  padding-bottom:16px;
+}
+.obligation-v2-modal .obligation-modal-card{
+  width:min(100%,1100px);
+  max-height:calc(100dvh - 32px);
+  margin:auto;
+  overflow-y:auto;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.obligation-v2-modal .obligation-modal-card>header{
+  position:sticky;
+  top:0;
+  z-index:4;
+  background:#fff;
+}
+.obligation-v2-modal .obligation-form-actions{
+  position:sticky;
+  bottom:0;
+  z-index:4;
+  background:#fff;
+  border-top:1px solid #e4e9f1;
+}
+@media(max-width:720px){
+  .obligation-v2-modal{padding:8px}
+  .obligation-v2-modal .obligation-modal-card{
+    max-height:calc(100dvh - 16px);
+    border-radius:14px;
+  }
+}
