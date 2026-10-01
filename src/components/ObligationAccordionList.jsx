@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { obligationProgress } from '../lib/obligationUtils.js'
 import { today } from '../lib/storage.js'
 import { obligationQuantitySummary } from '../lib/obligationQuantity.js'
+import { obligationProductivity } from '../lib/obligationProductivity.js'
 import './obligation-accordion-list.css'
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -87,6 +88,7 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
       const progress = obligationProgress(obligation)
       const complete = obligationComplete(obligation)
       const quantity = obligation.quantitativo ? obligationQuantitySummary(obligation) : null
+      const productivity = obligation.quantitativo ? obligationProductivity(obligation, today()) : null
       const pct = obligation.quantitativo ? (quantity?.percentualFechamento || 0) : complete ? 100 : progress.pct
       const due = dueInfo(obligation)
       const situation = situationFor(obligation)
@@ -102,7 +104,7 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
             </div>
             <div className="obligation-accordion-progress-wrap">
               <span>{obligation.quantitativo ? `${quantity?.pessoasConcluidas || 0} de ${quantity?.totalPessoas || 0} pessoas` : `${progress.done || 0} de ${progress.applicable || 0} concluído(s)`}</span>
-              <ProgressBar value={pct} />
+              <ProgressBar value={pct} />{obligation.quantitativo && productivity && !productivity.completedAll ? <small className="obligation-accordion-rhythm">{productivity.overdue ? `Prazo vencido · ${productivity.pending} pessoas pendentes` : productivity.mixedDue ? `Meta hoje: ${productivity.requiredToday} pessoas` : `${productivity.businessDaysRemaining} dia(s) útil(eis) · ${productivity.requiredToday}/dia · hoje faltam ${productivity.remainingToday}`}</small> : null}
             </div>
             <div className="obligation-accordion-due"><span>Vencimento</span><strong>{due.mixed ? 'Datas diferentes' : formatDate(due.value)}</strong></div>
             <span className={`obligation-accordion-situation situation-${normalize(situation).replaceAll(' ', '-')}`}>{situation}</span>
