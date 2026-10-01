@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { obligationProgress } from '../lib/obligationUtils.js'
 import { today } from '../lib/storage.js'
+import { obligationQuantitySummary } from '../lib/obligationQuantity.js'
 import './obligation-accordion-list.css'
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -96,7 +97,7 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
           <button type="button" className="obligation-accordion-main" onClick={() => toggle(id)} aria-expanded={isExpanded}>
             <div className="obligation-accordion-title">
               <strong>{obligation.nome || 'Obrigação'}</strong>
-              <small>{[obligation.categoria || 'Outros', `${progress.total || 0} CNPJ${Number(progress.total || 0) === 1 ? '' : 's'}`].join(' · ')}</small>
+              <small>{[obligation.categoria || 'Outros', `${progress.total || 0} CNPJ${Number(progress.total || 0) === 1 ? '' : 's'}`, obligation.quantitativo ? `${obligationQuantitySummary(obligation).totalPessoas} pessoas` : ''].filter(Boolean).join(' · ')}</small>
             </div>
             <div className="obligation-accordion-progress-wrap">
               <span>{progress.done || 0} de {progress.applicable || 0} concluído(s)</span>
@@ -110,7 +111,7 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
         </div>
 
         {isExpanded ? <div className={`obligation-accordion-companies ${receiptEnabled ? 'has-receipt' : ''}`}>
-          <div className="obligation-accordion-company-head"><span>Empresa</span><span>Vínculo</span><span>Status</span>{receiptEnabled ? <span>Recibo / protocolo</span> : null}<span /></div>
+          <div className="obligation-accordion-company-head"><span>Empresa</span><span>Vínculo</span><span>{obligation.quantitativo ? 'Pessoas' : 'Status'}</span>{receiptEnabled ? <span>Recibo / protocolo</span> : null}<span /></div>
           {(obligation.clientes || []).map(link => {
             const entityType = inferLinkType(link, clientsById, linkedCompaniesById)
             const linked = entityType === 'linkedCompany'
@@ -121,12 +122,12 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
             return <div className="obligation-accordion-company-row" key={`${entityType}-${link.clienteId}`}>
               <div className="obligation-accordion-company-name"><strong>{clientName(entity)}</strong><small>{entityDocument(entity) || 'Sem documento'}{linked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></div>
               <span className={`obligation-accordion-link link-${linked ? 'outsourced' : entity?.relacionamento === 'Avulso' ? 'avulso' : 'client'}`}>{relationship}</span>
-              <span className={`obligation-status status-${normalize(status).replaceAll(' ', '-')}`}>{status}</span>
+              {obligation.quantitativo ? <span className="obligation-accordion-quantity"><b>{Number(link.quantidadePessoas) || 0}</b><small>{link.fechado || status === 'Concluída' ? 'Fechado' : 'Pendente'}</small></span> : <span className={`obligation-status status-${normalize(status).replaceAll(' ', '-')}`}>{status}</span>}
               {receiptEnabled ? <span className={`obligation-accordion-receipt ${link.recibo ? 'has-value' : ''}`}>{link.recibo || '—'}</span> : null}
               <button type="button" onClick={() => onOpenDetails?.(obligation, link.clienteId)}>{tab === 'history' ? 'Consultar' : 'Abrir'}</button>
             </div>
           })}
-          <footer><span>{progress.total || 0} CNPJ{Number(progress.total || 0) === 1 ? '' : 's'}</span><strong>{progress.done || 0} concluído(s) · {pending} pendente(s)</strong></footer>
+          <footer><span>{progress.total || 0} CNPJ{Number(progress.total || 0) === 1 ? '' : 's'}{obligation.quantitativo ? ` · ${obligationQuantitySummary(obligation).totalPessoas} pessoas` : ''}</span><strong>{obligation.quantitativo ? `${obligationQuantitySummary(obligation).fechadas} fechamento(s) · ${obligationQuantitySummary(obligation).pendentes} pendente(s)` : `${progress.done || 0} concluído(s) · ${pending} pendente(s)`}</strong></footer>
         </div> : null}
       </article>
     })}
