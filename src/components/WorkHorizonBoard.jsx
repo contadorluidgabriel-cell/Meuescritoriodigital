@@ -93,6 +93,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       <strong>{item.title}</strong>
       <small className="v12-work-context"><b>{item.client || 'Escritório'}</b>{responsible ? <span>Responsável: {responsible}</span> : null}</small>
       <small>{detail}</small>
+      {item.type === 'obligation' && progress?.quantitative ? <small className="v12-obligation-rhythm">{progress.firstPendingOverdue ? `Prazo vencido · ${progress.pendingPeople} pessoas pendentes` : progress.firstPendingBusinessDaysRemaining != null ? `${progress.firstPendingBusinessDaysRemaining} dia(s) útil(eis) · ritmo ${progress.firstPendingRequiredPerDay}/dia · hoje faltam ${progress.firstPendingRemainingToday}` : ''}</small> : null}
       {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>
