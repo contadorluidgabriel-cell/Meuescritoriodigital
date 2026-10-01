@@ -8,3 +8,6 @@
 .v12-obligation-quantity-quick input{grid-column:2;grid-row:1/3;width:78px;height:34px;border:1px solid #d0d5dd;border-radius:8px;background:#fff;padding:0 8px;font:inherit;font-size:11px;font-weight:800;color:#111827}
 .v12-obligation-update{min-height:34px;border:0;border-radius:8px;background:#2456e8;color:#fff;padding:0 10px;font-size:9px;font-weight:850;cursor:pointer}
 @media(max-width:600px){.v12-obligation-actions.quantitative,.v12-obligation-quantity-quick{width:100%}.v12-obligation-quantity-quick{align-items:stretch}.v12-obligation-quantity-quick label{flex:1}.v12-obligation-actions.quantitative>.v12-open-record{width:100%;justify-self:stretch}}
+
+
+.v12-obligation-rhythm{display:block;margin-top:3px;font-size:9.5px!important;font-weight:800!important;color:#2456e8!important}
