@@ -6,6 +6,12 @@ import {
   quantityValidationError,
   updateObligationLinkQuantity,
 } from '../src/lib/obligationQuantity.js'
+import {
+  appendProductionHistory,
+  businessDaysInclusive,
+  linkProductivity,
+  obligationProductivity,
+} from '../src/lib/obligationProductivity.js'
 
 test('quantitative obligation link keeps people count and closing state', () => {
   assert.deepEqual(
@@ -89,4 +95,54 @@ test('reducing completed people reopens a previously completed quantitative link
   assert.equal(reopened.quantidadeConcluida, 300)
   assert.equal(reopened.fechado, false)
   assert.equal(reopened.status, 'Em andamento')
+})
+
+
+test('business days include today and deadline but ignore weekend', () => {
+  assert.equal(businessDaysInclusive('2026-10-01', '2026-10-09'), 7)
+  assert.equal(businessDaysInclusive('2026-10-03', '2026-10-04'), 0)
+})
+
+test('productivity calculates required daily pace using remaining business days', () => {
+  const metric = linkProductivity({
+    quantidadePessoas: 503,
+    quantidadeConcluida: 187,
+    historicoProducao: [{ data: '2026-10-01', quantidade: 43, totalApos: 187 }],
+  }, '2026-10-09', '2026-10-01')
+  assert.equal(metric.pending, 316)
+  assert.equal(metric.businessDaysRemaining, 7)
+  assert.equal(metric.requiredPerDay, 46)
+  assert.equal(metric.doneToday, 43)
+  assert.equal(metric.remainingToday, 3)
+})
+
+test('same-day quantity updates merge into one production history entry', () => {
+  const first = appendProductionHistory({}, 0, 40, '2026-10-01')
+  const second = appendProductionHistory({ historicoProducao: first }, 40, 75, '2026-10-01')
+  assert.deepEqual(second, [{ data: '2026-10-01', quantidade: 75, totalApos: 75 }])
+})
+
+test('quantity update records the daily production delta', () => {
+  const obligations = [{
+    id: 'obr-history',
+    quantitativo: true,
+    vencimento: '2026-10-09',
+    clientes: [{ clienteId: 'ter-1', quantidadePessoas: 503, quantidadeConcluida: 100, status: 'Em andamento', historicoProducao: [] }],
+  }]
+  const result = updateObligationLinkQuantity(obligations, 'obr-history', 'ter-1', 160, '2026-10-01')
+  assert.deepEqual(result.link.historicoProducao, [{ data: '2026-10-01', quantidade: 60, totalApos: 160 }])
+})
+
+test('obligation productivity aggregates today target across different due dates', () => {
+  const metric = obligationProductivity({
+    quantitativo: true,
+    clientes: [
+      { clienteId: 'a', vencimento: '2026-10-02', quantidadePessoas: 100, quantidadeConcluida: 50 },
+      { clienteId: 'b', vencimento: '2026-10-05', quantidadePessoas: 100, quantidadeConcluida: 0 },
+    ],
+  }, '2026-10-01')
+  assert.equal(metric.total, 200)
+  assert.equal(metric.pending, 150)
+  assert.equal(metric.mixedDue, true)
+  assert.ok(metric.requiredToday > 0)
 })
