@@ -94,7 +94,7 @@ function EntityPicker({ office, clientsById, selected, setSelected, query, setQu
   function toggleVisible() { setSelected(current => { const next = new Set(current); entities.forEach(entity => { const key = entityKey(entity._entityType, entity.id); allVisibleSelected ? next.delete(key) : next.add(key) }); return next }) }
 
   return <div className="obligation-v2-picker-wrap">
-    <div className="obligation-v2-picker-head"><label><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Mostrar clientes avulsos</label><strong>{selected.size} selecionada(s)</strong></div>
+    <div className="obligation-v2-picker-head">{mode !== 'outsourced' ? <label><input type="checkbox" checked={includeAvulsos} onChange={event => setIncludeAvulsos(event.target.checked)} /> Mostrar clientes avulsos</label> : <span /> }<strong>{selected.size} selecionada(s)</strong></div>
     {hint ? <p className="obligation-v2-picker-hint">{hint}</p> : null}
     <div className="obligation-picker-tools"><input value={query} onChange={event => setQuery(event.target.value)} placeholder="Buscar empresa, CNPJ ou cliente terceirizador" /><button type="button" onClick={toggleVisible}>{allVisibleSelected ? 'Desmarcar visíveis' : 'Selecionar visíveis'}</button></div>
     <div className="obligation-client-picker obligation-v2-picker">{entities.map(entity => {
@@ -132,10 +132,11 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, part
     const savedRows = rows.map(row => {
       const key = entityKey(inferLinkType(row, clientsById, linkedCompaniesById), row.clienteId)
       const previous = originalByKey.get(key)
-      let concluded = row.concluidoEm || ''
-      if (row.status === 'Concluída' && previous?.status !== 'Concluída') concluded = today()
-      if (row.status !== 'Concluída') concluded = ''
-      return { ...row, concluidoEm: concluded }
+      const normalizedRow = obligation.quantitativo ? normalizedObligationLinkQuantity(row, true) : row
+      let concluded = normalizedRow.concluidoEm || ''
+      if (normalizedRow.status === 'Concluída' && previous?.status !== 'Concluída') concluded = today()
+      if (normalizedRow.status !== 'Concluída') concluded = ''
+      return { ...normalizedRow, concluidoEm: concluded }
     })
     onSave(savedRows)
   }
@@ -151,7 +152,7 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, part
     return <article className={String(row.clienteId) === String(focusClientId) ? 'focused' : ''} key={entityKey(entityType, row.clienteId)}>
       <header><div><b>{clientName(entity)}</b>{linked ? <em>Terceirizado</em> : entity?.relacionamento === 'Avulso' ? <em>Avulso</em> : <em className="client-badge">Cliente</em>}<small>{entityDocument(entity) || 'Sem documento'}{linked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></div><span className={`obligation-status status-${normalize(row.status).replaceAll(' ', '-')}`}>{row.status || 'Pendente'}</span></header>
       <div className="obligation-client-fields obligation-v2-client-fields">
-{obligation.quantitativo ? <><Field label="Pessoas"><input type="number" min="1" step="1" value={row.quantidadePessoas || ''} onChange={event => changeRow(row, { quantidadePessoas: event.target.value })} /></Field><Field label="Fechamento"><label className="obligation-quantity-close"><input type="checkbox" checked={Boolean(row.fechado || row.status === 'Concluída')} onChange={event => changeRow(row, { fechado: event.target.checked, status: event.target.checked ? 'Concluída' : 'Pendente' })} /> Fechado</label></Field></> : <Field label="Status"><select value={row.status || 'Pendente'} onChange={event => changeRow(row, { status: event.target.value })}>{obligationStatuses.map(status => <option key={status}>{status}</option>)}</select></Field>}
+{obligation.quantitativo ? <><Field label="Total de pessoas"><input type="number" min="1" step="1" value={row.quantidadePessoas || ''} onChange={event => changeRow(row, { quantidadePessoas: event.target.value })} /></Field><Field label="Pessoas concluídas"><input type="number" min="0" max={Number(row.quantidadePessoas) || undefined} step="1" value={row.quantidadeConcluida ?? 0} onChange={event => changeRow(row, { quantidadeConcluida: event.target.value })} /></Field></> : <Field label="Status"><select value={row.status || 'Pendente'} onChange={event => changeRow(row, { status: event.target.value })}>{obligationStatuses.map(status => <option key={status}>{status}</option>)}</select></Field>}
         {receiptEnabled ? <Field label="Recibo / protocolo"><input value={row.recibo || ''} onChange={event => changeRow(row, { recibo: event.target.value })} placeholder="Número ou referência" /></Field> : null}
         {!linked && entity?.perfilAtendimento === 'Compartilhado' ? <><Field label="Responsabilidade"><select value={sharedResponsibility.compartilhadoResponsavel || 'Escritorio'} onChange={event => { const responsavel = event.target.value; changeRow(row, { compartilhadoResponsavel: responsavel, compartilhadoParceiroId: responsavel === 'Escritorio' ? '' : (sharedResponsibility.compartilhadoParceiroId || sharedPartnerIds[0] || '') }) }}><option value="Escritorio">Meu escritório</option><option value="Parceiro">Parceiro</option><option value="Ambos">Ambos</option></select></Field>{sharedResponsibility.compartilhadoResponsavel !== 'Escritorio' ? <Field label="Parceiro"><select value={sharedResponsibility.compartilhadoParceiroId || sharedPartnerIds[0] || ''} onChange={event => changeRow(row, { compartilhadoParceiroId: event.target.value })}>{sharedPartners.map(partner => <option value={partner.id} key={partner.id}>{partner.nome || partner.razao || 'Parceiro'}{partner.status === 'Inativo' ? ' (inativo)' : ''}</option>)}</select></Field> : null}</> : null}
       </div>
