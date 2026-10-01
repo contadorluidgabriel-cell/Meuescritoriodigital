@@ -86,7 +86,8 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
       const isExpanded = expanded.has(id)
       const progress = obligationProgress(obligation)
       const complete = obligationComplete(obligation)
-      const pct = complete ? 100 : progress.pct
+      const quantity = obligation.quantitativo ? obligationQuantitySummary(obligation) : null
+      const pct = obligation.quantitativo ? (quantity?.percentualFechamento || 0) : complete ? 100 : progress.pct
       const due = dueInfo(obligation)
       const situation = situationFor(obligation)
       const receiptEnabled = controlsReceipt(obligation)
@@ -100,7 +101,7 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
               <small>{[obligation.categoria || 'Outros', `${progress.total || 0} CNPJ${Number(progress.total || 0) === 1 ? '' : 's'}`, obligation.quantitativo ? `${obligationQuantitySummary(obligation).totalPessoas} pessoas` : ''].filter(Boolean).join(' · ')}</small>
             </div>
             <div className="obligation-accordion-progress-wrap">
-              <span>{progress.done || 0} de {progress.applicable || 0} concluído(s)</span>
+              <span>{obligation.quantitativo ? `${quantity?.pessoasConcluidas || 0} de ${quantity?.totalPessoas || 0} pessoas` : `${progress.done || 0} de ${progress.applicable || 0} concluído(s)`}</span>
               <ProgressBar value={pct} />
             </div>
             <div className="obligation-accordion-due"><span>Vencimento</span><strong>{due.mixed ? 'Datas diferentes' : formatDate(due.value)}</strong></div>
@@ -122,12 +123,12 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
             return <div className="obligation-accordion-company-row" key={`${entityType}-${link.clienteId}`}>
               <div className="obligation-accordion-company-name"><strong>{clientName(entity)}</strong><small>{entityDocument(entity) || 'Sem documento'}{linked && responsible ? ` · via ${clientName(responsible)}` : ''}</small></div>
               <span className={`obligation-accordion-link link-${linked ? 'outsourced' : entity?.relacionamento === 'Avulso' ? 'avulso' : 'client'}`}>{relationship}</span>
-              {obligation.quantitativo ? <span className="obligation-accordion-quantity"><b>{Number(link.quantidadePessoas) || 0}</b><small>{link.fechado || status === 'Concluída' ? 'Fechado' : 'Pendente'}</small></span> : <span className={`obligation-status status-${normalize(status).replaceAll(' ', '-')}`}>{status}</span>}
+              {obligation.quantitativo ? <span className="obligation-accordion-quantity"><b>{Number(link.quantidadeConcluida) || 0} / {Number(link.quantidadePessoas) || 0}</b><small>{link.fechado || status === 'Concluída' ? 'Fechado' : (Number(link.quantidadeConcluida) || 0) > 0 ? 'Em andamento' : 'Pendente'}</small></span> : <span className={`obligation-status status-${normalize(status).replaceAll(' ', '-')}`}>{status}</span>}
               {receiptEnabled ? <span className={`obligation-accordion-receipt ${link.recibo ? 'has-value' : ''}`}>{link.recibo || '—'}</span> : null}
               <button type="button" onClick={() => onOpenDetails?.(obligation, link.clienteId)}>{tab === 'history' ? 'Consultar' : 'Abrir'}</button>
             </div>
           })}
-          <footer><span>{progress.total || 0} CNPJ{Number(progress.total || 0) === 1 ? '' : 's'}{obligation.quantitativo ? ` · ${obligationQuantitySummary(obligation).totalPessoas} pessoas` : ''}</span><strong>{obligation.quantitativo ? `${obligationQuantitySummary(obligation).fechadas} fechamento(s) · ${obligationQuantitySummary(obligation).pendentes} pendente(s)` : `${progress.done || 0} concluído(s) · ${pending} pendente(s)`}</strong></footer>
+          <footer><span>{progress.total || 0} CNPJ{Number(progress.total || 0) === 1 ? '' : 's'}{obligation.quantitativo ? ` · ${obligationQuantitySummary(obligation).totalPessoas} pessoas` : ''}</span><strong>{obligation.quantitativo ? `${quantity?.pessoasConcluidas || 0} de ${quantity?.totalPessoas || 0} pessoas · ${quantity?.fechadas || 0} fechamento(s)` : `${progress.done || 0} concluído(s) · ${pending} pendente(s)`}</strong></footer>
         </div> : null}
       </article>
     })}

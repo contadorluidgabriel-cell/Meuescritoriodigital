@@ -4,12 +4,13 @@ import {
   normalizedObligationLinkQuantity,
   obligationQuantitySummary,
   quantityValidationError,
+  updateObligationLinkQuantity,
 } from '../src/lib/obligationQuantity.js'
 
 test('quantitative obligation link keeps people count and closing state', () => {
   assert.deepEqual(
     normalizedObligationLinkQuantity({ clienteId: 'ter-1', quantidadePessoas: '125', fechado: true, status: 'Pendente' }, true),
-    { clienteId: 'ter-1', quantidadePessoas: 125, fechado: true, status: 'Concluída' },
+    { clienteId: 'ter-1', quantidadePessoas: 125, quantidadeConcluida: 125, fechado: true, status: 'Concluída' },
   )
 })
 
@@ -32,9 +33,11 @@ test('quantitative obligation summarizes people and closings', () => {
   assert.deepEqual(obligationQuantitySummary(obligation), {
     empresas: 2,
     totalPessoas: 200,
+    pessoasConcluidas: 120,
+    pessoasPendentes: 80,
     fechadas: 1,
     pendentes: 1,
-    percentualFechamento: 50,
+    percentualFechamento: 60,
   })
 })
 
@@ -43,4 +46,33 @@ test('non quantitative links discard quantitative metadata', () => {
     normalizedObligationLinkQuantity({ clienteId: 'cli-1', quantidadePessoas: 30, fechado: true, status: 'Concluída' }, false),
     { clienteId: 'cli-1', status: 'Concluída' },
   )
+})
+
+
+test('updates cumulative people progress and keeps obligation in progress', () => {
+  const obligations = [{
+    id: 'obr-1',
+    quantitativo: true,
+    clientes: [{ clienteId: 'ter-1', quantidadePessoas: 503, quantidadeConcluida: 0, fechado: false, status: 'Pendente' }],
+  }]
+  const result = updateObligationLinkQuantity(obligations, 'obr-1', 'ter-1', 187, '2026-09-30')
+  assert.equal(result.changed, true)
+  assert.equal(result.link.quantidadeConcluida, 187)
+  assert.equal(result.link.status, 'Em andamento')
+  assert.equal(result.link.fechado, false)
+  assert.equal(result.link.concluidoEm, '')
+})
+
+test('closes CNPJ automatically when completed people reaches total', () => {
+  const obligations = [{
+    id: 'obr-1',
+    quantitativo: true,
+    clientes: [{ clienteId: 'ter-1', quantidadePessoas: 503, quantidadeConcluida: 400, fechado: false, status: 'Em andamento' }],
+  }]
+  const result = updateObligationLinkQuantity(obligations, 'obr-1', 'ter-1', 503, '2026-09-30')
+  assert.equal(result.changed, true)
+  assert.equal(result.link.quantidadeConcluida, 503)
+  assert.equal(result.link.status, 'Concluída')
+  assert.equal(result.link.fechado, true)
+  assert.equal(result.link.concluidoEm, '2026-09-30')
 })

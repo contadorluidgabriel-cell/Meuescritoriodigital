@@ -1,6 +1,7 @@
 import { isDone } from './storage.js'
 import { normalizeText } from './textUtils.js'
 import { entityDisplayName, obligationLinkEntityType } from './entityUtils.js'
+import { obligationQuantitySummary } from './obligationQuantity.js'
 
 const normalize = value => normalizeText(value || '')
 
@@ -25,14 +26,22 @@ export function obligationProgress(office = {}, obligationId = '') {
     firstEntityType = obligationLinkEntityType(first, clients, linked)
     firstEntity = firstEntityType === 'linkedCompany' ? linked.get(String(first.clienteId)) : clients.get(String(first.clienteId))
   }
+  const quantity = obligation.quantitativo ? obligationQuantitySummary(obligation) : null
   return {
     obligation,
     total: links.length,
     done: doneLinks.length,
     open: openLinks.length,
+    quantitative: Boolean(obligation.quantitativo),
+    totalPeople: quantity?.totalPessoas || 0,
+    completedPeople: quantity?.pessoasConcluidas || 0,
+    pendingPeople: quantity?.pessoasPendentes || 0,
+    peoplePercent: quantity?.percentualFechamento || 0,
     firstPendingClientId: first?.clienteId ? String(first.clienteId) : '',
     firstPendingEntityType: firstEntityType,
     firstPendingName: firstEntity ? entityDisplayName(firstEntity) : '',
+    firstPendingTotalPeople: first ? Number(first.quantidadePessoas || 0) : 0,
+    firstPendingCompletedPeople: first ? Number(first.quantidadeConcluida || 0) : 0,
     openLinks,
   }
 }
