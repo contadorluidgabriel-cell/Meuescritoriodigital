@@ -31,9 +31,11 @@ function PendingCard({ item, office, update, onOpenItem, onNotice, day }) {
   const responsible = operationalResponsible(office, item)
   const progress = item.type === 'obligation' ? obligationProgress(office, item.id) : null
   const openTarget = progress?.firstPendingClientId ? { ...item, clientId: progress.firstPendingClientId } : item
-  const buttonLabel = item.type === 'process' ? 'Abrir próxima ação' : item.type === 'obligation' ? 'Ver CNPJs pendentes' : 'Abrir'
+  const buttonLabel = item.type === 'process' ? 'Abrir próxima ação' : item.type === 'obligation' ? (progress?.quantitative ? 'Ver progresso' : 'Ver CNPJs pendentes') : 'Abrir'
   const secondary = item.type === 'obligation' && progress
-    ? `${progress.done}/${progress.total} concluídos · ${progress.open} pendentes`
+    ? progress.quantitative
+      ? `${progress.completedPeople}/${progress.totalPeople} pessoas concluídas · ${progress.pendingPeople} pendentes`
+      : `${progress.done}/${progress.total} concluídos · ${progress.open} pendentes`
     : item.type === 'process' && item.dependencyLabel
       ? `${item.subtitle || 'Próxima ação'} · depende de ${item.dependencyLabel}`
       : workItemSummary(item)

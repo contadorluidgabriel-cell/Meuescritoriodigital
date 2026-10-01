@@ -16,6 +16,7 @@ const office = {
     { id: 'c1', razao: 'Cliente Alfa' },
     { id: 'c2', razao: 'Cliente Beta' },
   ],
+  linkedCompanies: [{ id: 'lc1', clientId: 'c1', razao: 'Empresa Terceirizada XPTO', status: 'Ativo' }],
   tasks: [
     { id: 't1', clientId: 'c1', titulo: 'Enviar folha', prazo: '2026-09-01', status: 'Pendente', prioridade: 'Alta', departamento: 'DP' },
     { id: 't2', clientId: 'c1', titulo: 'Cobrar documentos', prazo: '2026-08-29', status: 'Aguardando cliente', prioridade: 'Normal', departamento: 'Fiscal' },
@@ -27,6 +28,7 @@ const office = {
   ],
   obligations: [
     { id: 'o1', nome: 'DCTFWeb', categoria: 'Fiscal', clientes: [{ clienteId: 'c1', vencimento: '2026-09-02', status: 'Pendente' }] },
+    { id: 'o2', nome: 'REINF', categoria: 'Fiscal', clientes: [{ clienteId: 'lc1', entityType: 'linkedCompany', vencimento: '2026-09-03', status: 'Pendente' }] },
   ],
   finance: [
     { id: 'f1', clienteId: 'c1', descricao: 'Honorários agosto', valor: 500, vencimento: '2026-08-20', competencia: '2026-08', status: 'Pendente', pagamentos: [] },
@@ -102,4 +104,11 @@ test('metrics expose operation and finance without destructive calculations', ()
   assert.equal(metrics.financeOverdue, 500)
   assert.equal(metrics.billedMonth, 1400)
   assert.equal(metrics.receivedMonth, 200)
+})
+
+
+test('operational work shows outsourced company name instead of generic client fallback', () => {
+  const items = collectOperationalWork(office, { day: '2026-09-01' })
+  const reinf = items.find(item => item.id === 'o2')
+  assert.equal(reinf.client, 'Empresa Terceirizada XPTO')
 })

@@ -1,6 +1,7 @@
 import { paymentSummary } from './financePro.js'
 import { collectOfficeNotifications } from './notificationCenter.js'
 import { today, isDone } from './storage.js'
+import { entityDisplayName, obligationLinkEntityType } from './entityUtils.js'
 
 const DAY_MS = 86400000
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -71,6 +72,7 @@ function operationalLevel(days, score, status = '') {
 
 export function collectOperationalWork(office = {}, { day = today(), includeDone = false } = {}) {
   const clients = new Map((office.clients || []).map(client => [String(client.id), client]))
+  const linkedCompanies = new Map((office.linkedCompanies || []).map(company => [String(company.id), company]))
   const items = []
 
   ;(office.tasks || []).forEach(task => {
@@ -143,7 +145,7 @@ export function collectOperationalWork(office = {}, { day = today(), includeDone
         kindLabel: 'Obrigação',
         id: String(obligation.id || ''),
         clientId: String(link.clienteId || ''),
-        client: clientName(clients.get(String(link.clienteId))),
+        client: entityDisplayName(obligationLinkEntityType(link, clients, linkedCompanies) === 'linkedCompany' ? linkedCompanies.get(String(link.clienteId)) : clients.get(String(link.clienteId)), 'Empresa'),
         title: obligation.nome || 'Obrigação',
         subtitle: obligation.categoria || link.status || 'Obrigação',
         due,

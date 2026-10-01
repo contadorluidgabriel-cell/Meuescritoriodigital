@@ -76,3 +76,17 @@ test('closes CNPJ automatically when completed people reaches total', () => {
   assert.equal(result.link.fechado, true)
   assert.equal(result.link.concluidoEm, '2026-09-30')
 })
+
+
+test('reducing completed people reopens a previously completed quantitative link', () => {
+  const reopened = normalizedObligationLinkQuantity({
+    clienteId: 'ter-1',
+    quantidadePessoas: 503,
+    quantidadeConcluida: 300,
+    fechado: false,
+    status: 'Em andamento',
+  }, true)
+  assert.equal(reopened.quantidadeConcluida, 300)
+  assert.equal(reopened.fechado, false)
+  assert.equal(reopened.status, 'Em andamento')
+})
