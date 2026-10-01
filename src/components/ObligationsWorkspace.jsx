@@ -5,6 +5,7 @@ import { formatCnpj } from '../lib/thirdPartyWork.js'
 import { clientPartnerIds } from '../lib/sharedWork.js'
 import { workResponsibilityFields } from '../lib/sharedResponsibility.js'
 import { normalizedObligationLinkQuantity, obligationQuantitySummary, quantityValidationError } from '../lib/obligationQuantity.js'
+import { appendProductionHistory } from '../lib/obligationProductivity.js'
 import ObligationDeadlinesBoard from './ObligationDeadlinesBoard.jsx'
 
 const normalize = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
@@ -132,7 +133,8 @@ function ClientDetailsModal({ obligation, clientsById, linkedCompaniesById, part
     const savedRows = rows.map(row => {
       const key = entityKey(inferLinkType(row, clientsById, linkedCompaniesById), row.clienteId)
       const previous = originalByKey.get(key)
-      const normalizedRow = obligation.quantitativo ? normalizedObligationLinkQuantity(row, true) : row
+      let normalizedRow = obligation.quantitativo ? normalizedObligationLinkQuantity(row, true) : row
+      if (obligation.quantitativo) normalizedRow = { ...normalizedRow, historicoProducao: appendProductionHistory(previous || {}, previous?.quantidadeConcluida || 0, normalizedRow.quantidadeConcluida || 0, today()) }
       let concluded = normalizedRow.concluidoEm || ''
       if (normalizedRow.status === 'Concluída' && previous?.status !== 'Concluída') concluded = today()
       if (normalizedRow.status !== 'Concluída') concluded = ''

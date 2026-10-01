@@ -1,3 +1,4 @@
+import { appendProductionHistory } from './obligationProductivity.js'
 const nonNegativeInteger = value => Math.max(0, Math.trunc(Number(value) || 0))
 
 export function usesQuantityControl(record = {}) {
@@ -70,6 +71,7 @@ export function updateObligationLinkQuantity(obligations = [], obligationId = ''
       updatedLink = {
         ...link,
         quantidadeConcluida: done,
+        historicoProducao: appendProductionHistory(link, link.quantidadeConcluida || 0, done, completedAt),
         fechado: closed,
         status: closed ? 'Concluída' : done > 0 ? 'Em andamento' : 'Pendente',
         concluidoEm: closed ? (link.concluidoEm || completedAt) : '',
