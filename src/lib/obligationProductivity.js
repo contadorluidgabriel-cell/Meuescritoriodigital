@@ -15,24 +15,21 @@ function formatIso(date) {
   return `${year}-${month}-${day}`
 }
 
-export function isBusinessDay(value) {
-  const date = value instanceof Date ? value : parseDay(value)
-  if (!date) return false
-  const weekday = date.getDay()
-  return weekday !== 0 && weekday !== 6
-}
-
-export function businessDaysInclusive(from, to) {
+export function calendarDaysInclusive(from, to) {
   const start = parseDay(from)
   const end = parseDay(to)
   if (!start || !end || start > end) return 0
-  let count = 0
-  const cursor = new Date(start)
-  while (cursor <= end) {
-    if (isBusinessDay(cursor)) count += 1
-    cursor.setDate(cursor.getDate() + 1)
-  }
-  return count
+  const diff = Math.floor((end.getTime() - start.getTime()) / 86400000)
+  return diff + 1
+}
+
+// Mantidos por compatibilidade com chamadas antigas; o ritmo produtivo usa dias corridos.
+export function isBusinessDay(value) {
+  return Boolean(value instanceof Date ? !Number.isNaN(value.getTime()) : parseDay(value))
+}
+
+export function businessDaysInclusive(from, to) {
+  return calendarDaysInclusive(from, to)
 }
 
 export function productionDoneOn(link = {}, day = '') {
@@ -42,18 +39,17 @@ export function productionDoneOn(link = {}, day = '') {
     .reduce((sum, item) => sum + Number(item?.quantidade || 0), 0))
 }
 
-export function addBusinessDays(from, amount = 0) {
+export function addCalendarDays(from, amount = 0) {
   const start = parseDay(from)
   const total = Math.max(0, Math.trunc(Number(amount) || 0))
   if (!start) return ''
-  if (!total) return formatIso(start)
   const cursor = new Date(start)
-  let added = 0
-  while (added < total) {
-    cursor.setDate(cursor.getDate() + 1)
-    if (isBusinessDay(cursor)) added += 1
-  }
+  cursor.setDate(cursor.getDate() + total)
   return formatIso(cursor)
+}
+
+export function addBusinessDays(from, amount = 0) {
+  return addCalendarDays(from, amount)
 }
 
 function historyPace(link = {}, day = '') {
@@ -61,16 +57,16 @@ function historyPace(link = {}, day = '') {
   const history = (Array.isArray(link.historicoProducao) ? link.historicoProducao : [])
     .filter(item => isoDay(item?.data) && isoDay(item.data) <= currentDay)
     .sort((a, b) => String(a.data || '').localeCompare(String(b.data || '')))
-  if (!history.length) return { historyDays: 0, elapsedBusinessDays: 0, produced: 0, averagePerBusinessDay: 0, firstProductionDay: '' }
+  if (!history.length) return { historyDays: 0, elapsedDays: 0, produced: 0, averagePerDay: 0, firstProductionDay: '' }
 
   const firstProductionDay = isoDay(history[0].data)
   const produced = Math.max(0, Math.round(history.reduce((sum, item) => sum + Number(item?.quantidade || 0), 0)))
-  const elapsedBusinessDays = Math.max(1, businessDaysInclusive(firstProductionDay, currentDay))
+  const elapsedDays = Math.max(1, calendarDaysInclusive(firstProductionDay, currentDay))
   return {
     historyDays: history.length,
-    elapsedBusinessDays,
+    elapsedDays,
     produced,
-    averagePerBusinessDay: produced > 0 ? Math.round(produced / elapsedBusinessDays) : 0,
+    averagePerDay: produced > 0 ? Math.round(produced / elapsedDays) : 0,
     firstProductionDay,
   }
 }
@@ -82,48 +78,48 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
   const dueDay = isoDay(due || link.vencimento)
   const currentDay = isoDay(day)
   const doneToday = productionDoneOn(link, currentDay)
-  const todayIsBusinessDay = isBusinessDay(currentDay)
+  const todayAvailable = true
   const pace = historyPace(link, currentDay)
 
   if (!total) return {
-    total, completed, pending, due: dueDay, businessDaysRemaining: 0, requiredPerDay: 0,
-    todayTarget: 0, doneToday, remainingToday: 0, todayIsBusinessDay,
-    overdue: false, completedAll: false, averagePerBusinessDay: pace.averagePerBusinessDay,
-    projectedFinish: '', projectedBusinessDays: 0, paceStatus: 'sem-dados',
+    total, completed, pending, due: dueDay, daysRemaining: 0, requiredPerDay: 0,
+    todayTarget: 0, doneToday, remainingToday: 0, todayAvailable,
+    overdue: false, completedAll: false, averagePerDay: pace.averagePerDay,
+    projectedFinish: '', projectedDays: 0, paceStatus: 'sem-dados',
   }
 
   const completedAll = pending === 0
   const overdue = Boolean(dueDay && currentDay > dueDay && !completedAll)
-  const businessDaysRemaining = dueDay && currentDay <= dueDay ? businessDaysInclusive(currentDay, dueDay) : 0
+  const daysRemaining = dueDay && currentDay <= dueDay ? calendarDaysInclusive(currentDay, dueDay) : 0
 
   // Keep today's target stable as production is posted during the day.
   const pendingAtStartOfDay = Math.max(0, pending + doneToday)
-  const todayTarget = completedAll || !todayIsBusinessDay
+  const todayTarget = completedAll || !todayAvailable
     ? 0
-    : businessDaysRemaining > 0
-      ? Math.ceil(pendingAtStartOfDay / businessDaysRemaining)
+    : daysRemaining > 0
+      ? Math.ceil(pendingAtStartOfDay / daysRemaining)
       : pendingAtStartOfDay
-  const remainingToday = completedAll || !todayIsBusinessDay ? 0 : Math.max(0, todayTarget - doneToday)
+  const remainingToday = completedAll || !todayAvailable ? 0 : Math.max(0, todayTarget - doneToday)
 
   // Required pace for the next available business day after the current position.
-  const futureBusinessDays = Math.max(0, businessDaysRemaining - (todayIsBusinessDay ? 1 : 0))
+  const futureDays = Math.max(0, daysRemaining - 1)
   const pendingAfterTodayTarget = Math.max(0, pending - remainingToday)
   const requiredPerDay = completedAll
     ? 0
-    : futureBusinessDays > 0
-      ? Math.ceil(pendingAfterTodayTarget / futureBusinessDays)
-      : todayIsBusinessDay ? todayTarget : pending
+    : futureDays > 0
+      ? Math.ceil(pendingAfterTodayTarget / futureDays)
+      : todayAvailable ? todayTarget : pending
 
-  const averagePerBusinessDay = pace.averagePerBusinessDay
-  const projectedBusinessDays = completedAll ? 0 : averagePerBusinessDay > 0 ? Math.ceil(pending / averagePerBusinessDay) : 0
-  const projectedFinish = projectedBusinessDays > 0 ? addBusinessDays(currentDay, projectedBusinessDays) : ''
+  const averagePerDay = pace.averagePerDay
+  const projectedDays = completedAll ? 0 : averagePerDay > 0 ? Math.ceil(pending / averagePerDay) : 0
+  const projectedFinish = projectedDays > 0 ? addCalendarDays(currentDay, projectedDays) : ''
 
   let paceStatus = 'sem-dados'
   if (completedAll) paceStatus = 'concluida'
   else if (overdue) paceStatus = 'atrasada'
-  else if (averagePerBusinessDay > 0) {
-    const baseline = Math.max(1, todayIsBusinessDay ? todayTarget : requiredPerDay)
-    const ratio = averagePerBusinessDay / baseline
+  else if (averagePerDay > 0) {
+    const baseline = Math.max(1, todayAvailable ? todayTarget : requiredPerDay)
+    const ratio = averagePerDay / baseline
     paceStatus = ratio >= 1.1 ? 'adiantada' : ratio >= 0.9 ? 'no-ritmo' : ratio >= 0.7 ? 'atencao' : 'abaixo'
   }
 
@@ -132,20 +128,20 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
     completed,
     pending,
     due: dueDay,
-    businessDaysRemaining,
+    daysRemaining,
     requiredPerDay,
     todayTarget,
     doneToday,
     remainingToday,
-    todayIsBusinessDay,
+    todayAvailable,
     overdue,
     completedAll,
-    averagePerBusinessDay,
+    averagePerDay,
     projectedFinish,
-    projectedBusinessDays,
+    projectedDays,
     paceStatus,
     historyDays: pace.historyDays,
-    elapsedBusinessDays: pace.elapsedBusinessDays,
+    elapsedDays: pace.elapsedDays,
   }
 }
 
@@ -162,7 +158,7 @@ export function obligationProductivity(obligation = {}, day = new Date().toISOSt
   const remainingToday = active.reduce((sum, row) => sum + row.remainingToday, 0)
   const dueDays = active.map(row => row.due).filter(Boolean)
   const sameDue = dueDays.length > 0 && new Set(dueDays).size === 1
-  const businessDaysRemaining = sameDue ? active[0]?.businessDaysRemaining || 0 : null
+  const daysRemaining = sameDue ? active[0]?.daysRemaining || 0 : null
   return {
     total,
     completed,
@@ -171,7 +167,7 @@ export function obligationProductivity(obligation = {}, day = new Date().toISOSt
     requiredToday,
     nextRequiredPerDay,
     remainingToday,
-    businessDaysRemaining,
+    daysRemaining,
     due: sameDue ? dueDays[0] : '',
     mixedDue: dueDays.length > 1 && !sameDue,
     overdue: active.some(row => row.overdue),
