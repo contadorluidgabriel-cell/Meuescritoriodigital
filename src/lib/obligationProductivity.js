@@ -157,7 +157,8 @@ export function obligationProductivity(obligation = {}, day = new Date().toISOSt
   const completed = rows.reduce((sum, row) => sum + row.completed, 0)
   const pending = rows.reduce((sum, row) => sum + row.pending, 0)
   const doneToday = rows.reduce((sum, row) => sum + row.doneToday, 0)
-  const requiredToday = active.reduce((sum, row) => sum + row.requiredPerDay, 0)
+  const requiredToday = active.reduce((sum, row) => sum + row.todayTarget, 0)
+  const nextRequiredPerDay = active.reduce((sum, row) => sum + row.requiredPerDay, 0)
   const remainingToday = active.reduce((sum, row) => sum + row.remainingToday, 0)
   const dueDays = active.map(row => row.due).filter(Boolean)
   const sameDue = dueDays.length > 0 && new Set(dueDays).size === 1
@@ -168,6 +169,7 @@ export function obligationProductivity(obligation = {}, day = new Date().toISOSt
     pending,
     doneToday,
     requiredToday,
+    nextRequiredPerDay,
     remainingToday,
     businessDaysRemaining,
     due: sameDue ? dueDays[0] : '',
