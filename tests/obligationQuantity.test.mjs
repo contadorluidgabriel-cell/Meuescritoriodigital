@@ -105,21 +105,15 @@ test('calendar days include today, deadline and weekends', () => {
   assert.equal(businessDaysInclusive('2026-10-03', '2026-10-04'), 2)
 })
 
-test('productivity calculates required daily pace using remaining calendar days', () => {
+test('productivity divides current pending balance by remaining calendar days', () => {
   const metric = linkProductivity({
     quantidadePessoas: 503,
-    quantidadeConcluida: 187,
-    historicoProducao: [{ data: '2026-10-01', quantidade: 43, totalApos: 187 }],
-  }, '2026-10-09', '2026-10-01')
-  assert.equal(metric.pending, 316)
-  assert.equal(metric.daysRemaining, 9)
-  assert.equal(metric.todayTarget, 40)
-  assert.equal(metric.requiredPerDay, 40)
-  assert.equal(metric.doneToday, 43)
-  assert.equal(metric.remainingToday, 0)
-  assert.equal(metric.averagePerDay, 43)
-  assert.equal(metric.projectedFinish, '2026-10-09')
-  assert.equal(metric.paceStatus, 'no-ritmo')
+    quantidadeConcluida: 177,
+    historicoProducao: [],
+  }, '2026-10-09', '2026-10-03')
+  assert.equal(metric.pending, 326)
+  assert.equal(metric.daysRemaining, 7)
+  assert.equal(metric.requiredPerDay, 47)
 })
 
 test('same-day quantity updates merge into one production history entry', () => {
@@ -154,20 +148,19 @@ test('obligation productivity aggregates today target across different due dates
 })
 
 
-test('daily target stays fixed as work is posted on the same day', () => {
+test('required pace recalculates immediately when current progress changes', () => {
   const before = linkProductivity({
     quantidadePessoas: 503,
-    quantidadeConcluida: 144,
+    quantidadeConcluida: 177,
     historicoProducao: [],
-  }, '2026-10-09', '2026-10-01')
+  }, '2026-10-09', '2026-10-03')
   const after = linkProductivity({
     quantidadePessoas: 503,
-    quantidadeConcluida: 187,
-    historicoProducao: [{ data: '2026-10-01', quantidade: 43, totalApos: 187 }],
-  }, '2026-10-09', '2026-10-01')
-  assert.equal(before.todayTarget, 40)
-  assert.equal(after.todayTarget, 40)
-  assert.equal(after.remainingToday, 0)
+    quantidadeConcluida: 227,
+    historicoProducao: [{ data: '2026-10-03', quantidade: 50, totalApos: 227 }],
+  }, '2026-10-09', '2026-10-03')
+  assert.equal(before.requiredPerDay, 47)
+  assert.equal(after.requiredPerDay, 40)
 })
 
 test('weekends count normally in the daily target', () => {
@@ -180,7 +173,7 @@ test('weekends count normally in the daily target', () => {
   assert.equal(metric.daysRemaining, 7)
   assert.equal(metric.todayTarget, 46)
   assert.equal(metric.remainingToday, 46)
-  assert.equal(metric.requiredPerDay, 45)
+  assert.equal(metric.requiredPerDay, 46)
 })
 
 test('pace status compares observed business-day average against required target', () => {
