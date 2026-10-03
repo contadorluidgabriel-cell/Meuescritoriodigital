@@ -92,7 +92,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       <strong>{item.title}</strong>
       <small className="v12-work-context"><b>{item.client || 'Escritório'}</b>{responsible ? <span>Responsável: {responsible}</span> : null}</small>
       <small>{detail}</small>
-      {item.type === 'obligation' && progress?.quantitative ? <div className="v12-obligation-rhythm-block"><small className="v12-obligation-rhythm">Meta hoje <b>{progress.firstPendingTodayTarget}</b> · faltam <b>{progress.firstPendingRemainingToday}</b> para bater a meta</small></div> : null}
+      {item.type === 'obligation' && progress?.quantitative ? <div className="v12-obligation-rhythm-block"><small className="v12-obligation-rhythm">{progress.firstPendingOverdue ? <><b>{progress.pendingPeople}</b> pessoas pendentes · prazo vencido</> : <><b>{progress.firstPendingRequiredPerDay}</b> pessoas por dia para concluir até {dateLabel(progress.obligation?.vencimento || progress.openLinks?.[0]?.vencimento || '')}</>}</small></div> : null}
       {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>

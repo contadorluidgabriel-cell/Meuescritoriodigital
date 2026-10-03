@@ -78,12 +78,11 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
   const dueDay = isoDay(due || link.vencimento)
   const currentDay = isoDay(day)
   const doneToday = productionDoneOn(link, currentDay)
-  const todayAvailable = true
   const pace = historyPace(link, currentDay)
 
   if (!total) return {
     total, completed, pending, due: dueDay, daysRemaining: 0, requiredPerDay: 0,
-    todayTarget: 0, doneToday, remainingToday: 0, todayAvailable,
+    todayTarget: 0, doneToday, remainingToday: 0, todayAvailable: true,
     overdue: false, completedAll: false, averagePerDay: pace.averagePerDay,
     projectedFinish: '', projectedDays: 0, paceStatus: 'sem-dados',
   }
@@ -92,23 +91,13 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
   const overdue = Boolean(dueDay && currentDay > dueDay && !completedAll)
   const daysRemaining = dueDay && currentDay <= dueDay ? calendarDaysInclusive(currentDay, dueDay) : 0
 
-  // Keep today's target stable as production is posted during the day.
-  const pendingAtStartOfDay = Math.max(0, pending + doneToday)
-  const todayTarget = completedAll || !todayAvailable
-    ? 0
-    : daysRemaining > 0
-      ? Math.ceil(pendingAtStartOfDay / daysRemaining)
-      : pendingAtStartOfDay
-  const remainingToday = completedAll || !todayAvailable ? 0 : Math.max(0, todayTarget - doneToday)
-
-  // Required pace for the next available business day after the current position.
-  const futureDays = Math.max(0, daysRemaining - 1)
-  const pendingAfterTodayTarget = Math.max(0, pending - remainingToday)
+  // Ritmo vivo: sempre divide o saldo atual pelos dias corridos restantes.
+  // Se o usuário avança mais hoje, o ritmo cai imediatamente; se avança menos, sobe.
   const requiredPerDay = completedAll
     ? 0
-    : futureDays > 0
-      ? Math.ceil(pendingAfterTodayTarget / futureDays)
-      : todayAvailable ? todayTarget : pending
+    : daysRemaining > 0
+      ? Math.ceil(pending / daysRemaining)
+      : pending
 
   const averagePerDay = pace.averagePerDay
   const projectedDays = completedAll ? 0 : averagePerDay > 0 ? Math.ceil(pending / averagePerDay) : 0
@@ -118,8 +107,7 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
   if (completedAll) paceStatus = 'concluida'
   else if (overdue) paceStatus = 'atrasada'
   else if (averagePerDay > 0) {
-    const baseline = Math.max(1, todayAvailable ? todayTarget : requiredPerDay)
-    const ratio = averagePerDay / baseline
+    const ratio = averagePerDay / Math.max(1, requiredPerDay)
     paceStatus = ratio >= 1.1 ? 'adiantada' : ratio >= 0.9 ? 'no-ritmo' : ratio >= 0.7 ? 'atencao' : 'abaixo'
   }
 
@@ -130,10 +118,10 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
     due: dueDay,
     daysRemaining,
     requiredPerDay,
-    todayTarget,
+    todayTarget: requiredPerDay,
     doneToday,
-    remainingToday,
-    todayAvailable,
+    remainingToday: requiredPerDay,
+    todayAvailable: true,
     overdue,
     completedAll,
     averagePerDay,
@@ -153,9 +141,9 @@ export function obligationProductivity(obligation = {}, day = new Date().toISOSt
   const completed = rows.reduce((sum, row) => sum + row.completed, 0)
   const pending = rows.reduce((sum, row) => sum + row.pending, 0)
   const doneToday = rows.reduce((sum, row) => sum + row.doneToday, 0)
-  const requiredToday = active.reduce((sum, row) => sum + row.todayTarget, 0)
-  const nextRequiredPerDay = active.reduce((sum, row) => sum + row.requiredPerDay, 0)
-  const remainingToday = active.reduce((sum, row) => sum + row.remainingToday, 0)
+  const requiredToday = active.reduce((sum, row) => sum + row.requiredPerDay, 0)
+  const nextRequiredPerDay = requiredToday
+  const remainingToday = requiredToday
   const dueDays = active.map(row => row.due).filter(Boolean)
   const sameDue = dueDays.length > 0 && new Set(dueDays).size === 1
   const daysRemaining = sameDue ? active[0]?.daysRemaining || 0 : null

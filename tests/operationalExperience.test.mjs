@@ -68,10 +68,9 @@ test('Painel do Escritorio adiciona leitura executiva sem executar a operacao', 
 })
 
 
-test('Meu Dia quantitativo mostra apenas meta diária e saldo para bater a meta', () => {
+test('Meu Dia quantitativo mostra ritmo necessario ate o prazo', () => {
   const horizon = read('src/components/WorkHorizonBoard.jsx')
-  assert.match(horizon, /Meta hoje/)
-  assert.match(horizon, /para bater a meta/)
+  assert.match(horizon, /pessoas por dia para concluir até/)
+  assert.equal(horizon.includes('para bater a meta'), false)
   assert.equal(horizon.includes('Média real'), false)
-  assert.equal(horizon.includes('paceLabel'), false)
 })
