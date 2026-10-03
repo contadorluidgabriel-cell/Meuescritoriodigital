@@ -24,6 +24,15 @@ const filters = [
 
 const dateLabel = value => value ? new Date(`${value}T12:00:00`).toLocaleDateString('pt-BR') : ''
 const kindLabel = type => type === 'task' ? 'Tarefa' : type === 'process' ? 'Processo' : type === 'obligation' ? 'Obrigação' : type === 'payable' ? 'Conta a pagar' : type === 'partner' ? 'Parceiro' : 'Financeiro'
+const paceLabel = status => ({
+  adiantada: 'Adiantado',
+  'no-ritmo': 'No ritmo',
+  atencao: 'Atenção',
+  abaixo: 'Abaixo do ritmo',
+  atrasada: 'Prazo vencido',
+  concluida: 'Concluído',
+  'sem-dados': 'Sem histórico',
+})[status] || 'Sem histórico'
 
 function deadline(item, day) {
   if (item.planned && item.planned !== item.due) return `Planejado ${dateLabel(item.planned)} · prazo ${dateLabel(item.due) || 'não definido'}`
@@ -93,7 +102,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       <strong>{item.title}</strong>
       <small className="v12-work-context"><b>{item.client || 'Escritório'}</b>{responsible ? <span>Responsável: {responsible}</span> : null}</small>
       <small>{detail}</small>
-      {item.type === 'obligation' && progress?.quantitative ? <small className="v12-obligation-rhythm">{progress.firstPendingOverdue ? `Prazo vencido · ${progress.pendingPeople} pessoas pendentes` : progress.firstPendingBusinessDaysRemaining != null ? `${progress.firstPendingBusinessDaysRemaining} dia(s) útil(eis) · ritmo ${progress.firstPendingRequiredPerDay}/dia · hoje faltam ${progress.firstPendingRemainingToday}` : ''}</small> : null}
+      {item.type === 'obligation' && progress?.quantitative ? <div className="v12-obligation-rhythm-block"><small className={`v12-obligation-pace pace-${progress.firstPendingPaceStatus}`}>{paceLabel(progress.firstPendingPaceStatus)}</small><small className="v12-obligation-rhythm">{progress.firstPendingOverdue ? `Prazo vencido · ${progress.pendingPeople} pessoas pendentes` : progress.firstPendingTodayIsBusinessDay ? `Meta hoje ${progress.firstPendingTodayTarget} · feitas ${progress.firstPendingDoneToday} · faltam ${progress.firstPendingRemainingToday}` : `Sem meta hoje · próximo ritmo ${progress.firstPendingRequiredPerDay}/dia`}</small>{progress.firstPendingAveragePerBusinessDay > 0 ? <small className="v12-obligation-forecast">Média real {progress.firstPendingAveragePerBusinessDay}/dia{progress.firstPendingProjectedFinish ? ` · previsão ${dateLabel(progress.firstPendingProjectedFinish)}` : ''}</small> : null}</div> : null}
       {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>

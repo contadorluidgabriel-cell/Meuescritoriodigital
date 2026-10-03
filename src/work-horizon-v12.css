@@ -11,3 +11,13 @@
 
 
 .v12-obligation-rhythm{display:block;margin-top:3px;font-size:9.5px!important;font-weight:800!important;color:#2456e8!important}
+
+
+.v12-obligation-rhythm-block{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-top:4px}
+.v12-obligation-pace{display:inline-flex!important;align-items:center;min-height:20px;padding:2px 7px;border-radius:999px;font-size:8.5px!important;font-weight:850!important}
+.v12-obligation-pace.pace-adiantada{background:#ecfdf3;color:#16834a!important}
+.v12-obligation-pace.pace-no-ritmo{background:#eff4ff;color:#2456e8!important}
+.v12-obligation-pace.pace-atencao{background:#fffaeb;color:#a15c07!important}
+.v12-obligation-pace.pace-abaixo,.v12-obligation-pace.pace-atrasada{background:#fef3f2;color:#b42318!important}
+.v12-obligation-pace.pace-sem-dados{background:#f2f4f7;color:#667085!important}
+.v12-obligation-forecast{font-size:9px!important;color:#667085!important;font-weight:700!important}

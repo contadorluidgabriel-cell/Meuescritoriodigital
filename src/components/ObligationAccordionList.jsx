@@ -104,7 +104,7 @@ export default function ObligationAccordionList({ rows = [], office = {}, tab = 
             </div>
             <div className="obligation-accordion-progress-wrap">
               <span>{obligation.quantitativo ? `${quantity?.pessoasConcluidas || 0} de ${quantity?.totalPessoas || 0} pessoas` : `${progress.done || 0} de ${progress.applicable || 0} concluído(s)`}</span>
-              <ProgressBar value={pct} />{obligation.quantitativo && productivity && !productivity.completedAll ? <small className="obligation-accordion-rhythm">{productivity.overdue ? `Prazo vencido · ${productivity.pending} pessoas pendentes` : productivity.mixedDue ? `Meta hoje: ${productivity.requiredToday} pessoas` : `${productivity.businessDaysRemaining} dia(s) útil(eis) · ${productivity.requiredToday}/dia · hoje faltam ${productivity.remainingToday}`}</small> : null}
+              <ProgressBar value={pct} />{obligation.quantitativo && productivity && !productivity.completedAll ? <small className="obligation-accordion-rhythm">{productivity.overdue ? `Prazo vencido · ${productivity.pending} pessoas pendentes` : productivity.requiredToday > 0 ? `Meta hoje ${productivity.requiredToday} · feitas ${productivity.doneToday} · faltam ${productivity.remainingToday}` : productivity.mixedDue ? `Próximo ritmo: ${productivity.nextRequiredPerDay}/dia` : `Sem meta hoje · próximo ritmo ${productivity.nextRequiredPerDay}/dia`}</small> : null}
             </div>
             <div className="obligation-accordion-due"><span>Vencimento</span><strong>{due.mixed ? 'Datas diferentes' : formatDate(due.value)}</strong></div>
             <span className={`obligation-accordion-situation situation-${normalize(situation).replaceAll(' ', '-')}`}>{situation}</span>
