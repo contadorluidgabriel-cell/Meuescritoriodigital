@@ -111,9 +111,13 @@ test('productivity calculates required daily pace using remaining business days'
   }, '2026-10-09', '2026-10-01')
   assert.equal(metric.pending, 316)
   assert.equal(metric.businessDaysRemaining, 7)
-  assert.equal(metric.requiredPerDay, 46)
+  assert.equal(metric.todayTarget, 52)
+  assert.equal(metric.requiredPerDay, 52)
   assert.equal(metric.doneToday, 43)
-  assert.equal(metric.remainingToday, 3)
+  assert.equal(metric.remainingToday, 9)
+  assert.equal(metric.averagePerBusinessDay, 43)
+  assert.equal(metric.projectedFinish, '2026-10-13')
+  assert.equal(metric.paceStatus, 'atencao')
 })
 
 test('same-day quantity updates merge into one production history entry', () => {
@@ -145,4 +149,48 @@ test('obligation productivity aggregates today target across different due dates
   assert.equal(metric.pending, 150)
   assert.equal(metric.mixedDue, true)
   assert.ok(metric.requiredToday > 0)
+})
+
+
+test('daily target stays fixed as work is posted on the same day', () => {
+  const before = linkProductivity({
+    quantidadePessoas: 503,
+    quantidadeConcluida: 144,
+    historicoProducao: [],
+  }, '2026-10-09', '2026-10-01')
+  const after = linkProductivity({
+    quantidadePessoas: 503,
+    quantidadeConcluida: 187,
+    historicoProducao: [{ data: '2026-10-01', quantidade: 43, totalApos: 187 }],
+  }, '2026-10-09', '2026-10-01')
+  assert.equal(before.todayTarget, 52)
+  assert.equal(after.todayTarget, 52)
+  assert.equal(after.remainingToday, 9)
+})
+
+test('weekends have no daily target but still expose next required pace', () => {
+  const metric = linkProductivity({
+    quantidadePessoas: 503,
+    quantidadeConcluida: 187,
+    historicoProducao: [{ data: '2026-10-01', quantidade: 43, totalApos: 187 }],
+  }, '2026-10-09', '2026-10-03')
+  assert.equal(metric.todayIsBusinessDay, false)
+  assert.equal(metric.todayTarget, 0)
+  assert.equal(metric.remainingToday, 0)
+  assert.equal(metric.businessDaysRemaining, 5)
+  assert.equal(metric.requiredPerDay, 64)
+})
+
+test('pace status compares observed business-day average against required target', () => {
+  const ahead = linkProductivity({
+    quantidadePessoas: 500,
+    quantidadeConcluida: 200,
+    historicoProducao: [
+      { data: '2026-10-01', quantidade: 100, totalApos: 100 },
+      { data: '2026-10-02', quantidade: 100, totalApos: 200 },
+    ],
+  }, '2026-10-09', '2026-10-02')
+  assert.equal(ahead.averagePerBusinessDay, 100)
+  assert.equal(ahead.paceStatus, 'adiantada')
+  assert.ok(ahead.projectedFinish)
 })
