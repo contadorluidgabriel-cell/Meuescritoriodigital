@@ -46,8 +46,13 @@ export function obligationProgress(office = {}, obligationId = '') {
     firstPendingCompletedPeople: first ? Number(first.quantidadeConcluida || 0) : 0,
     firstPendingBusinessDaysRemaining: firstProductivity?.businessDaysRemaining ?? null,
     firstPendingRequiredPerDay: firstProductivity?.requiredPerDay || 0,
+    firstPendingTodayTarget: firstProductivity?.todayTarget || 0,
     firstPendingDoneToday: firstProductivity?.doneToday || 0,
     firstPendingRemainingToday: firstProductivity?.remainingToday || 0,
+    firstPendingTodayIsBusinessDay: Boolean(firstProductivity?.todayIsBusinessDay),
+    firstPendingAveragePerBusinessDay: firstProductivity?.averagePerBusinessDay || 0,
+    firstPendingProjectedFinish: firstProductivity?.projectedFinish || '',
+    firstPendingPaceStatus: firstProductivity?.paceStatus || 'sem-dados',
     firstPendingOverdue: Boolean(firstProductivity?.overdue),
     openLinks,
   }
