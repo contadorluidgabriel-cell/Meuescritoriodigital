@@ -189,3 +189,23 @@ test('pace status compares observed business-day average against required target
   assert.equal(ahead.paceStatus, 'adiantada')
   assert.ok(ahead.projectedFinish)
 })
+
+
+test('incremental daily entry can be added to cumulative progress and merged into today history', () => {
+  const obligations = [{
+    id: 'obr-add',
+    quantitativo: true,
+    clientes: [{
+      clienteId: 'ter-1',
+      quantidadePessoas: 503,
+      quantidadeConcluida: 177,
+      status: 'Em andamento',
+      historicoProducao: [{ data: '2026-10-03', quantidade: 31, totalApos: 177 }],
+    }],
+  }]
+  const current = 177
+  const addedNow = 20
+  const result = updateObligationLinkQuantity(obligations, 'obr-add', 'ter-1', current + addedNow, '2026-10-03')
+  assert.equal(result.link.quantidadeConcluida, 197)
+  assert.deepEqual(result.link.historicoProducao, [{ data: '2026-10-03', quantidade: 51, totalApos: 197 }])
+})

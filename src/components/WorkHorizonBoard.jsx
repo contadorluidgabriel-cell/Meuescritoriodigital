@@ -36,8 +36,8 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
   const task = item.type === 'task' ? (office.tasks || []).find(row => String(row.id) === String(item.id)) : null
   const process = item.type === 'process' ? (office.processes || []).find(row => String(row.id) === String(item.id)) : null
   const progress = item.type === 'obligation' ? obligationProgress(office, item.id) : null
-  const [peopleDone, setPeopleDone] = useState(() => progress?.firstPendingCompletedPeople || 0)
-  useEffect(() => { setPeopleDone(progress?.firstPendingCompletedPeople || 0) }, [progress?.firstPendingClientId, progress?.firstPendingCompletedPeople])
+  const [peopleAdded, setPeopleAdded] = useState('')
+  useEffect(() => { setPeopleAdded('') }, [progress?.firstPendingClientId])
   const responsible = operationalResponsible(office, item)
   const openTarget = progress?.firstPendingClientId ? { ...item, clientId: progress.firstPendingClientId } : item
   const actionLabel = item.type === 'process' ? 'Abrir próxima ação' : item.type === 'obligation' ? 'Ver pendentes' : 'Abrir registro'
@@ -54,21 +54,29 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
     onNotice?.('Andamento do processo atualizado.')
   }
 
-  function updatePendingObligationQuantity() {
+  function addPendingObligationQuantity() {
     if (!progress?.firstPendingClientId) {
       onNotice?.('Não há CNPJ pendente nesta obrigação.')
       return
     }
-    const result = updateObligationLinkQuantity(office.obligations || [], item.id, progress.firstPendingClientId, peopleDone)
+    const added = Math.max(0, Math.trunc(Number(peopleAdded) || 0))
+    if (!added) {
+      onNotice?.('Informe quantas pessoas foram feitas.')
+      return
+    }
+    const current = Number(progress.firstPendingCompletedPeople || 0)
+    const result = updateObligationLinkQuantity(office.obligations || [], item.id, progress.firstPendingClientId, current + added)
     if (!result.changed) {
-      onNotice?.(result.error || 'Não foi possível atualizar a quantidade.')
+      onNotice?.(result.error || 'Não foi possível somar a quantidade.')
       return
     }
     update(draft => { draft.obligations = result.obligations })
+    setPeopleAdded('')
     const total = Number(result.link?.quantidadePessoas || 0)
     const done = Number(result.link?.quantidadeConcluida || 0)
+    const actualAdded = Math.max(0, done - current)
     const name = progress.firstPendingName ? ` · ${progress.firstPendingName}` : ''
-    onNotice?.(done >= total ? `Fechamento concluído${name}.` : `${done} de ${total} pessoas concluídas${name}.`)
+    onNotice?.(done >= total ? `Fechamento concluído${name}.` : `+${actualAdded} pessoas · ${done} de ${total} concluídas${name}.`)
   }
 
   function completePendingObligation() {
@@ -96,7 +104,7 @@ function HorizonItem({ item, office, update, onOpenItem, onNotice, onCompleted, 
       {item.type === 'process' && item.dependencyLabel ? <small className="v12-next-action">Próxima ação: {item.subtitle || 'Revisar processo'} · depende de {item.dependencyLabel}</small> : null}
       <p>{deadline(item, day)}</p>
     </div>
-    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : process ? <div className="v12-process-actions"><ProcessStepQuickStatus process={process} onChangeProcess={updateProcess} compact /><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : item.type === 'obligation' && progress?.open ? progress.quantitative ? <div className="v12-obligation-actions quantitative"><div className="v12-obligation-quantity-quick"><label><span>{progress.firstPendingName || 'CNPJ'}</span><small>Feitas de {progress.firstPendingTotalPeople}</small><input type="number" min="0" max={progress.firstPendingTotalPeople || undefined} step="1" value={peopleDone} onChange={event => setPeopleDone(event.target.value)} /></label><button type="button" className="v12-obligation-update" onClick={updatePendingObligationQuantity}>Atualizar</button></div><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <div className="v12-obligation-actions"><button type="button" className="v12-obligation-complete" title={progress.firstPendingName ? `Concluir ${progress.firstPendingName}` : 'Concluir próximo CNPJ pendente'} onClick={completePendingObligation}>Concluir CNPJ</button><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
+    {task ? <TaskQuickExecution task={task} tasks={office.tasks || []} clients={office.clients || []} update={update} onOpen={() => onOpenItem(item)} onNotice={onNotice} onCompleted={onCompleted} compact /> : process ? <div className="v12-process-actions"><ProcessStepQuickStatus process={process} onChangeProcess={updateProcess} compact /><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : item.type === 'obligation' && progress?.open ? progress.quantitative ? <div className="v12-obligation-actions quantitative"><div className="v12-obligation-quantity-quick"><label><span>{progress.firstPendingName || 'CNPJ'}</span><small>Hoje: {progress.firstPendingDoneToday || 0} · Total: {progress.firstPendingCompletedPeople}/{progress.firstPendingTotalPeople}</small><input type="number" min="1" max={Math.max(0, progress.firstPendingTotalPeople - progress.firstPendingCompletedPeople) || undefined} step="1" placeholder="Feitas hoje" value={peopleAdded} onChange={event => setPeopleAdded(event.target.value)} /></label><button type="button" className="v12-obligation-update" onClick={addPendingObligationQuantity}>Somar</button></div><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <div className="v12-obligation-actions"><button type="button" className="v12-obligation-complete" title={progress.firstPendingName ? `Concluir ${progress.firstPendingName}` : 'Concluir próximo CNPJ pendente'} onClick={completePendingObligation}>Concluir CNPJ</button><button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button></div> : <button type="button" className="v12-open-record" onClick={() => onOpenItem(openTarget)}>{actionLabel}</button>}
   </article>
 }
 

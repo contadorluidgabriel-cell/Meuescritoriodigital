@@ -74,3 +74,12 @@ test('Meu Dia quantitativo mostra ritmo necessario ate o prazo', () => {
   assert.equal(horizon.includes('para bater a meta'), false)
   assert.equal(horizon.includes('Média real'), false)
 })
+
+
+test('Meu Dia quantitativo permite somar apenas a produção feita agora', () => {
+  const horizon = read('src/components/WorkHorizonBoard.jsx')
+  assert.match(horizon, /Hoje: \{progress\.firstPendingDoneToday/)
+  assert.match(horizon, /placeholder="Feitas hoje"/)
+  assert.match(horizon, />Somar<\/button>/)
+  assert.match(horizon, /current \+ added/)
+})
