@@ -31,7 +31,7 @@ export const PARTNER_VIEW_OPTIONS = [
 ]
 
 export function processViewOf(process = {}) {
-  if (isDone(process?.status)) return 'completed'
+  if (isDone(process?.status) || normalize(process?.status) === 'cancelado') return 'completed'
   const dependency = processActionState(process).dependency
   return ['cliente', 'orgao', 'terceiro'].includes(String(dependency || '')) ? 'waiting' : 'active'
 }

@@ -27,6 +27,7 @@ import { applyTaskQuickExecutionPatch } from './scripts/patch-task-quick-executi
 import { applyV12Patch } from './scripts/patch-v12.mjs'
 import { applyV121Patch } from './scripts/patch-v12-1.mjs'
 import { applyProcessStepStatusesPatch } from './scripts/patch-process-step-statuses.mjs'
+import { applyProcessCancellationPatch } from './scripts/patch-process-cancellation.mjs'
 import { applyInviteLinksPatch } from './scripts/patch-invite-links.mjs'
 import { applyTaskDeadlinesPatch } from './scripts/patch-task-deadlines.mjs'
 import { applyObligationDeadlinesPatch } from './scripts/patch-obligation-deadlines.mjs'
@@ -127,6 +128,7 @@ applyPartnerPaymentEditorPatch(root)
 applyPartnerForecastPatch(root)
 applyPartnerFlowPatch(root)
 applyDepartmentsPatch(root)
+applyProcessCancellationPatch(root)
 applyTaskAssigneeSelectPatch(root)
 applyRemoveExternalTaskSyncPatch(root)
 applyTaskCalendarOnlyAudit(root)

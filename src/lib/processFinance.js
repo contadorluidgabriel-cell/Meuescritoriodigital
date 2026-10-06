@@ -1,5 +1,6 @@
 import { buildInstallmentCharges } from './financePro.js'
 import { clientPartnerIds, sharedChargeError } from './sharedWork.js'
+import { processIsCancelled } from './processCancellation.js'
 
 const money = value => Math.round(Math.max(0, Number(value) || 0) * 100) / 100
 const unique = values => [...new Set((values || []).map(value => String(value || '').trim()).filter(Boolean))]
@@ -18,7 +19,8 @@ export function processFinanceShares(process = {}, client = {}) {
 
 export function normalizedProcessFinance(process = {}, client = {}) {
   const charged = Boolean(process.cobradoAParte)
-  const total = charged ? money(process.financeiroValor) : 0
+  const contracted = charged ? money(process.financeiroValor) : 0
+  const total = charged && processIsCancelled(process) ? money(process.cancelamentoValorDevido) : contracted
   const installmentCount = Math.max(1, Math.min(60, Math.floor(Number(process.financeiroParcelas) || 1)))
   const shared = charged && client?.perfilAtendimento === 'Compartilhado'
   const partnerIds = shared ? processFinancePartnerIds(process, client) : []
@@ -28,7 +30,8 @@ export function normalizedProcessFinance(process = {}, client = {}) {
 
   return {
     cobradoAParte: charged,
-    financeiroValor: total,
+    financeiroValor: contracted,
+    financeiroValorCobrar: total,
     financeiroParcelas: installmentCount,
     financeiroVencimento: charged ? String(process.financeiroVencimento || '') : '',
     financeiroDescricao: String(process.financeiroDescricao || process.tipo || 'Serviço do processo').trim(),
@@ -44,12 +47,13 @@ export function processFinanceError(process = {}, client = {}) {
   const normalized = normalizedProcessFinance(process, client)
   if (!normalized.cobradoAParte) return ''
   if (normalized.financeiroValor <= 0) return 'Informe o valor do serviço cobrado à parte.'
+  if (processIsCancelled(process) && normalized.financeiroValorCobrar <= 0) return ''
   if (!normalized.financeiroVencimento) return 'Informe o primeiro vencimento da cobrança.'
   if (!normalized.financeiroDescricao) return 'Informe a descrição da cobrança.'
   if (client?.perfilAtendimento !== 'Compartilhado') return ''
 
   return sharedChargeError({
-    valor: normalized.financeiroValor,
+    valor: normalized.financeiroValorCobrar,
     compartilhado: true,
     parceiroIds: normalized.financeiroParceiroIds,
     parceiroId: normalized.financeiroParceiroIds[0] || '',
@@ -61,9 +65,9 @@ export function processFinanceError(process = {}, client = {}) {
 
 export function buildProcessFinanceCharges(process = {}, client = {}, makeId = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`) {
   const normalized = normalizedProcessFinance(process, client)
-  const error = processFinanceError(normalized, client)
+  const error = processFinanceError(process, client)
   if (error) throw new Error(error)
-  if (!normalized.cobradoAParte) return []
+  if (!normalized.cobradoAParte || normalized.financeiroValorCobrar <= 0) return []
 
   const shared = client?.perfilAtendimento === 'Compartilhado'
   const base = {
@@ -73,7 +77,7 @@ export function buildProcessFinanceCharges(process = {}, client = {}, makeId = p
     descricao: normalized.financeiroDescricao,
     competencia: String(normalized.financeiroVencimento).slice(0, 7),
     vencimento: normalized.financeiroVencimento,
-    valor: normalized.financeiroValor,
+    valor: normalized.financeiroValorCobrar,
     origem: 'avulso',
     origemTipo: 'Processo',
     origemId: String(process.id || ''),
