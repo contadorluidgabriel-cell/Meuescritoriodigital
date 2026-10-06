@@ -4,8 +4,8 @@ export function applyRemoveExternalTaskSyncPatch(root) {
   const taskPath = `${root}src/components/TasksReactBase.jsx`
   let source = readFileSync(taskPath, 'utf8')
 
-  const debugIndex = source.indexOf('useGoogleTasks')
-  if (debugIndex >= 0) throw new Error('GOOGLE_HOOK_SNIPPET\n' + source.slice(Math.max(0, debugIndex - 500), Math.min(source.length, debugIndex + 1700)))
+  const debugIndex = source.indexOf('const google =')
+  if (debugIndex >= 0) throw new Error('GOOGLE_HOOK_SNIPPET\n' + source.slice(Math.max(0, debugIndex - 900), Math.min(source.length, debugIndex + 1800)))
   source = source.replace(/\s*<section className="google-tasks-card">[\s\S]*?<\/section>\s*/g, '\n')
 
   source = source
