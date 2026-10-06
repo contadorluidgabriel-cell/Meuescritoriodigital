@@ -65,9 +65,9 @@ export function processFinanceError(process = {}, client = {}) {
 
 export function buildProcessFinanceCharges(process = {}, client = {}, makeId = prefix => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`) {
   const normalized = normalizedProcessFinance(process, client)
-  const error = processFinanceError(normalized, client)
+  const error = processFinanceError(process, client)
   if (error) throw new Error(error)
-  if (!normalized.cobradoAParte) return []
+  if (!normalized.cobradoAParte || normalized.financeiroValorCobrar <= 0) return []
 
   const shared = client?.perfilAtendimento === 'Compartilhado'
   const base = {
@@ -77,7 +77,7 @@ export function buildProcessFinanceCharges(process = {}, client = {}, makeId = p
     descricao: normalized.financeiroDescricao,
     competencia: String(normalized.financeiroVencimento).slice(0, 7),
     vencimento: normalized.financeiroVencimento,
-    valor: normalized.financeiroValor,
+    valor: normalized.financeiroValorCobrar,
     origem: 'avulso',
     origemTipo: 'Processo',
     origemId: String(process.id || ''),
