@@ -4,11 +4,11 @@ import { readFileSync } from 'node:fs'
 
 const viewSource = readFileSync('src/lib/moduleViews.js', 'utf8')
 
-test('Tarefas usa quatro visões operacionais e direciona Modelos para a área própria', () => {
+test('Tarefas usa A Fazer e Concluídas e direciona Modelos para a área própria', () => {
   const source = readFileSync('src/components/TasksReactBase.jsx', 'utf8')
   assert.match(source, /MED_TASK_OPERATIONAL_VIEWS_V1/)
-  for (const label of ['Minhas', 'Equipe', 'Aguardando cliente', 'Concluídas']) assert.match(viewSource, new RegExp(label))
-  assert.match(source, /taskViewOf\(task, currentTaskUserId\)/)
+  for (const label of ['A Fazer', 'Concluídas']) assert.match(viewSource, new RegExp(label))
+  assert.match(source, /taskViewOf\(task\)/)
   assert.match(source, /onNavigate\?\.\('modelos'\)/)
   assert.doesNotMatch(source, /onClick=\{\(\) => setView\('models'\)\}>Modelos/)
 })
