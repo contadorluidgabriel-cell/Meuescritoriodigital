@@ -18,6 +18,8 @@ export function applyRemoveExternalTaskSyncPatch(root) {
   source = source.replace(/<[^>]+className=["'][^"']*(?:google|sync)[^"']*["'][^>]*>[\s\S]*?<\/[^>]+>/gi, match =>
     /google\.|Google Tasks|Sincroniz|Conectar Google|Desconectar Google/i.test(match) ? '' : match
   )
+  source = source.replace(/<p>Tarefas com data aparecem no Calendar; título, prazo e conclusão são sincronizados\.<\/p><small className=\{!google\.configured \? 'error' : ''\}>\{google\.message\}<\/small>/g, '<p>As tarefas são gerenciadas exclusivamente no MED.</p>')
+  source = source.replace(/<div className="google-actions">\s*null\s*<\/div>/g, '')
   source = source.replace(/<[^>]+>[\s\S]*?(?:Google Tasks|Google conectado|Google ainda não conectado|Sincronizar Google)[\s\S]*?<\/[^>]+>/gi, '')
 
   if (/useGoogleTasks|google\.|Google Tasks|reconcileGoogleTaskPayload/.test(source)) {
