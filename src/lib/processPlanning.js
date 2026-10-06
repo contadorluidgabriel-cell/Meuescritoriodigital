@@ -1,4 +1,5 @@
 import { isDone, today } from './storage.js'
+import { processIsClosed } from './processCancellation.js'
 
 const clone = value => value == null ? value : structuredClone(value)
 const pad = value => String(value).padStart(2, '0')
@@ -137,7 +138,7 @@ export function initializeProcessPlanning(process = {}, baseDate = today()) {
   const initialized = initializeProcessStep(step, baseDate)
   next.etapas = (next.etapas || []).map(item => String(item.id) === String(step.id) ? initialized : item)
   next.etapaAtual = Math.max(0, steps.findIndex(item => String(item.id) === String(step.id)))
-  if (!isDone(next.status)) next.status = processStatusFromStep(initialized)
+  if (!processIsClosed(next)) next.status = processStatusFromStep(initialized)
   return next
 }
 
@@ -149,7 +150,7 @@ export function setCurrentProcessStep(process = {}, stepId, baseDate = today()) 
   const initialized = initializeProcessStep(steps[index], baseDate)
   next.etapas = (next.etapas || []).map(step => String(step.id) === String(stepId) ? initialized : step)
   next.etapaAtual = index
-  if (!isDone(next.status)) next.status = processStatusFromStep(initialized)
+  if (!processIsClosed(next)) next.status = processStatusFromStep(initialized)
   return { process: next, changed: true, step: initialized }
 }
 
@@ -163,7 +164,7 @@ function advanceAfterSettled(next, stepId, baseDate) {
     return { ...result, completedStepId: String(stepId) }
   }
   next.etapaAtual = Math.max(0, targetIndex)
-  if (!isDone(next.status) && current.allDone) next.status = 'Em andamento'
+  if (!processIsClosed(next) && current.allDone) next.status = 'Em andamento'
   return { process: next, changed: true, completedStepId: String(stepId), allStepsDone: true }
 }
 
@@ -196,7 +197,7 @@ export function setProcessStepStatus(process = {}, stepId, status, { waitingTarg
 
   if (wasCurrent || Number(process.etapaAtual || 0) === index) {
     next.etapaAtual = Math.max(0, index)
-    if (!isDone(next.status)) next.status = processStatusFromStep(updated)
+    if (!processIsClosed(next)) next.status = processStatusFromStep(updated)
   }
   return { process: next, changed: true, step: updated }
 }
@@ -220,7 +221,7 @@ export function continueProcessWaiting(process = {}, baseDate = today()) {
   const interval = Math.max(1, Math.trunc(Number(step.followupDias) || 3))
   const updated = { ...step, aguardandoDesde: step.aguardandoDesde || baseDate, proximaRevisao: addBusinessDays(baseDate, interval) }
   next.etapas = (next.etapas || []).map(item => String(item.id) === String(step.id) ? updated : item)
-  if (!isDone(next.status)) next.status = processStatusFromStep(updated)
+  if (!processIsClosed(next)) next.status = processStatusFromStep(updated)
   return { process: next, changed: true, step: updated }
 }
 
