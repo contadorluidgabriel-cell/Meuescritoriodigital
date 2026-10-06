@@ -7,58 +7,6 @@ function replaceRequired(source, from, to, label, path) {
 }
 
 export function applySyncSafetyPatch(root) {
-  const taskProgressPath = `${root}src/lib/taskProgress.js`
-  let taskProgress = readFileSync(taskProgressPath, 'utf8')
-  taskProgress = replaceRequired(
-    taskProgress,
-    `export function reconcileExternalTaskPayload(remoteTasks = [], currentTasks = []) {
-  const currentById = new Map((currentTasks || []).map(task => [String(task.id), task]))
-  return (remoteTasks || []).map(remote => {
-    const previous = currentById.get(String(remote.id))
-    if (!previous) return remote
-    const merged = { ...remote }
-
-    for (const key of preservedKeys) {
-      if (Object.prototype.hasOwnProperty.call(previous, key)) {
-        merged[key] = structuredClone(previous[key])
-      }
-    }
-
-    if (!isDone(previous.status) && isDone(merged.status) && taskCompletionBlocker({ ...previous, ...merged })) {
-      merged.status = previous.status
-    }
-    return merged
-  })
-}`,
-    `export function reconcileExternalTaskPayload(remoteTasks = [], currentTasks = []) {
-  const remoteById = new Map((Array.isArray(remoteTasks) ? remoteTasks : []).filter(task => task?.id).map(task => [String(task.id), task]))
-  const currentIds = new Set((Array.isArray(currentTasks) ? currentTasks : []).filter(task => task?.id).map(task => String(task.id)))
-  const next = (Array.isArray(currentTasks) ? currentTasks : []).map(previous => {
-    const remote = remoteById.get(String(previous.id))
-    if (!remote) return structuredClone(previous)
-    const merged = { ...structuredClone(previous), ...remote }
-
-    for (const key of preservedKeys) {
-      if (Object.prototype.hasOwnProperty.call(previous, key)) {
-        merged[key] = structuredClone(previous[key])
-      }
-    }
-
-    if (!isDone(previous.status) && isDone(merged.status) && taskCompletionBlocker({ ...previous, ...merged })) {
-      merged.status = previous.status
-    }
-    return merged
-  })
-
-  for (const remote of remoteById.values()) {
-    if (!currentIds.has(String(remote.id))) next.push(structuredClone(remote))
-  }
-  return next
-}`,
-    'non-destructive external task reconciliation',
-    taskProgressPath,
-  )
-  writeFileSync(taskProgressPath, taskProgress)
 
   const workspacePath = `${root}src/lib/workspaceSync.js`
   let workspace = readFileSync(workspacePath, 'utf8')
