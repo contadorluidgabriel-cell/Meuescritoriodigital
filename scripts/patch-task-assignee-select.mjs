@@ -10,3 +10,5 @@ export function applyTaskAssigneeSelectPatch(root) {
   })
   throw new Error('TASK_ASSIGNEE_SNIPPETS\n' + snippets.join('\n\n'))
 }
+
+// trigger inspection
