@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLocalUpdatedAt, loadOffice, payloadToOffice, saveOffice } from '../lib/storage.js'
 import { buildOfficePatch, hasOfficePatch, isAdminAccess, loadWorkspace, preferredWorkspaceId, saveWorkspace } from '../lib/workspaceSync.js'
 import { useTodoistTasks } from './useTodoistTasks.js'
+import { reconcileRecurringTaskCalendar } from '../lib/taskRecurrence.js'
 
 const timeValue = value => {
   const parsed = Date.parse(value || '')
@@ -240,6 +241,13 @@ export function useOfficeData(session) {
     dirtyVersion.current += 1
     return draft
   }), [])
+
+  useEffect(() => {
+    if (!ready) return
+    const result = reconcileRecurringTaskCalendar(office.tasks || [], office.clients || [])
+    if (!result.changed) return
+    update(draft => { draft.tasks = result.tasks })
+  }, [office.clients, office.tasks, ready, update])
 
   const switchWorkspace = useCallback(workspaceId => {
     const id = String(workspaceId || '')
