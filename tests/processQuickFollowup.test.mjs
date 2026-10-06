@@ -8,7 +8,7 @@ test('conclusão rápida oferece opção sem acompanhamento e com acompanhamento
   const process = read('src/components/ProcessesReact.jsx')
   assert.match(process, /Concluir processo<\/button>/)
   assert.match(process, /Concluir e acompanhar<\/button>/)
-  assert.match(process, /action\.allStepsDone && action\.stepCount > 0 && !isDone\(process\.status\)/)
+  assert.match(process, /action\.allStepsDone && action\.stepCount > 0 && !processIsClosed\(process\)/)
   assert.match(process, /!followUps\?\.records\?\.some\(row => row\.status === 'active' && row\.sourceType === 'process'/)
 })
 
