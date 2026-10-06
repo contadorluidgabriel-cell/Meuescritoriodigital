@@ -4,8 +4,6 @@ export function applyRemoveExternalTaskSyncPatch(root) {
   const taskPath = `${root}src/components/TasksReactBase.jsx`
   let source = readFileSync(taskPath, 'utf8')
 
-  const debugIndex = source.indexOf('const google =')
-  if (debugIndex >= 0) throw new Error('GOOGLE_HOOK_SNIPPET\n' + source.slice(Math.max(0, debugIndex - 900), Math.min(source.length, debugIndex + 1800)))
   source = source.replace(/\s*<section className="google-tasks-card">[\s\S]*?<\/section>\s*/g, '\n')
 
   source = source
@@ -13,8 +11,8 @@ export function applyRemoveExternalTaskSyncPatch(root) {
     .replace(/,\s*reconcileGoogleTaskPayload/g, '')
     .replace(/reconcileGoogleTaskPayload\s*,\s*/g, '')
 
-  source = source.replace(/\n\s*const\s+reconcileGoogleTasks\s*=\s*useCallback\(\(remoteTasks, currentTasks\)\s*=>\s*\{[\s\S]*?\n\s*\},\s*\[office\.clients\]\)\s*;?/g, '\n')
-  source = source.replace(/\n\s*const\s+google\s*=\s*useGoogleTasks\(\{[\s\S]*?\n\s*\}\)\s*;?/g, '\n')
+  source = source.replace("  const reconcileGoogleTasks = useCallback((remoteTasks, currentTasks) => {\n    return reconcileGoogleTaskPayload(remoteTasks, currentTasks, office.clients)\n  }, [office.clients])\n", '')
+  source = source.replace("  const google = useGoogleTasks({ enabled: Boolean(session), tasks: office.tasks, update, reconcileTasks: reconcileGoogleTasks })\n", '')
   source = source.replace(/^.*google\.schedule\([^\n]*\)\s*;?\s*$/gm, '')
 
   if (/useGoogleTasks|google\.|Google Tasks|reconcileGoogleTaskPayload|google-tasks-card/.test(source)) {
