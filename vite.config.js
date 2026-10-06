@@ -139,6 +139,7 @@ function legacyCompatibilityFile() {
     },
     closeBundle() {
       const destination = fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url))
+      mkdirSync(dirname(destination), { recursive: true })
       const chunks = Array.from({ length: 10 }, (_, index) => readLegacyChunk(index))
       writeFileSync(destination, decodePayload(chunks.join('')))
     },
