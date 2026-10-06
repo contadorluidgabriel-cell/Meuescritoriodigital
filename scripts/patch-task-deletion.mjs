@@ -13,7 +13,7 @@ export function applyTaskDeletionPatch(root) {
     ],
     [
       "  function commitTasks(nextTasks) {\n    update(draft => { draft.tasks = nextTasks })\n    google.schedule(nextTasks)\n  }",
-      "  function commitTasks(nextTasks) {\n    update(draft => { draft.tasks = nextTasks })\n    google.schedule(nextTasks)\n  }\n  function deleteTask(task) {\n    if (!task?.id || !window.confirm(taskDeletionMessage(task))) return\n    const nextTasks = removeTaskOccurrence(office.tasks || [], task, office.clients || [])\n    commitTasks(nextTasks)\n    setSelected(current => {\n      const next = new Set(current)\n      next.delete(task.id)\n      return next\n    })\n    if (editing?.id === task.id) setEditing(null)\n    setNotice(task.recorrencia ? 'Ocorrência excluída. A próxima tarefa recorrente foi mantida.' : 'Tarefa excluída.')\n  }",
+      "  function commitTasks(nextTasks) {\n    update(draft => { draft.tasks = nextTasks })\n    google.schedule(nextTasks)\n  }\n  function deleteTask(task) {\n    if (!task?.id || !window.confirm(taskDeletionMessage(task))) return\n    const nextTasks = removeTaskOccurrence(office.tasks || [], task, office.clients || [])\n    commitTasks(nextTasks)\n    setSelected(current => {\n      const next = new Set(current)\n      next.delete(task.id)\n      return next\n    })\n    if (editing?.id === task.id) setEditing(null)\n    setNotice(task.recorrencia ? 'Ocorrência excluída. As próximas serão controladas pelo calendário.' : 'Tarefa excluída.')\n  }",
       'delete task function',
     ],
     [
