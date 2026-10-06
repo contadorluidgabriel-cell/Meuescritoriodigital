@@ -8,3 +8,5 @@ export function applyTaskCalendarOnlyAudit(root) {
     throw new Error('TASK_RECURRENCE_LEGACY_SNIPPET\n' + source.slice(Math.max(0, index - 1200), Math.min(source.length, index + 2200)))
   }
 }
+
+// calendar-only validation
