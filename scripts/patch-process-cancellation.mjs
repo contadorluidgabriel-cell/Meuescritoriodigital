@@ -7,6 +7,22 @@ function replaceRequired(source, from, to, label, path) {
 }
 
 export function applyProcessCancellationPatch(root) {
+  const planningPath = `${root}src/lib/processPlanning.js`
+  let planning = readFileSync(planningPath, 'utf8')
+  if (!planning.includes("processIsClosed")) {
+    planning = replaceRequired(
+      planning,
+      "import { isDone, today } from './storage.js'",
+      "import { isDone, today } from './storage.js'\nimport { processIsClosed } from './processCancellation.js'",
+      'planning closed import',
+      planningPath,
+    )
+    planning = planning.replaceAll("if (!isDone(next.status)) next.status = processStatusFromStep(initialized)", "if (!processIsClosed(next)) next.status = processStatusFromStep(initialized)")
+    planning = planning.replaceAll("if (!isDone(next.status) && current.allDone) next.status = 'Em andamento'", "if (!processIsClosed(next) && current.allDone) next.status = 'Em andamento'")
+    planning = planning.replaceAll("if (!isDone(next.status)) next.status = processStatusFromStep(updated)", "if (!processIsClosed(next)) next.status = processStatusFromStep(updated)")
+    writeFileSync(planningPath, planning)
+  }
+
   const path = `${root}src/components/ProcessesReact.jsx`
   let source = readFileSync(path, 'utf8')
   if (source.includes('MED_PROCESS_CANCELLATION_V1')) return
