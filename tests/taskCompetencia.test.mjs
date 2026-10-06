@@ -136,6 +136,6 @@ test('filtro principal de competencia inicia no mes atual e nao pode ficar vazio
 })
 
 test('tarefas sem competencia continuam visiveis mesmo com mes fixo', () => {
-  const patch = readFileSync(new URL('../scripts/patch-task-competencia-opcional.mjs', import.meta.url), 'utf8')
+  const patch = readFileSync(new URL('../scripts/patch-module-views.mjs', import.meta.url), 'utf8')
   assert.match(patch, /!task\.usaCompetencia \|\| String\(task\.competencia \|\| ''\) === competenciaFilter/)
 })
