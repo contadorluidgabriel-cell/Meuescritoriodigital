@@ -137,7 +137,10 @@ function legacyCompatibilityFile() {
         response.end(readFileSync(legacyFile))
       })
     },
-    closeBundle() { copyFileSync(legacyFile, fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url))) },
+    closeBundle() {
+      if (!existsSync(legacyFile)) restorePayloads()
+      copyFileSync(legacyFile, fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url)))
+    },
   }
 }
 export default defineConfig({ plugins: [react(), legacyCompatibilityFile()], build: { target: 'es2022' } })
