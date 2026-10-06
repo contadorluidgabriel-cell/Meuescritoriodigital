@@ -58,7 +58,7 @@ test('última etapa terminada oferece encerramento explícito no detalhe', () =>
   assert.equal(action.allStepsDone, true)
   assert.equal(action.actionLabel, 'Concluir processo')
   const ui = readFileSync('src/components/ProcessesReact.jsx', 'utf8')
-  assert.match(ui, /action\.allStepsDone && action\.stepCount > 0 && !isDone\(process\.status\)/)
+  assert.match(ui, /action\.allStepsDone && action\.stepCount > 0 && !processIsClosed\(process\)/)
   assert.match(ui, /item\.status = 'Concluído'; item\.dataConclusao = today\(\)/)
 })
 
