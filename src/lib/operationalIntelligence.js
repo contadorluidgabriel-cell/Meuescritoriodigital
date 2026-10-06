@@ -38,7 +38,7 @@ export function weekBounds(day = today()) {
 }
 
 function processDone(process = {}) {
-  return isDone(process.status)
+  return isDone(process.status) || normalize(process.status) === 'cancelado'
 }
 
 function obligationDone(link = {}) {
