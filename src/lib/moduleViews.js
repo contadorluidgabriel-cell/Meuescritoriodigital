@@ -14,9 +14,7 @@ export const PROCESS_VIEW_OPTIONS = [
 ]
 
 export const TASK_VIEW_OPTIONS = [
-  ['mine', 'Minhas'],
-  ['team', 'Equipe'],
-  ['waiting', 'Aguardando cliente'],
+  ['todo', 'A Fazer'],
   ['completed', 'Concluídas'],
 ]
 
@@ -38,19 +36,8 @@ export function processViewOf(process = {}) {
   return ['cliente', 'orgao', 'terceiro'].includes(String(dependency || '')) ? 'waiting' : 'active'
 }
 
-export function taskViewOf(task = {}, currentUserId = '') {
-  if (isDone(task?.status)) return 'completed'
-  if (normalize(task?.status) === 'aguardando cliente') return 'waiting'
-  const assigned = String(task?.responsavelUserId || '')
-  const current = String(currentUserId || '')
-  const explicitTeam = Boolean(
-    task?.compartilhadoParceiroId
-    || task?.compartilhadoResponsavel
-    || task?.equipeResponsavelId
-    || task?.equipeId
-  )
-  if (!assigned && !explicitTeam) return 'mine'
-  return current && assigned === current ? 'mine' : 'team'
+export function taskViewOf(task = {}) {
+  return isDone(task?.status) ? 'completed' : 'todo'
 }
 
 export function obligationViewOf(obligation = {}) {
