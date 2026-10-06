@@ -29,7 +29,7 @@ export function applyTaskCompetenciaOpcionalPatch(root) {
   source = replaceRequired(
     source,
     "  const [historyPeriod, setHistoryPeriod] = useState('90')",
-    "  const [historyPeriod, setHistoryPeriod] = useState('90')\n  const [competenciaFilter, setCompetenciaFilter] = useState('')\n  const [historyCompetencia, setHistoryCompetencia] = useState('')\n  const MED_TASK_COMPETENCIA_OPTIONAL_V2 = true",
+    "  const [historyPeriod, setHistoryPeriod] = useState('90')\n  const [competenciaFilter, setCompetenciaFilter] = useState(() => { const now = new Date(); return now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') })\n  const [historyCompetencia, setHistoryCompetencia] = useState('')\n  const MED_TASK_COMPETENCIA_OPTIONAL_V2 = true",
     'competencia state',
     path,
   )
@@ -101,7 +101,7 @@ export function applyTaskCompetenciaOpcionalPatch(root) {
   source = replaceRequired(
     source,
     '<div className="task-filters"><input placeholder="Buscar tarefa, cliente ou responsável" value={query} onChange={event => setQuery(event.target.value)} /><select value={status}',
-    '<div className="task-filters"><input placeholder="Buscar tarefa, cliente ou responsável" value={query} onChange={event => setQuery(event.target.value)} /><input type="month" value={competenciaFilter} onChange={event => setCompetenciaFilter(event.target.value)} aria-label="Filtrar por competência" title="Filtrar por competência" /><select value={status}',
+    '<div className="task-filters"><input placeholder="Buscar tarefa, cliente ou responsável" value={query} onChange={event => setQuery(event.target.value)} /><input type="month" value={competenciaFilter} onChange={event => { const value = event.target.value; if (value) setCompetenciaFilter(value) }} aria-label="Filtrar por competência" title="Filtrar por competência" /><select value={status}',
     'main competencia control',
     path,
   )

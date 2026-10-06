@@ -127,3 +127,15 @@ test('modelos podem definir que suas tarefas usam competência sem fixar um mês
   assert.match(source, /usaCompetencia: Boolean\(editingTemplate\.usaCompetencia\)/)
   assert.match(source, /competencia: ''/)
 })
+
+
+test('filtro principal de competencia inicia no mes atual e nao pode ficar vazio', () => {
+  const patch = readFileSync(new URL('../scripts/patch-task-competencia-opcional.mjs', import.meta.url), 'utf8')
+  assert.match(patch, /setCompetenciaFilter.*new Date/)
+  assert.match(patch, /if \(value\) setCompetenciaFilter\(value\)/)
+})
+
+test('tarefas sem competencia continuam visiveis mesmo com mes fixo', () => {
+  const patch = readFileSync(new URL('../scripts/patch-module-views.mjs', import.meta.url), 'utf8')
+  assert.match(patch, /!task\.usaCompetencia \|\| String\(task\.competencia \|\| ''\) === competenciaFilter/)
+})
