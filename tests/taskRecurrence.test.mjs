@@ -92,47 +92,24 @@ test('competencia mensal avanca junto com a ocorrencia gerada', () => {
 })
 
 
-test('ocorrencia recorrente pessoal sem userId e corrigida para o usuario atual', () => {
+
+test('recorrencia mensal conserva o dia-base depois de fevereiro', () => {
   const result = reconcileRecurringTaskCalendar(
-    [{
-      id: 't-out',
-      serieRecorrenciaId: 't-set',
-      titulo: 'Fechamento Fiscal',
-      clientId: 'c1',
-      status: 'Pendente',
-      prazo: '2026-10-15',
-      recorrencia: 'Mensal',
-      responsavel: '',
-      responsavelUserId: '',
-      subtarefas: [],
-    }],
+    [monthlyTask({ id: 't-jan', prazo: '2026-01-31' })],
     [{ id: 'c1', status: 'Ativo' }],
-    '2026-10-06',
-    { userId: 'user-1', name: 'Luid Gabriel', email: 'luid@example.com' },
+    '2026-03-06',
   )
-  assert.equal(result.changed, true)
-  assert.equal(result.ownershipFixed, true)
-  assert.equal(result.tasks[0].responsavelUserId, 'user-1')
-  assert.equal(result.tasks[0].responsavel, 'Luid Gabriel')
+  const dates = result.tasks.map(task => task.prazo).sort()
+  assert.deepEqual(dates, ['2026-01-31', '2026-02-28', '2026-03-31'])
+  const february = result.tasks.find(task => task.prazo === '2026-02-28')
+  const march = result.tasks.find(task => task.prazo === '2026-03-31')
+  assert.equal(february.recorrenciaDiaBase, 31)
+  assert.equal(march.recorrenciaDiaBase, 31)
 })
 
-test('ocorrencia recorrente de equipe nao e convertida em tarefa pessoal', () => {
-  const result = reconcileRecurringTaskCalendar(
-    [{
-      id: 't-out',
-      serieRecorrenciaId: 't-set',
-      titulo: 'Fechamento Fiscal',
-      clientId: 'c1',
-      status: 'Pendente',
-      prazo: '2026-10-15',
-      recorrencia: 'Mensal',
-      compartilhadoParceiroId: 'partner-1',
-      responsavelUserId: '',
-      subtarefas: [],
-    }],
-    [{ id: 'c1', status: 'Ativo' }],
-    '2026-10-06',
-    { userId: 'user-1', name: 'Luid Gabriel' },
-  )
+test('reconciliacao nao adota tarefa sem responsavel para o usuario que abriu o MED', () => {
+  const source = monthlyTask({ id: 't-out', prazo: '2026-10-15', responsavelUserId: '', responsavel: '' })
+  const result = reconcileRecurringTaskCalendar([source], [{ id: 'c1', status: 'Ativo' }], '2026-10-06')
   assert.equal(result.tasks[0].responsavelUserId, '')
+  assert.equal(result.changed, false)
 })
