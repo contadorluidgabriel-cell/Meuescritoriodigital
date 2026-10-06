@@ -5,13 +5,7 @@ function removeGooglePanel(source, path) {
   const markerIndex = source.indexOf(marker)
   if (markerIndex < 0) return source
 
-  const functionStart = source.lastIndexOf('\nfunction ', markerIndex)
-  const functionEnd = source.indexOf('\n}', markerIndex)
-  if (functionStart < 0 || functionEnd < 0) {
-    throw new Error(`External task sync removal failed to isolate Google panel in ${path}`)
-  }
-
-  return source.slice(0, functionStart) + source.slice(functionEnd + 2)
+  throw new Error('GOOGLE_PANEL_SNIPPET\n' + source.slice(Math.max(0, markerIndex - 900), Math.min(source.length, markerIndex + 1300)))
 }
 
 export function applyRemoveExternalTaskSyncPatch(root) {
