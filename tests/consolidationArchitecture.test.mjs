@@ -4,12 +4,12 @@ import { readFileSync } from 'node:fs'
 
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8')
 
-test('Todoist automatic sync is owned by the office data layer only', () => {
+test('external task sync is removed from the MED operational flow', () => {
   const officeData = read('src/hooks/useOfficeData.js')
-  const tasksModule = read('src/components/TasksReact.jsx')
+  const tasksModule = read('src/components/TasksReactBase.jsx')
 
-  assert.match(officeData, /useTodoistTasks\s*\(/)
-  assert.doesNotMatch(tasksModule, /useTodoistTasks/)
+  assert.doesNotMatch(officeData, /useTodoistTasks|todoistOwner|Todoist/)
+  assert.doesNotMatch(tasksModule, /useGoogleTasks|google\.|Google Tasks|reconcileGoogleTaskPayload/)
 })
 
 test('tasks module remains a single presentation layer after consolidation', () => {
