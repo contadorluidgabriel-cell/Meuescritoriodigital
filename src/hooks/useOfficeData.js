@@ -244,10 +244,15 @@ export function useOfficeData(session) {
 
   useEffect(() => {
     if (!ready) return
-    const result = reconcileRecurringTaskCalendar(office.tasks || [], office.clients || [])
+    const owner = {
+      userId: session?.user?.id || '',
+      name: session?.user?.user_metadata?.full_name || session?.user?.user_metadata?.name || session?.user?.email || '',
+      email: session?.user?.email || '',
+    }
+    const result = reconcileRecurringTaskCalendar(office.tasks || [], office.clients || [], undefined, owner)
     if (!result.changed) return
     update(draft => { draft.tasks = result.tasks })
-  }, [office.clients, office.tasks, ready, update])
+  }, [office.clients, office.tasks, ready, session?.user?.email, session?.user?.id, session?.user?.user_metadata?.full_name, session?.user?.user_metadata?.name, update])
 
   const switchWorkspace = useCallback(workspaceId => {
     const id = String(workspaceId || '')
