@@ -91,6 +91,26 @@ function recurringOccurrenceExists(tasks = [], source = {}, due = '', competenci
   }) || null
 }
 
+
+function recurringTaskHasTeamOwner(task = {}) {
+  return Boolean(
+    task.compartilhadoParceiroId
+    || task.compartilhadoResponsavel
+    || task.equipeResponsavelId
+    || task.equipeId
+  )
+}
+
+function ensureRecurringTaskOwnership(task = {}, owner = {}) {
+  if (!task?.serieRecorrenciaId) return task
+  if (task.responsavelUserId || recurringTaskHasTeamOwner(task) || !owner?.userId) return task
+  return {
+    ...task,
+    responsavelUserId: String(owner.userId),
+    responsavel: task.responsavel || owner.name || owner.email || '',
+  }
+}
+
 function recurrenceCutoff(recurrence, day = today()) {
   const current = new Date(`${day}T12:00:00`)
   if (Number.isNaN(current.getTime())) return day
@@ -148,9 +168,11 @@ export function appendNextRecurringTask(tasks, task, clients = []) {
 }
 
 
-export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = today()) {
-  let current = structuredClone(tasks || [])
+export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = today(), owner = {}) {
+  const original = tasks || []
+  let current = structuredClone(original).map(task => ensureRecurringTaskOwnership(task, owner))
   let generatedCount = 0
+  const ownershipFixed = current.some((task, index) => String(task.responsavelUserId || '') !== String(original[index]?.responsavelUserId || ''))
   const seeds = [...current]
     .filter(task => task?.recorrencia && task?.prazo && recurringClientIsActive(task, clients))
     .sort((a, b) => String(a.prazo || '').localeCompare(String(b.prazo || '')))
@@ -178,13 +200,13 @@ export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = t
 
       const result = appendNextRecurringTaskWithMeta(current, cursor, clients)
       if (!result.generatedTaskId) break
-      current = result.tasks
+      current = result.tasks.map(task => ensureRecurringTaskOwnership(task, owner))
       generatedCount += 1
       cursor = current.find(item => String(item.id) === String(result.generatedTaskId)) || cursor
     }
   }
 
-  return { tasks: current, changed: generatedCount > 0, generatedCount }
+  return { tasks: current, changed: generatedCount > 0 || ownershipFixed, generatedCount, ownershipFixed }
 }
 
 export function reconcileGoogleTaskPayload(remoteTasks, currentTasks, clients) {
