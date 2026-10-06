@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getLocalUpdatedAt, loadOffice, payloadToOffice, saveOffice } from '../lib/storage.js'
 import { buildOfficePatch, hasOfficePatch, isAdminAccess, loadWorkspace, preferredWorkspaceId, saveWorkspace } from '../lib/workspaceSync.js'
-import { useTodoistTasks } from './useTodoistTasks.js'
 import { reconcileRecurringTaskCalendar } from '../lib/taskRecurrence.js'
 
 const timeValue = value => {
@@ -277,18 +276,6 @@ export function useOfficeData(session) {
     return true
   }, [clearSyncRetry])
 
-  const todoistOwner = Boolean(
-    ready
-    && session?.user?.id
-    && isAdminAccess(access)
-    && String(access.workspace?.owner_user_id || '') === String(session.user.id),
-  )
-  const todoist = useTodoistTasks({
-    enabled: todoistOwner,
-    workspaceId: String(access.workspace?.id || ''),
-    tasks: office.tasks || [],
-    update,
-  })
 
-  return { office, update, ready, sync, todoist, access, switchWorkspace, refreshWorkspace }
+  return { office, update, ready, sync, access, switchWorkspace, refreshWorkspace }
 }
