@@ -9,7 +9,7 @@ const viteSource = readFileSync(new URL('../vite.config.js', import.meta.url), '
 
 test('tarefas concluídas ficam na visão Concluídas e podem ser reabertas', () => {
   const source = taskSource()
-  assert.match(source, /taskViewOf\(task, currentTaskUserId\) === taskView/)
+  assert.match(source, /taskViewOf\(task\) === taskView/)
   assert.match(source, /TASK_VIEW_OPTIONS/)
   assert.match(source, /visibleRows\.map/)
   assert.match(source, /Nenhuma tarefa encontrada nesta visão/)
