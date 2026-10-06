@@ -11,7 +11,7 @@ const uniqueByKey = items => [...new Map((items || []).map(item => [item.key, it
 const itemDate = item => String(item?.effectiveDate || item?.planned || item?.due || '')
 const officialDue = item => String(item?.due || '')
 const normalizeStatus = value => String(value || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
-const isActiveProcess = item => item?.type === 'process' && !/(conclu|cancel)/.test(normalizeStatus(item?.status))
+const isActiveProcess = (item, processesById = new Map()) => { const source = processesById.get(String(item?.id || '')); const status = source?.status ?? item?.status; return item?.type === 'process' && !/(conclu|cancel)/.test(normalizeStatus(status)) }
 const staysVisibleTodayWhileOpen = item => item?.type === 'process' || item?.type === 'obligation'
 
 function dateLabel(value, options = {}) {
@@ -82,7 +82,8 @@ export function horizonEnd(day, horizon = 'today') {
 export function buildWorkHorizon(office = {}, { day, horizon = 'today' } = {}) {
   const config = WORK_HORIZONS[horizon] || WORK_HORIZONS.today
   const end = horizonEnd(day, config.id)
-  const all = collectCommandCenterItems(office, { day, daysBefore: 60 }).filter(item => item.type !== 'process' || isActiveProcess(item))
+  const processesById = new Map((office.processes || []).map(process => [String(process.id || ''), process]))
+  const all = collectCommandCenterItems(office, { day, daysBefore: 60 }).filter(item => item.type !== 'process' || isActiveProcess(item, processesById))
   const tasksById = taskSourceMap(office)
   const overdue = all.filter(item => {
     const due = officialDue(item)
