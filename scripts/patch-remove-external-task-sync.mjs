@@ -11,6 +11,7 @@ export function applyRemoveExternalTaskSyncPatch(root) {
     .replace(/,\s*reconcileGoogleTaskPayload/g, '')
     .replace(/reconcileGoogleTaskPayload\s*,\s*/g, '')
 
+  source = source.replace(/\n\s*const\s+reconcileGoogleTasks\s*=\s*useCallback\(\(remoteTasks, currentTasks\)\s*=>\s*\{[\s\S]*?\n\s*\},\s*\[office\.clients\]\)\s*;?/g, '\n')
   source = source.replace(/\n\s*const\s+google\s*=\s*useGoogleTasks\(\{[\s\S]*?\n\s*\}\)\s*;?/g, '\n')
   source = source.replace(/^.*google\.schedule\([^\n]*\)\s*;?\s*$/gm, '')
 
