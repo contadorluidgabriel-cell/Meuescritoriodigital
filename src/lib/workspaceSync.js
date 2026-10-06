@@ -81,6 +81,7 @@ export async function loadWorkspace(workspaceId = '') { const data = await invok
 export async function saveWorkspace(workspaceId, patch) { const data = await invoke('save', { workspace_id: workspaceId, patch }); if (data?.workspace?.id) rememberWorkspace(data.workspace.id); return data }
 export async function loadWorkspaceContext(workspaceId = '') { const data = await invoke('context', { workspace_id: workspaceId || preferredWorkspaceId() }); if (data?.workspace?.id) rememberWorkspace(data.workspace.id); return data }
 export const listWorkspaceMembers = workspaceId => invoke('members', { workspace_id: workspaceId })
+export const listWorkspaceAssignees = workspaceId => invoke('assignees', { workspace_id: workspaceId })
 export const inviteWorkspaceMember = (workspaceId, values) => invoke('invite', { workspace_id: workspaceId, ...values })
 export const updateWorkspaceMember = (workspaceId, values) => invoke('update_member', { workspace_id: workspaceId, ...values })
 export const removeWorkspaceMember = (workspaceId, memberId) => invoke('remove_member', { workspace_id: workspaceId, member_id: memberId })
