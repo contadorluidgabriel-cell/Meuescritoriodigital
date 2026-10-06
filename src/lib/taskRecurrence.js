@@ -72,6 +72,34 @@ export function nextTaskCompetencia(competencia, recurrence, autoAdvance = true)
   return `${year}-${String(month).padStart(2, '0')}`
 }
 
+
+function recurrenceSeriesId(task = {}) {
+  return String(task.serieRecorrenciaId || task.id || '')
+}
+
+function recurringOccurrenceExists(tasks = [], source = {}, due = '', competencia = '') {
+  const sourceSeries = recurrenceSeriesId(source)
+  return (tasks || []).find(item => {
+    if (String(item.id || '') === String(source.id || '')) return false
+    if (String(item.prazo || '') !== String(due || '')) return false
+    if (normalizeRecurrence(item.recorrencia) !== normalizeRecurrence(source.recorrencia)) return false
+    const itemSeries = String(item.serieRecorrenciaId || '')
+    if (sourceSeries && itemSeries && itemSeries === sourceSeries) return true
+    return String(item.clientId || '') === String(source.clientId || '')
+      && String(item.titulo || '') === String(source.titulo || '')
+      && (!source.usaCompetencia || (Boolean(item.usaCompetencia) && String(item.competencia || '') === String(competencia || '')))
+  }) || null
+}
+
+function recurrenceCutoff(recurrence, day = today()) {
+  const current = new Date(`${day}T12:00:00`)
+  if (Number.isNaN(current.getTime())) return day
+  if (competenciaStepMonths(recurrence) > 0) {
+    return new Date(current.getFullYear(), current.getMonth() + 1, 0, 12).toISOString().slice(0, 10)
+  }
+  return day
+}
+
 function recurringClientIsActive(task, clients = []) {
   if (!task.clientId || !Array.isArray(clients) || !clients.length) return true
   const client = clients.find(item => String(item.id) === String(task.clientId))
@@ -88,13 +116,7 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
   const nextCompetencia = task.usaCompetencia && task.competencia
     ? nextTaskCompetencia(task.competencia, task.recorrencia, autoAdvanceCompetencia)
     : ''
-  const alreadyExists = current.some(item => String(item.id) !== String(task.id)
-    && String(item.clientId || '') === String(task.clientId || '')
-    && String(item.titulo || '') === String(task.titulo || '')
-    && normalizeRecurrence(item.recorrencia) === normalizeRecurrence(task.recorrencia)
-    && String(item.prazo || '') === nextDue
-    && (!task.usaCompetencia || (Boolean(item.usaCompetencia) && String(item.competencia || '') === String(nextCompetencia || '')))
-    && !isDone(item.status))
+  const alreadyExists = recurringOccurrenceExists(current, task, nextDue, nextCompetencia)
   if (alreadyExists) return { tasks: current, generatedTaskId: '' }
 
   const generatedTaskId = uid('tar')
@@ -102,6 +124,7 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
   const nextTask = {
     ...structuredClone(task),
     id: generatedTaskId,
+    serieRecorrenciaId: recurrenceSeriesId(task),
     status: 'Pendente',
     prazo: nextDue,
     planejadoPara: '',
@@ -122,6 +145,46 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
 
 export function appendNextRecurringTask(tasks, task, clients = []) {
   return appendNextRecurringTaskWithMeta(tasks, task, clients).tasks
+}
+
+
+export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = today()) {
+  let current = structuredClone(tasks || [])
+  let generatedCount = 0
+  const seeds = [...current]
+    .filter(task => task?.recorrencia && task?.prazo && recurringClientIsActive(task, clients))
+    .sort((a, b) => String(a.prazo || '').localeCompare(String(b.prazo || '')))
+
+  for (const seed of seeds) {
+    const cutoff = recurrenceCutoff(seed.recorrencia, day)
+    let cursor = seed
+    let guard = 0
+
+    while (guard < 62) {
+      guard += 1
+      const nextDue = nextTaskDue(cursor.prazo, cursor.recorrencia)
+      if (!nextDue || nextDue > cutoff) break
+
+      const autoAdvanceCompetencia = shouldAutoAdvanceCompetencia(cursor)
+      const nextCompetencia = cursor.usaCompetencia && cursor.competencia
+        ? nextTaskCompetencia(cursor.competencia, cursor.recorrencia, autoAdvanceCompetencia)
+        : ''
+
+      const existing = recurringOccurrenceExists(current, cursor, nextDue, nextCompetencia)
+      if (existing) {
+        cursor = existing
+        continue
+      }
+
+      const result = appendNextRecurringTaskWithMeta(current, cursor, clients)
+      if (!result.generatedTaskId) break
+      current = result.tasks
+      generatedCount += 1
+      cursor = current.find(item => String(item.id) === String(result.generatedTaskId)) || cursor
+    }
+  }
+
+  return { tasks: current, changed: generatedCount > 0, generatedCount }
 }
 
 export function reconcileGoogleTaskPayload(remoteTasks, currentTasks, clients) {
