@@ -21,6 +21,7 @@ export default function QuickTaskCreate({ office, update, access, day = today(),
     event.preventDefault()
     const cleanTitle = title.trim()
     if (!cleanTitle) { setError('Informe o título da tarefa.'); return }
+    if (!currentUserId) { setError('Não foi possível identificar o responsável atual. Atualize a página e tente novamente.'); return }
 
     const timestamp = new Date().toISOString()
     const task = {
