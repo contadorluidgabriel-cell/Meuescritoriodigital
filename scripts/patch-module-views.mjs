@@ -109,7 +109,7 @@ function patchTasks(root) {
   source = replaceRequired(
     source,
     "  const visibleRows = useMemo(() => rows.filter(task => !isDone(task.status) && (!competenciaFilter || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows])",
-    "  const taskViewCounts = useMemo(() => (office.tasks || []).reduce((counts, task) => { const key = taskViewOf(task); counts[key] = (counts[key] || 0) + 1; return counts }, { todo: 0, completed: 0 }), [office.tasks])\n  const visibleRows = useMemo(() => rows.filter(task => taskViewOf(task) === taskView && (!task.usaCompetencia || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows, taskView])",
+    "  const currentTaskUserId = String(access?.membership?.user_id || session?.user?.id || '')\n  const taskViewCounts = useMemo(() => (office.tasks || []).reduce((counts, task) => { const key = taskViewOf(task); counts[key] = (counts[key] || 0) + 1; return counts }, { todo: 0, completed: 0 }), [office.tasks])\n  const visibleRows = useMemo(() => rows.filter(task => taskViewOf(task) === taskView && (!task.usaCompetencia || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows, taskView])",
     'task visible rows',
     path,
   )
