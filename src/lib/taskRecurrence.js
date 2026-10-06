@@ -1,5 +1,4 @@
-import { isDone, today, uid } from './storage.js'
-import { reconcileExternalTaskPayload, taskCompletionBlocker } from './taskProgress.js'
+import { today, uid } from './storage.js'
 
 const normalizeRecurrence = value => String(value || '').trim().toLowerCase()
 const COMPETENCIA_PATTERN = /^(\d{4})-(0[1-9]|1[0-2])$/
@@ -26,34 +25,37 @@ export function taskCompetenciaError(task = {}) {
   return ''
 }
 
-export function nextTaskDue(date, recurrence) {
+export function nextTaskDue(date, recurrence, anchorDay = 0) {
   const source = date || today()
   const next = new Date(`${source}T12:00:00`)
   if (Number.isNaN(next.getTime())) return ''
   const value = normalizeRecurrence(recurrence)
+  const sourceDay = next.getDate()
+  const wantedDay = Math.max(1, Math.min(31, Number(anchorDay) || sourceDay))
   if (['daily', 'diaria', 'diária'].includes(value)) next.setDate(next.getDate() + 1)
   else if (['weekly', 'semanal'].includes(value)) next.setDate(next.getDate() + 7)
   else if (['biweekly', 'quinzenal'].includes(value)) next.setDate(next.getDate() + 15)
   else if (['monthly', 'mensal'].includes(value)) {
-    const wantedDay = next.getDate()
     next.setDate(1)
     next.setMonth(next.getMonth() + 1)
     next.setDate(Math.min(wantedDay, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()))
   } else if (value === 'bimestral') {
-    const wantedDay = next.getDate()
-    next.setDate(1); next.setMonth(next.getMonth() + 2)
+    next.setDate(1)
+    next.setMonth(next.getMonth() + 2)
     next.setDate(Math.min(wantedDay, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()))
   } else if (['quarterly', 'trimestral'].includes(value)) {
-    const wantedDay = next.getDate()
-    next.setDate(1); next.setMonth(next.getMonth() + 3)
+    next.setDate(1)
+    next.setMonth(next.getMonth() + 3)
     next.setDate(Math.min(wantedDay, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()))
   } else if (value === 'semestral') {
-    const wantedDay = next.getDate()
-    next.setDate(1); next.setMonth(next.getMonth() + 6)
+    next.setDate(1)
+    next.setMonth(next.getMonth() + 6)
     next.setDate(Math.min(wantedDay, new Date(next.getFullYear(), next.getMonth() + 1, 0).getDate()))
   } else if (['yearly', 'anual'].includes(value)) {
-    const month = next.getMonth(), wantedDay = next.getDate()
-    next.setDate(1); next.setFullYear(next.getFullYear() + 1); next.setMonth(month)
+    const month = next.getMonth()
+    next.setDate(1)
+    next.setFullYear(next.getFullYear() + 1)
+    next.setMonth(month)
     next.setDate(Math.min(wantedDay, new Date(next.getFullYear(), month + 1, 0).getDate()))
   } else return ''
   return next.toISOString().slice(0, 10)
@@ -92,25 +94,6 @@ function recurringOccurrenceExists(tasks = [], source = {}, due = '', competenci
 }
 
 
-function recurringTaskHasTeamOwner(task = {}) {
-  return Boolean(
-    task.compartilhadoParceiroId
-    || task.compartilhadoResponsavel
-    || task.equipeResponsavelId
-    || task.equipeId
-  )
-}
-
-function ensureRecurringTaskOwnership(task = {}, owner = {}) {
-  if (!task?.serieRecorrenciaId) return task
-  if (task.responsavelUserId || recurringTaskHasTeamOwner(task) || !owner?.userId) return task
-  return {
-    ...task,
-    responsavelUserId: String(owner.userId),
-    responsavel: task.responsavel || owner.name || owner.email || '',
-  }
-}
-
 function recurrenceCutoff(recurrence, day = today()) {
   const current = new Date(`${day}T12:00:00`)
   if (Number.isNaN(current.getTime())) return day
@@ -129,7 +112,8 @@ function recurringClientIsActive(task, clients = []) {
 export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients = []) {
   const current = structuredClone(tasks || [])
   if (!task.recorrencia || !task.prazo || !recurringClientIsActive(task, clients)) return { tasks: current, generatedTaskId: '' }
-  const nextDue = nextTaskDue(task.prazo, task.recorrencia)
+  const recurrenceDay = Math.max(1, Math.min(31, Number(task.recorrenciaDiaBase) || Number(String(task.prazo || '').slice(8, 10)) || 1))
+  const nextDue = nextTaskDue(task.prazo, task.recorrencia, recurrenceDay)
   if (!nextDue) return { tasks: current, generatedTaskId: '' }
 
   const autoAdvanceCompetencia = shouldAutoAdvanceCompetencia(task)
@@ -145,6 +129,7 @@ export function appendNextRecurringTaskWithMeta(tasks = [], task = {}, clients =
     ...structuredClone(task),
     id: generatedTaskId,
     serieRecorrenciaId: recurrenceSeriesId(task),
+    recorrenciaDiaBase: recurrenceDay,
     status: 'Pendente',
     prazo: nextDue,
     planejadoPara: '',
@@ -168,11 +153,9 @@ export function appendNextRecurringTask(tasks, task, clients = []) {
 }
 
 
-export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = today(), owner = {}) {
-  const original = tasks || []
-  let current = structuredClone(original).map(task => ensureRecurringTaskOwnership(task, owner))
+export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = today()) {
+  let current = structuredClone(tasks || [])
   let generatedCount = 0
-  const ownershipFixed = current.some((task, index) => String(task.responsavelUserId || '') !== String(original[index]?.responsavelUserId || ''))
   const seeds = [...current]
     .filter(task => task?.recorrencia && task?.prazo && recurringClientIsActive(task, clients))
     .sort((a, b) => String(a.prazo || '').localeCompare(String(b.prazo || '')))
@@ -184,7 +167,8 @@ export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = t
 
     while (guard < 62) {
       guard += 1
-      const nextDue = nextTaskDue(cursor.prazo, cursor.recorrencia)
+      const recurrenceDay = Math.max(1, Math.min(31, Number(cursor.recorrenciaDiaBase) || Number(String(seed.prazo || '').slice(8, 10)) || 1))
+      const nextDue = nextTaskDue(cursor.prazo, cursor.recorrencia, recurrenceDay)
       if (!nextDue || nextDue > cutoff) break
 
       const autoAdvanceCompetencia = shouldAutoAdvanceCompetencia(cursor)
@@ -200,30 +184,11 @@ export function reconcileRecurringTaskCalendar(tasks = [], clients = [], day = t
 
       const result = appendNextRecurringTaskWithMeta(current, cursor, clients)
       if (!result.generatedTaskId) break
-      current = result.tasks.map(task => ensureRecurringTaskOwnership(task, owner))
+      current = result.tasks
       generatedCount += 1
       cursor = current.find(item => String(item.id) === String(result.generatedTaskId)) || cursor
     }
   }
 
-  return { tasks: current, changed: generatedCount > 0 || ownershipFixed, generatedCount, ownershipFixed }
-}
-
-export function reconcileGoogleTaskPayload(remoteTasks, currentTasks, clients) {
-  const currentById = new Map((currentTasks || []).map(task => [String(task.id), task]))
-  let nextTasks = reconcileExternalTaskPayload(remoteTasks, currentTasks)
-  nextTasks = nextTasks.map(task => {
-    const previous = currentById.get(String(task.id))
-    if (previous && !isDone(previous.status) && isDone(task.status) && taskCompletionBlocker(task)) {
-      return { ...task, status: previous.status }
-    }
-    return task
-  })
-  nextTasks.forEach(task => {
-    const previous = currentById.get(String(task.id))
-    if (previous && !isDone(previous.status) && isDone(task.status)) {
-      nextTasks = appendNextRecurringTask(nextTasks, task, clients)
-    }
-  })
-  return nextTasks
+  return { tasks: current, changed: generatedCount > 0, generatedCount }
 }
