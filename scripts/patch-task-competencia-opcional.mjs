@@ -61,7 +61,7 @@ export function applyTaskCompetenciaOpcionalPatch(root) {
   source = replaceRequired(
     source,
     "  }), [clientsById, office.tasks, priority, query, status])",
-    "  }), [clientsById, office.tasks, priority, query, status])\n  const visibleRows = useMemo(() => rows.filter(task => !isDone(task.status) && (!task.usaCompetencia || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows])\n  useEffect(() => { setSelected(new Set()) }, [competenciaFilter, priority, query, status])",
+    "  }), [clientsById, office.tasks, priority, query, status])\n  const visibleRows = useMemo(() => rows.filter(task => !isDone(task.status) && (!competenciaFilter || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows])\n  useEffect(() => { setSelected(new Set()) }, [competenciaFilter, priority, query, status])",
     'visible rows by competencia',
     path,
   )
