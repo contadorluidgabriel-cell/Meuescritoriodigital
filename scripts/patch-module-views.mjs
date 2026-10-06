@@ -100,7 +100,7 @@ function patchTasks(root) {
       let next = props
       if (!/\baccess\b/.test(next)) next += ', access'
       if (!/\bonNavigate\b/.test(next)) next += ', onNavigate'
-      return `export default function ${name}({${next}}) {\n  const [taskView, setTaskView] = useState('mine')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true`
+      return `export default function ${name}({${next}}) {\n  const [taskView, setTaskView] = useState('todo')\n  const MED_TASK_OPERATIONAL_VIEWS_V1 = true`
     },
     'task component props',
     path,
@@ -109,7 +109,7 @@ function patchTasks(root) {
   source = replaceRequired(
     source,
     "  const visibleRows = useMemo(() => rows.filter(task => !isDone(task.status) && (!competenciaFilter || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows])",
-    "  const currentTaskUserId = String(access?.membership?.user_id || session?.user?.id || '')\n  const taskViewCounts = useMemo(() => (office.tasks || []).reduce((counts, task) => { const key = taskViewOf(task, currentTaskUserId); counts[key] = (counts[key] || 0) + 1; return counts }, { mine: 0, team: 0, waiting: 0, completed: 0 }), [currentTaskUserId, office.tasks])\n  const visibleRows = useMemo(() => rows.filter(task => taskViewOf(task, currentTaskUserId) === taskView && (!task.usaCompetencia || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, currentTaskUserId, rows, taskView])",
+    "  const currentTaskUserId = String(access?.membership?.user_id || session?.user?.id || '')\n  const taskViewCounts = useMemo(() => (office.tasks || []).reduce((counts, task) => { const key = taskViewOf(task); counts[key] = (counts[key] || 0) + 1; return counts }, { todo: 0, completed: 0 }), [office.tasks])\n  const visibleRows = useMemo(() => rows.filter(task => taskViewOf(task) === taskView && (!task.usaCompetencia || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows, taskView])",
     'task visible rows',
     path,
   )

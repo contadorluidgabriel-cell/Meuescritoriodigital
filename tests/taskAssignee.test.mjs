@@ -18,9 +18,18 @@ test('nova tarefa inicia atribuida ao usuario atual', () => {
   assert.match(source, /responsavel: currentTaskUserName/)
 })
 
-test('seletor lista somente usuarios internos ativos e usa user_id como chave', () => {
+test('seletor usa endpoint seguro de responsaveis e user_id como chave', () => {
   const source = read('src/components/TaskAssigneeSelect.jsx')
-  assert.match(source, /member\?\.status === 'active'/)
-  assert.match(source, /member\?\.role !== 'partner'/)
+  const workspace = read('src/lib/workspaceSync.js')
+  assert.match(source, /listWorkspaceAssignees/)
   assert.match(source, /String\(member\.user_id\)/)
+  assert.match(workspace, /listWorkspaceAssignees/)
+})
+
+test('Meu Dia cria tarefa com responsavel atual', () => {
+  const source = read('src/components/QuickTaskCreate.jsx')
+  assert.match(source, /responsavelUserId: currentUserId/)
+  assert.match(source, /responsavel: currentUserName/)
+  assert.match(source, /observacao: ''/)
+  assert.doesNotMatch(source, /observacoes:/)
 })

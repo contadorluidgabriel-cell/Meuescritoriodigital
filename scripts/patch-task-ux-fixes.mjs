@@ -37,7 +37,7 @@ export function applyTaskUxFixesPatch(root) {
   command = replaceRequired(
     command,
     "  return <div className=\"occ-shell occ-v123\">\n    {notice ? <div className=\"occ-toast\">{notice}</div> : null}",
-    "  return <div className=\"occ-shell occ-v123\">\n    {quickTaskOpen ? <QuickTaskCreate office={office} update={update} day={day} onClose={() => setQuickTaskOpen(false)} onCreated={task => setNotice(`Tarefa ${task.titulo ? `“${task.titulo}” ` : ''}criada no Meu Dia.`)} /> : null}\n    {notice ? <div className=\"occ-toast\">{notice}</div> : null}",
+    "  return <div className=\"occ-shell occ-v123\">\n    {quickTaskOpen ? <QuickTaskCreate office={office} update={update} access={access} day={day} onClose={() => setQuickTaskOpen(false)} onCreated={task => setNotice(`Tarefa ${task.titulo ? `“${task.titulo}” ` : ''}criada no Meu Dia.`)} /> : null}\n    {notice ? <div className=\"occ-toast\">{notice}</div> : null}",
     'quick task modal',
     commandPath,
   )

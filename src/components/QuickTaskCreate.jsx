@@ -4,13 +4,15 @@ import '../quick-task-create.css'
 
 const clientName = client => client?.razao || client?.nome || client?.fantasia || 'Cliente'
 
-export default function QuickTaskCreate({ office, update, day = today(), onClose, onCreated }) {
+export default function QuickTaskCreate({ office, update, access, day = today(), onClose, onCreated }) {
   const [title, setTitle] = useState('')
   const [clientId, setClientId] = useState('')
   const [department, setDepartment] = useState('')
   const [priority, setPriority] = useState('Normal')
   const [due, setDue] = useState(day)
   const [error, setError] = useState('')
+  const currentUserId = String(access?.membership?.user_id || '')
+  const currentUserName = access?.membership?.display_name || access?.membership?.email || 'Você'
 
   const clients = useMemo(() => [...(office?.clients || [])].sort((a, b) => clientName(a).localeCompare(clientName(b), 'pt-BR')), [office?.clients])
   const departments = useMemo(() => (office?.departments || []).map(item => typeof item === 'string' ? item : item?.name).filter(Boolean), [office?.departments])
@@ -19,6 +21,7 @@ export default function QuickTaskCreate({ office, update, day = today(), onClose
     event.preventDefault()
     const cleanTitle = title.trim()
     if (!cleanTitle) { setError('Informe o título da tarefa.'); return }
+    if (!currentUserId) { setError('Não foi possível identificar o responsável atual. Atualize a página e tente novamente.'); return }
 
     const timestamp = new Date().toISOString()
     const task = {
@@ -26,8 +29,8 @@ export default function QuickTaskCreate({ office, update, day = today(), onClose
       titulo: cleanTitle,
       clientId: clientId || '',
       departamento: department || '',
-      responsavel: '',
-      responsavelUserId: '',
+      responsavel: currentUserName,
+      responsavelUserId: currentUserId,
       prioridade: priority || 'Normal',
       prazo: due || '',
       planejadoPara: day,
@@ -35,7 +38,7 @@ export default function QuickTaskCreate({ office, update, day = today(), onClose
       recorrencia: '',
       antecedenciaDias: 0,
       subtarefas: [],
-      observacoes: '',
+      observacao: '',
       origem: 'Meu Dia',
       createdAt: timestamp,
       updatedAt: timestamp,

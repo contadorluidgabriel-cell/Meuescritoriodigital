@@ -44,7 +44,7 @@ test('progresso quantitativo respeita a meta e libera conclusão', () => {
   assert.equal(completeTask(capped.tasks, current.id).changed, true)
 })
 
-test('conclusão recorrente gera próxima ocorrência resetada e desfazer remove somente a gerada', () => {
+test('conclusão recorrente altera somente a ocorrência atual', () => {
   const current = task({
     recorrencia: 'Mensal',
     quantitativo: true,
@@ -55,12 +55,8 @@ test('conclusão recorrente gera próxima ocorrência resetada e desfazer remove
   })
   const completed = completeTask([current], current.id)
   assert.equal(completed.changed, true)
-  assert.equal(completed.tasks.length, 2)
-  const generated = completed.tasks.find(item => item.id !== current.id)
-  assert.equal(generated.prazo, '2026-10-10')
-  assert.equal(generated.status, 'Pendente')
-  assert.equal(generated.quantidadeConcluida, 0)
-  assert.equal(generated.subtarefas[0].concluida, false)
+  assert.equal(completed.tasks.length, 1)
+  assert.equal(completed.tasks[0].status, 'Concluída')
 
   const undone = undoTaskCompletion(completed.tasks, completed.transaction)
   assert.equal(undone.changed, true)

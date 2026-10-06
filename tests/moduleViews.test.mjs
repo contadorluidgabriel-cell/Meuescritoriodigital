@@ -16,13 +16,11 @@ test('processos são classificados sem duplicar a base', () => {
   }), 'active')
 })
 
-test('tarefas priorizam conclusão e aguardando cliente antes da responsabilidade', () => {
-  assert.equal(taskViewOf({ status: 'Concluída', responsavelUserId: 'u1' }, 'u1'), 'completed')
-  assert.equal(taskViewOf({ status: 'Aguardando cliente', responsavelUserId: 'u1' }, 'u1'), 'waiting')
-  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: 'u1' }, 'u1'), 'mine')
-  assert.equal(taskViewOf({ status: 'Em andamento', responsavelUserId: 'u2' }, 'u1'), 'team')
-  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: '' }, 'u1'), 'mine')
-  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: '', compartilhadoParceiroId: 'p1' }, 'u1'), 'team')
+test('tarefas usam apenas A Fazer e Concluidas', () => {
+  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: 'u1' }), 'todo')
+  assert.equal(taskViewOf({ status: 'Em andamento', responsavelUserId: 'u2' }), 'todo')
+  assert.equal(taskViewOf({ status: 'Aguardando cliente', responsavelUserId: 'u1' }), 'todo')
+  assert.equal(taskViewOf({ status: 'Concluída', responsavelUserId: 'u1' }), 'completed')
 })
 
 test('obrigações usam o andamento agregado dos vínculos', () => {

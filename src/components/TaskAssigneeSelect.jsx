@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { listWorkspaceMembers } from '../lib/workspaceSync.js'
+import { listWorkspaceAssignees } from '../lib/workspaceSync.js'
 
 const labelOf = member => member?.display_name || member?.email || 'Usuário'
 
@@ -23,10 +23,10 @@ export default function TaskAssigneeSelect({
     }
 
     setLoading(true)
-    listWorkspaceMembers(workspaceId)
+    listWorkspaceAssignees(workspaceId)
       .then(result => {
         if (!active) return
-        setMembers(Array.isArray(result?.members) ? result.members : [])
+        setMembers(Array.isArray(result?.assignees) ? result.assignees : [])
       })
       .catch(() => {
         if (active) setMembers([])

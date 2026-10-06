@@ -168,6 +168,28 @@ async function listMembers(service: any, user: any, workspaceId = '') {
   return { workspace: context.selected.office_workspaces, members: (data || []).map(item => memberView(item, context.selected.office_workspaces)) }
 }
 
+async function listAssignees(service: any, user: any, workspaceId = '') {
+  const context = await contextFor(service, user, workspaceId)
+  const { data, error } = await service
+    .from('office_members')
+    .select('user_id,display_name,email,role,status')
+    .eq('workspace_id', context.selected.workspace_id)
+    .eq('status', 'active')
+  if (error) throw error
+  return {
+    workspace: context.selected.office_workspaces,
+    assignees: (data || [])
+      .filter((item: any) => internalRole(String(item.role || '')) && item.user_id)
+      .map((item: any) => ({
+        user_id: String(item.user_id),
+        display_name: String(item.display_name || item.email || 'Usuário'),
+        email: String(item.email || ''),
+        role: String(item.role || ''),
+        status: 'active',
+      })),
+  }
+}
+
 function invitePermissions(role: string, bodyPermissions: any) {
   if (internalRole(role)) return defaultInternalV2Permissions(role)
   return { ...DEFAULT_PERMISSIONS[role], ...(bodyPermissions && typeof bodyPermissions === 'object' ? bodyPermissions : {}) }
@@ -335,6 +357,7 @@ Deno.serve(async (req: Request) => {
     if (action === 'load') return json(await loadWorkspace(service, user, String(body.workspace_id || '')))
     if (action === 'save') return json(await saveWorkspace(service, user, body))
     if (action === 'members') return json(await listMembers(service, user, String(body.workspace_id || '')))
+    if (action === 'assignees') return json(await listAssignees(service, user, String(body.workspace_id || '')))
     if (action === 'invite') return json(await inviteMember(service, user, body))
     if (action === 'update_member') return json(await updateMember(service, user, body))
     if (action === 'remove_member') return json(await removeMember(service, user, body))
