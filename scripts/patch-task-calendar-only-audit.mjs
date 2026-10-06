@@ -1,12 +1,19 @@
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 
 export function applyTaskCalendarOnlyAudit(root) {
   const path = `${root}src/components/TasksReactBase.jsx`
-  const source = readFileSync(path, 'utf8')
-  const index = source.indexOf('appendNextRecurringTask(')
-  if (index >= 0) {
-    throw new Error('TASK_RECURRENCE_LEGACY_SNIPPET\n' + source.slice(Math.max(0, index - 1200), Math.min(source.length, index + 2200)))
-  }
-}
+  let source = readFileSync(path, 'utf8')
 
-// calendar-only validation
+  source = source.replace(
+    "    if (old && !isDone(old.status) && isDone(task.status)) nextTasks = appendNextRecurringTask(nextTasks, task, office.clients)\n",
+    '',
+  )
+  source = source.replace(/appendNextRecurringTask,\s*/g, '')
+
+  if (/appendNextRecurringTask\s*\(/.test(source)) {
+    const index = source.indexOf('appendNextRecurringTask(')
+    throw new Error('Task calendar-only patch still found legacy recurrence call: ' + source.slice(Math.max(0, index - 500), index + 1000))
+  }
+
+  writeFileSync(path, source)
+}
