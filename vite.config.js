@@ -138,8 +138,13 @@ function legacyCompatibilityFile() {
       })
     },
     closeBundle() {
-      if (!existsSync(legacyFile)) restorePayloads()
-      copyFileSync(legacyFile, fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url)))
+      const destination = fileURLToPath(new URL('./dist/legacy-v10-7.html', import.meta.url))
+      if (existsSync(legacyFile)) {
+        copyFileSync(legacyFile, destination)
+        return
+      }
+      const chunks = Array.from({ length: 10 }, (_, index) => readLegacyChunk(index))
+      writeFileSync(destination, decodePayload(chunks.join('')))
     },
   }
 }
