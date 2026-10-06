@@ -1,6 +1,5 @@
 import { isDone } from './storage.js'
 import { taskCompletionBlocker, taskProgress } from './taskProgress.js'
-import { appendNextRecurringTaskWithMeta } from './taskRecurrence.js'
 
 const clone = value => value == null ? value : structuredClone(value)
 
@@ -22,7 +21,7 @@ export function taskExecutionState(task = {}) {
   }
 }
 
-export function completeTask(tasks = [], taskId, { clients = [] } = {}) {
+export function completeTask(tasks = [], taskId) {
   const nextTasks = clone(tasks) || []
   const index = nextTasks.findIndex(item => String(item.id) === String(taskId))
   if (index < 0) return { tasks: nextTasks, changed: false, error: 'Tarefa não encontrada.' }
@@ -33,9 +32,8 @@ export function completeTask(tasks = [], taskId, { clients = [] } = {}) {
   const completedAt = new Date().toISOString()
   const completed = { ...current, status: 'Concluída', updatedAt: completedAt, completedAt }
   nextTasks[index] = completed
-  const recurring = appendNextRecurringTaskWithMeta(nextTasks, completed, clients)
   return {
-    tasks: recurring.tasks,
+    tasks: nextTasks,
     changed: true,
     task: completed,
     transaction: {
@@ -43,7 +41,6 @@ export function completeTask(tasks = [], taskId, { clients = [] } = {}) {
       taskId: String(taskId),
       previousStatus: current.status || 'Pendente',
       previousCompletedAt: current.completedAt || '',
-      generatedTaskId: recurring.generatedTaskId,
     },
   }
 }
