@@ -109,7 +109,7 @@ function patchTasks(root) {
   source = replaceRequired(
     source,
     "  const visibleRows = useMemo(() => rows.filter(task => !isDone(task.status) && (!competenciaFilter || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, rows])",
-    "  const currentTaskUserId = String(access?.membership?.user_id || session?.user?.id || '')\n  const taskViewCounts = useMemo(() => (office.tasks || []).reduce((counts, task) => { const key = taskViewOf(task, currentTaskUserId); counts[key] = (counts[key] || 0) + 1; return counts }, { mine: 0, team: 0, waiting: 0, completed: 0 }), [currentTaskUserId, office.tasks])\n  const visibleRows = useMemo(() => rows.filter(task => taskViewOf(task, currentTaskUserId) === taskView && (!competenciaFilter || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, currentTaskUserId, rows, taskView])",
+    "  const currentTaskUserId = String(access?.membership?.user_id || session?.user?.id || '')\n  const taskViewCounts = useMemo(() => (office.tasks || []).reduce((counts, task) => { const key = taskViewOf(task, currentTaskUserId); counts[key] = (counts[key] || 0) + 1; return counts }, { mine: 0, team: 0, waiting: 0, completed: 0 }), [currentTaskUserId, office.tasks])\n  const visibleRows = useMemo(() => rows.filter(task => taskViewOf(task, currentTaskUserId) === taskView && (!task.usaCompetencia || String(task.competencia || '') === competenciaFilter)), [competenciaFilter, currentTaskUserId, rows, taskView])",
     'task visible rows',
     path,
   )
