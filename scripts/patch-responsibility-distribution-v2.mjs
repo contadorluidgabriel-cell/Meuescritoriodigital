@@ -11,8 +11,8 @@ export function applyResponsibilityDistributionV2Patch(root) {
   if (!office.includes("applyPrimaryResponsibilityInheritance from '../lib/responsibility.js'")) {
     office = replaceOrFail(
       office,
-      "import { useTodoistTasks } from './useTodoistTasks.js'",
-      "import { useTodoistTasks } from './useTodoistTasks.js'\nimport { applyPrimaryResponsibilityInheritance } from '../lib/responsibility.js'",
+      "import { useCallback, useEffect, useRef, useState } from 'react'",
+      "import { useCallback, useEffect, useRef, useState } from 'react'\nimport { applyPrimaryResponsibilityInheritance } from '../lib/responsibility.js'",
       'office inheritance import',
     )
     office = replaceOrFail(
