@@ -90,3 +90,49 @@ test('competencia mensal avanca junto com a ocorrencia gerada', () => {
   const october = result.tasks.find(task => task.prazo === '2026-10-15')
   assert.equal(october.competencia, '2026-10')
 })
+
+
+test('ocorrencia recorrente pessoal sem userId e corrigida para o usuario atual', () => {
+  const result = reconcileRecurringTaskCalendar(
+    [{
+      id: 't-out',
+      serieRecorrenciaId: 't-set',
+      titulo: 'Fechamento Fiscal',
+      clientId: 'c1',
+      status: 'Pendente',
+      prazo: '2026-10-15',
+      recorrencia: 'Mensal',
+      responsavel: '',
+      responsavelUserId: '',
+      subtarefas: [],
+    }],
+    [{ id: 'c1', status: 'Ativo' }],
+    '2026-10-06',
+    { userId: 'user-1', name: 'Luid Gabriel', email: 'luid@example.com' },
+  )
+  assert.equal(result.changed, true)
+  assert.equal(result.ownershipFixed, true)
+  assert.equal(result.tasks[0].responsavelUserId, 'user-1')
+  assert.equal(result.tasks[0].responsavel, 'Luid Gabriel')
+})
+
+test('ocorrencia recorrente de equipe nao e convertida em tarefa pessoal', () => {
+  const result = reconcileRecurringTaskCalendar(
+    [{
+      id: 't-out',
+      serieRecorrenciaId: 't-set',
+      titulo: 'Fechamento Fiscal',
+      clientId: 'c1',
+      status: 'Pendente',
+      prazo: '2026-10-15',
+      recorrencia: 'Mensal',
+      compartilhadoParceiroId: 'partner-1',
+      responsavelUserId: '',
+      subtarefas: [],
+    }],
+    [{ id: 'c1', status: 'Ativo' }],
+    '2026-10-06',
+    { userId: 'user-1', name: 'Luid Gabriel' },
+  )
+  assert.equal(result.tasks[0].responsavelUserId, '')
+})
