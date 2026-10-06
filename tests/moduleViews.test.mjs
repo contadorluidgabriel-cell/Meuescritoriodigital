@@ -21,7 +21,8 @@ test('tarefas priorizam conclusão e aguardando cliente antes da responsabilidad
   assert.equal(taskViewOf({ status: 'Aguardando cliente', responsavelUserId: 'u1' }, 'u1'), 'waiting')
   assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: 'u1' }, 'u1'), 'mine')
   assert.equal(taskViewOf({ status: 'Em andamento', responsavelUserId: 'u2' }, 'u1'), 'team')
-  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: '' }, 'u1'), 'team')
+  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: '' }, 'u1'), 'mine')
+  assert.equal(taskViewOf({ status: 'Pendente', responsavelUserId: '', compartilhadoParceiroId: 'p1' }, 'u1'), 'team')
 })
 
 test('obrigações usam o andamento agregado dos vínculos', () => {

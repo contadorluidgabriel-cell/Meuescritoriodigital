@@ -43,6 +43,13 @@ export function taskViewOf(task = {}, currentUserId = '') {
   if (normalize(task?.status) === 'aguardando cliente') return 'waiting'
   const assigned = String(task?.responsavelUserId || '')
   const current = String(currentUserId || '')
+  const explicitTeam = Boolean(
+    task?.compartilhadoParceiroId
+    || task?.compartilhadoResponsavel
+    || task?.equipeResponsavelId
+    || task?.equipeId
+  )
+  if (!assigned && !explicitTeam) return 'mine'
   return current && assigned === current ? 'mine' : 'team'
 }
 
