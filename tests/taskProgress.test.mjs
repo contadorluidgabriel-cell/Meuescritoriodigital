@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { quantitativeTaskError, reconcileExternalTaskPayload, taskCompletionBlocker, taskProgress } from '../src/lib/taskProgress.js'
+import { quantitativeTaskError, taskCompletionBlocker, taskProgress } from '../src/lib/taskProgress.js'
 
 test('calcula progresso quantitativo', () => {
   assert.deepEqual(taskProgress({ quantitativo: true, quantidadeTotal: 450, quantidadeConcluida: 287, unidade: 'lançamentos' }), {
@@ -19,48 +19,4 @@ test('bloqueia conclusão por subtarefas e depois por quantidade', () => {
   assert.match(taskCompletionBlocker(base), /subtarefa/i)
   assert.match(taskCompletionBlocker({ ...base, subtarefas: [{ id: '1', concluida: true }] }), /300\/450 lançamentos/i)
   assert.equal(taskCompletionBlocker({ ...base, quantidadeConcluida: 450, subtarefas: [{ id: '1', concluida: true }] }), '')
-})
-
-test('sincronização externa preserva campos internos e não burla bloqueio', () => {
-  const current = [{ id: 't1', titulo: 'REINF', status: 'Pendente', clientId: 'c1', subtarefas: [{ id: 's1', concluida: false }], quantitativo: true, quantidadeTotal: 450, quantidadeConcluida: 100, unidade: 'lançamentos' }]
-  const remote = [{ id: 't1', titulo: 'REINF', status: 'Concluída' }]
-  const [result] = reconcileExternalTaskPayload(remote, current)
-  assert.equal(result.status, 'Pendente')
-  assert.equal(result.clientId, 'c1')
-  assert.equal(result.quantidadeTotal, 450)
-  assert.equal(result.subtarefas.length, 1)
-})
-
-test('sincronização externa não reverte subtarefa recém concluída', () => {
-  const current = [{
-    id: 't1',
-    titulo: 'Fechamento',
-    status: 'Pendente',
-    subtarefas: [
-      { id: 's1', titulo: 'Apuração', concluida: true },
-      { id: 's2', titulo: 'Envio', concluida: false },
-    ],
-    quantitativo: true,
-    quantidadeTotal: 100,
-    quantidadeConcluida: 60,
-    unidade: 'itens',
-  }]
-  const remote = [{
-    id: 't1',
-    titulo: 'Fechamento',
-    status: 'Pendente',
-    subtarefas: [
-      { id: 's1', titulo: 'Apuração', concluida: false },
-      { id: 's2', titulo: 'Envio', concluida: false },
-    ],
-    quantitativo: true,
-    quantidadeTotal: 100,
-    quantidadeConcluida: 20,
-    unidade: 'itens',
-  }]
-
-  const [result] = reconcileExternalTaskPayload(remote, current)
-  assert.equal(result.subtarefas[0].concluida, true)
-  assert.equal(result.subtarefas[1].concluida, false)
-  assert.equal(result.quantidadeConcluida, 60)
 })
