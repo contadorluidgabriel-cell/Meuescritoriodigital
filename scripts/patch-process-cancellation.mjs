@@ -30,7 +30,7 @@ export function applyProcessCancellationPatch(root) {
   source = replaceRequired(
     source,
     "import { buildProcessFinanceCharges, normalizedProcessFinance, processFinanceError, processHasFinanceCharge } from '../lib/processFinance.js'",
-    "import { buildProcessFinanceCharges, normalizedProcessFinance, processFinanceError, processHasFinanceCharge } from '../lib/processFinance.js'\nimport { processCancellationError, processCancellationSummary, processIsCancelled, processIsClosed } from '../lib/processCancellation.js'",
+    "import { buildProcessFinanceCharges, normalizedProcessFinance, processFinanceError, processHasFinanceCharge } from '../lib/processFinance.js'\nimport { processCancellationError, processCancellationSummary, processIsCancelled, processIsClosed, reconcileProcessCancellationFinance } from '../lib/processCancellation.js'",
     'imports',
     path,
   )
@@ -65,6 +65,13 @@ export function applyProcessCancellationPatch(root) {
       "onChange={event => setField('status', event.target.value)}",
       "onChange={event => setDraft(current => ({ ...current, status: event.target.value, cancelamentoData: event.target.value === 'Cancelado' ? (current.cancelamentoData || today()) : current.cancelamentoData }))}",
     )
+  }
+
+  const mainComponent = source.match(/export default function ProcessesReact\(([^)]*)\) \{/)
+  if (!mainComponent) throw new Error(`Process cancellation patch failed (main component) in ${path}`)
+  if (!source.includes('MED_PROCESS_CANCELLATION_FINANCE_RECONCILE_V1')) {
+    const reconcileEffect = `${mainComponent[0]}\n  const MED_PROCESS_CANCELLATION_FINANCE_RECONCILE_V1 = true\n  useEffect(() => {\n    const cancelled = (office.processes || []).filter(process => processIsCancelled(process))\n    if (!cancelled.length) return\n    let nextFinance = office.finance || []\n    let changed = false\n    cancelled.forEach(process => {\n      const result = reconcileProcessCancellationFinance(nextFinance, process, today())\n      if (result.changed) { nextFinance = result.finance; changed = true }\n    })\n    if (!changed) return\n    update(draftOffice => { draftOffice.finance = nextFinance })\n  }, [office.processes, office.finance, update])`
+    source = source.replace(mainComponent[0], reconcileEffect)
   }
 
   source = source.replaceAll("!isDone(process.status)", "!processIsClosed(process)")
