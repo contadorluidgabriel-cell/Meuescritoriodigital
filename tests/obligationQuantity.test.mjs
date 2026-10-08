@@ -1,5 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import {
   normalizedObligationLinkQuantity,
   obligationQuantitySummary,
@@ -208,4 +209,24 @@ test('incremental daily entry can be added to cumulative progress and merged int
   const result = updateObligationLinkQuantity(obligations, 'obr-add', 'ter-1', current + addedNow, '2026-10-03')
   assert.equal(result.link.quantidadeConcluida, 197)
   assert.deepEqual(result.link.historicoProducao, [{ data: '2026-10-03', quantidade: 51, totalApos: 197 }])
+})
+
+
+test('ritmo inclui o dia atual no exemplo real de 253 pendentes ate 09/10', () => {
+  const metric = linkProductivity({
+    quantidadePessoas: 503,
+    quantidadeConcluida: 250,
+    historicoProducao: [],
+  }, '2026-10-09', '2026-10-07')
+  assert.equal(metric.pending, 253)
+  assert.equal(metric.daysRemaining, 3)
+  assert.equal(metric.requiredPerDay, 85)
+})
+
+test('produtividade usa data local e nao UTC como padrao', () => {
+  const productivitySource = readFileSync(new URL('../src/lib/obligationProductivity.js', import.meta.url), 'utf8')
+  const quantitySource = readFileSync(new URL('../src/lib/obligationQuantity.js', import.meta.url), 'utf8')
+  assert.match(productivitySource, /import \{ today \} from '.\/storage\.js'/)
+  assert.doesNotMatch(productivitySource, /new Date\(\)\.toISOString\(\)\.slice\(0, 10\)/)
+  assert.doesNotMatch(quantitySource, /new Date\(\)\.toISOString\(\)\.slice\(0, 10\)/)
 })
