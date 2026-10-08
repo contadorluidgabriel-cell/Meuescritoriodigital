@@ -1,4 +1,5 @@
 import { appendProductionHistory } from './obligationProductivity.js'
+import { today } from './storage.js'
 const nonNegativeInteger = value => Math.max(0, Math.trunc(Number(value) || 0))
 
 export function usesQuantityControl(record = {}) {
@@ -54,7 +55,7 @@ export function obligationQuantitySummary(obligation = {}) {
 }
 
 
-export function updateObligationLinkQuantity(obligations = [], obligationId = '', clientId = '', completedPeople = 0, completedAt = new Date().toISOString().slice(0, 10)) {
+export function updateObligationLinkQuantity(obligations = [], obligationId = '', clientId = '', completedPeople = 0, completedAt = today()) {
   const targetObligationId = String(obligationId || '')
   const targetClientId = String(clientId || '')
   const requested = nonNegativeInteger(completedPeople)
