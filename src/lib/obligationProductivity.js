@@ -1,3 +1,4 @@
+import { today } from './storage.js'
 const integer = value => Math.max(0, Math.trunc(Number(value) || 0))
 const isoDay = value => String(value || '').slice(0, 10)
 
@@ -71,7 +72,7 @@ function historyPace(link = {}, day = '') {
   }
 }
 
-export function linkProductivity(link = {}, due = '', day = new Date().toISOString().slice(0, 10)) {
+export function linkProductivity(link = {}, due = '', day = today()) {
   const total = integer(link.quantidadePessoas)
   const completed = Math.min(total, integer(link.quantidadeConcluida))
   const pending = Math.max(0, total - completed)
@@ -133,7 +134,7 @@ export function linkProductivity(link = {}, due = '', day = new Date().toISOStri
   }
 }
 
-export function obligationProductivity(obligation = {}, day = new Date().toISOString().slice(0, 10)) {
+export function obligationProductivity(obligation = {}, day = today()) {
   const links = Array.isArray(obligation.clientes) ? obligation.clientes : []
   const rows = links.map(link => linkProductivity(link, link.vencimento || obligation.vencimento || '', day))
   const active = rows.filter(row => !row.completedAll)
@@ -163,7 +164,7 @@ export function obligationProductivity(obligation = {}, day = new Date().toISOSt
   }
 }
 
-export function appendProductionHistory(link = {}, previousCompleted = 0, nextCompleted = 0, day = new Date().toISOString().slice(0, 10)) {
+export function appendProductionHistory(link = {}, previousCompleted = 0, nextCompleted = 0, day = today()) {
   const previous = integer(previousCompleted)
   const next = integer(nextCompleted)
   const delta = next - previous
