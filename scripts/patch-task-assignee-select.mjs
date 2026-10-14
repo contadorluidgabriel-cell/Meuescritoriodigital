@@ -62,7 +62,7 @@ export function applyTaskAssigneeSelectPatch(root) {
   source = replaceRequired(
     source,
     '<Field label="Responsável"><input value={editing.responsavel} onChange={event => setField(\'responsavel\', event.target.value)} /></Field>',
-    '<Field label="Responsável"><TaskAssigneeSelect access={access} value={editing.responsavelUserId || \'\'} currentUserId={currentTaskUserId} currentUserName={currentTaskUserName} onChange={assignee => setEditing(current => ({ ...current, responsavelUserId: assignee.userId, responsavel: assignee.name }))} /></Field>',
+    '<Field label="Responsável"><TaskAssigneeSelect access={access} value={editing.responsavelUserId || currentTaskUserId || \'\'} currentUserId={currentTaskUserId} currentUserName={currentTaskUserName} onChange={assignee => setEditing(current => ({ ...current, responsavelUserId: assignee.userId, responsavel: assignee.name }))} /></Field>',
     'assignee select field',
     path,
   )
