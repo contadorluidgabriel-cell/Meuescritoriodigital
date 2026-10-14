@@ -33,3 +33,16 @@ test('Meu Dia cria tarefa com responsavel atual', () => {
   assert.match(source, /observacao: ''/)
   assert.doesNotMatch(source, /observacoes:/)
 })
+
+
+test('tarefa legada sem responsavelUserId usa usuario atual ao salvar', () => {
+  const source = read('src/components/TasksReactBase.jsx')
+  assert.match(source, /taskResponsavelUserId = String\(editing\.responsavelUserId \|\| currentTaskUserId \|\| ''\)/)
+  assert.match(source, /responsavelUserId: taskResponsavelUserId/)
+  assert.match(source, /responsavel: taskResponsavel/)
+})
+
+test('seletor exibe usuario atual como fallback em tarefa legada', () => {
+  const source = read('src/components/TasksReactBase.jsx')
+  assert.match(source, /value=\{editing\.responsavelUserId \|\| currentTaskUserId \|\| ''\}/)
+})
