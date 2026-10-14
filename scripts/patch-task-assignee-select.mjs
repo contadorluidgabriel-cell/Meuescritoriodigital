@@ -46,7 +46,7 @@ export function applyTaskAssigneeSelectPatch(root) {
   source = replaceRequired(
     source,
     "    if (!editing.titulo.trim()) { setError('Informe o título da tarefa.'); return }",
-    "    if (!editing.titulo.trim()) { setError('Informe o título da tarefa.'); return }\n    if (!String(editing.responsavelUserId || '').trim()) { setError('Selecione o responsável da tarefa.'); return }",
+    "    if (!editing.titulo.trim()) { setError('Informe o título da tarefa.'); return }\n    const taskResponsavelUserId = String(editing.responsavelUserId || currentTaskUserId || '').trim()\n    const taskResponsavel = String(editing.responsavel || (taskResponsavelUserId === currentTaskUserId ? currentTaskUserName : '') || '').trim()\n    if (!taskResponsavelUserId) { setError('Não foi possível identificar o responsável. Atualize a página e tente novamente.'); return }",
     'assignee validation',
     path,
   )
@@ -54,7 +54,7 @@ export function applyTaskAssigneeSelectPatch(root) {
   source = replaceRequired(
     source,
     "      departamento: editing.departamento, responsavel: editing.responsavel.trim(), prazo: editing.prazo, prioridade: editing.prioridade,",
-    "      departamento: editing.departamento, responsavel: String(editing.responsavel || '').trim(), responsavelUserId: String(editing.responsavelUserId || ''), prazo: editing.prazo, prioridade: editing.prioridade,",
+    "      departamento: editing.departamento, responsavel: taskResponsavel, responsavelUserId: taskResponsavelUserId, prazo: editing.prazo, prioridade: editing.prioridade,",
     'assignee save',
     path,
   )
@@ -62,7 +62,7 @@ export function applyTaskAssigneeSelectPatch(root) {
   source = replaceRequired(
     source,
     '<Field label="Responsável"><input value={editing.responsavel} onChange={event => setField(\'responsavel\', event.target.value)} /></Field>',
-    '<Field label="Responsável"><TaskAssigneeSelect access={access} value={editing.responsavelUserId || \'\'} currentUserId={currentTaskUserId} currentUserName={currentTaskUserName} onChange={assignee => setEditing(current => ({ ...current, responsavelUserId: assignee.userId, responsavel: assignee.name }))} /></Field>',
+    '<Field label="Responsável"><TaskAssigneeSelect access={access} value={editing.responsavelUserId || currentTaskUserId || \'\'} currentUserId={currentTaskUserId} currentUserName={currentTaskUserName} onChange={assignee => setEditing(current => ({ ...current, responsavelUserId: assignee.userId, responsavel: assignee.name }))} /></Field>',
     'assignee select field',
     path,
   )

@@ -8,7 +8,7 @@ test('formulario de tarefa usa seletor de usuarios do workspace', () => {
   const source = read('src/components/TasksReactBase.jsx')
   assert.match(source, /TaskAssigneeSelect/)
   assert.match(source, /responsavelUserId/)
-  assert.match(source, /Selecione o responsável da tarefa/)
+  assert.match(source, /Não foi possível identificar o responsável/)
   assert.doesNotMatch(source, /<Field label="Responsável"><input value=\{editing\.responsavel\}/)
 })
 
@@ -32,4 +32,17 @@ test('Meu Dia cria tarefa com responsavel atual', () => {
   assert.match(source, /responsavel: currentUserName/)
   assert.match(source, /observacao: ''/)
   assert.doesNotMatch(source, /observacoes:/)
+})
+
+
+test('tarefa legada sem responsavelUserId usa usuario atual ao salvar', () => {
+  const source = read('src/components/TasksReactBase.jsx')
+  assert.match(source, /taskResponsavelUserId = String\(editing\.responsavelUserId \|\| currentTaskUserId \|\| ''\)/)
+  assert.match(source, /responsavelUserId: taskResponsavelUserId/)
+  assert.match(source, /responsavel: taskResponsavel/)
+})
+
+test('seletor exibe usuario atual como fallback em tarefa legada', () => {
+  const source = read('src/components/TasksReactBase.jsx')
+  assert.match(source, /value=\{editing\.responsavelUserId \|\| currentTaskUserId \|\| ''\}/)
 })
