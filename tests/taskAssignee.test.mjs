@@ -8,7 +8,7 @@ test('formulario de tarefa usa seletor de usuarios do workspace', () => {
   const source = read('src/components/TasksReactBase.jsx')
   assert.match(source, /TaskAssigneeSelect/)
   assert.match(source, /responsavelUserId/)
-  assert.match(source, /Selecione o responsável da tarefa/)
+  assert.match(source, /Não foi possível identificar o responsável/)
   assert.doesNotMatch(source, /<Field label="Responsável"><input value=\{editing\.responsavel\}/)
 })
 
