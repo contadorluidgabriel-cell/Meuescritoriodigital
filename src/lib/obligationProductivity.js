@@ -99,6 +99,11 @@ export function linkProductivity(link = {}, due = '', day = today()) {
     : daysRemaining > 0
       ? Math.ceil(pending / daysRemaining)
       : pending
+  // A meta personalizada não substitui o ritmo necessário recalculado pelo prazo.
+  const savedDailyGoal = integer(link.metaDiariaPersonalizada)
+  const dailyGoal = completedAll ? 0 : savedDailyGoal > 0 ? savedDailyGoal : requiredPerDay
+  const goalIsCustom = savedDailyGoal > 0
+  const goalBelowRequired = !completedAll && goalIsCustom && dailyGoal < requiredPerDay
 
   const averagePerDay = pace.averagePerDay
   const projectedDays = completedAll ? 0 : averagePerDay > 0 ? Math.ceil(pending / averagePerDay) : 0
@@ -119,9 +124,13 @@ export function linkProductivity(link = {}, due = '', day = today()) {
     due: dueDay,
     daysRemaining,
     requiredPerDay,
-    todayTarget: requiredPerDay,
+    todayTarget: dailyGoal,
+    dailyGoal,
+    goalIsCustom,
+    goalBelowRequired,
+    suggestedDailyGoal: requiredPerDay,
     doneToday,
-    remainingToday: requiredPerDay,
+    remainingToday: Math.max(0, dailyGoal - doneToday),
     todayAvailable: true,
     overdue,
     completedAll,
@@ -143,6 +152,8 @@ export function obligationProductivity(obligation = {}, day = today()) {
   const pending = rows.reduce((sum, row) => sum + row.pending, 0)
   const doneToday = rows.reduce((sum, row) => sum + row.doneToday, 0)
   const requiredToday = active.reduce((sum, row) => sum + row.requiredPerDay, 0)
+  const dailyGoalToday = active.reduce((sum, row) => sum + row.dailyGoal, 0)
+  const goalBelowRequired = active.some(row => row.goalBelowRequired)
   const nextRequiredPerDay = requiredToday
   const remainingToday = requiredToday
   const dueDays = active.map(row => row.due).filter(Boolean)
@@ -154,6 +165,8 @@ export function obligationProductivity(obligation = {}, day = today()) {
     pending,
     doneToday,
     requiredToday,
+    dailyGoalToday,
+    goalBelowRequired,
     nextRequiredPerDay,
     remainingToday,
     daysRemaining,
