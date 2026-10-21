@@ -51,6 +51,7 @@ import { applyRemoveExternalTaskSyncPatch } from './scripts/patch-remove-externa
 import { applyTaskCalendarOnlyAudit } from './scripts/patch-task-calendar-only-audit.mjs'
 import { applyDailyProductionTargetPatch } from './scripts/patch-daily-production-target.mjs'
 import { applyDailyTargetVisibilityPatch } from './scripts/patch-daily-target-visibility.mjs'
+import { applyTodayExpedienteDailyTargetPatch } from './scripts/patch-today-expediente-daily-target.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -136,6 +137,7 @@ applyRemoveExternalTaskSyncPatch(root)
 applyTaskCalendarOnlyAudit(root)
 applyDailyProductionTargetPatch(root)
 applyDailyTargetVisibilityPatch(root)
+applyTodayExpedienteDailyTargetPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
