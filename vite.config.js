@@ -49,6 +49,7 @@ import { applyDepartmentsPatch } from './scripts/patch-departments.mjs'
 import { applyTaskAssigneeSelectPatch } from './scripts/patch-task-assignee-select.mjs'
 import { applyRemoveExternalTaskSyncPatch } from './scripts/patch-remove-external-task-sync.mjs'
 import { applyTaskCalendarOnlyAudit } from './scripts/patch-task-calendar-only-audit.mjs'
+import { applyDailyProductionTargetPatch } from './scripts/patch-daily-production-target.mjs'
 
 const root = fileURLToPath(new URL('./', import.meta.url))
 const payloadDir = fileURLToPath(new URL('./source-payloads/', import.meta.url))
@@ -132,6 +133,7 @@ applyProcessCancellationPatch(root)
 applyTaskAssigneeSelectPatch(root)
 applyRemoveExternalTaskSyncPatch(root)
 applyTaskCalendarOnlyAudit(root)
+applyDailyProductionTargetPatch(root)
 
 const legacyFile = fileURLToPath(new URL('./legacy-v10-7.html', import.meta.url))
 function legacyCompatibilityFile() {
