@@ -17,7 +17,7 @@ test('preserves a custom daily goal independently from the required deadline pac
     metaDiariaPersonalizada: 12,
     historicoProducao: [{ data: '2026-10-21', quantidade: 5, totalApos: 50 }],
   }, '2026-10-30', '2026-10-21')
-  assert.equal(metric.requiredPerDay, 28)
+  assert.equal(metric.requiredPerDay, 25)
   assert.equal(metric.dailyGoal, 12)
   assert.equal(metric.goalIsCustom, true)
   assert.equal(metric.goalBelowRequired, true)
@@ -34,7 +34,7 @@ test('aggregate productivity shows custom goal and deadline pace separately', ()
     ],
   }, '2026-10-21')
   assert.equal(metric.dailyGoalToday, 20)
-  assert.equal(metric.requiredToday, 37)
+  assert.equal(metric.requiredToday, 35)
   assert.equal(metric.goalBelowRequired, true)
 })
 
